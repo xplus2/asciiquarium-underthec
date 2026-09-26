@@ -194,14 +194,14 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   double tx;
   double speed = 2.0;
   int y = rng_int(h - 19) + 9;
-  int ty = y + 7;
+  int ty = y + 6;
   if (dir) {
     speed = -2.0;
     x = w - 2;
-    tx = x + 9;
+    tx = x + 6;
   } else {
     x = -53;
-    tx = -9;
+    tx = x + 32;
   }
 
   struct entity *teeth = entity_spawn(&sc->entities);
