@@ -11,6 +11,7 @@
 #include "art/misc.h"
 #include "art/monster.h"
 #include "art/rowers.h"
+#include "art/sailboat.h"
 #include "art/seahorse.h"
 #include "art/shark.h"
 #include "art/ship.h"
@@ -251,6 +252,18 @@ static void spawn_ship(struct scene *sc, int w, int h) {
   spawn_simple_creature(sc, w, &def);
 }
 
+static void spawn_sailboat(struct scene *sc, int w, int h) {
+  (void)h;
+  int dir = rng_int(2);
+  double speed = dir ? -1.0 : 1.0;
+  struct entity *e = entity_spawn(&sc->entities);
+  e->frames = &sailboat[dir];
+  e->frame_count = 1;
+  e->y = (double)(1 + rng_int(3));
+  e->x = dir ? (double)(w - 2) : (double)(1 - entity_width(e));
+  finish_creature_spawn(e, ENT_SAILBOAT, Z_SAILBOAT, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("WHITE"));
+}
+
 static void spawn_whale(struct scene *sc, int w, int h) {
   (void)h;
   static const struct simple_creature_def def = {ENT_WHALE, Z_WHALE, 1.0, 0, 12, 10.0, "WHITE", {whale[0], whale[1]}};
@@ -411,6 +424,7 @@ void spawn_random_object(struct scene *sc, int w, int h) {
   {spawn_dolphins, sc->aquatic.dolphins},   {spawn_swan, sc->aquatic.swan},
   {spawn_fishhook, sc->aquatic.fishhook},   {spawn_crab, sc->aquatic.crab},
   {spawn_seahorse, sc->aquatic.seahorse},   {spawn_rowers, sc->aquatic.rowers},
+  {spawn_sailboat, sc->aquatic.sailboat},
   {spawn_message_event, sc->message_rows != NULL && sc->message_position == MSG_POS_EVENT},
   };
   const int count = (int)(sizeof(table) / sizeof(table[0]));

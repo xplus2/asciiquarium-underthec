@@ -16,6 +16,7 @@ struct cli_args {
   double pace;
   int fps;
   int uturn_chance;
+  int colors_mode;
   struct aquatic_life aquatic;
 
   const char *message_arg;

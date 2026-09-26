@@ -21,6 +21,7 @@ struct config {
   double pace;
   int uturn_chance;
   int fps;
+  int colors_mode;
 };
 
 void config_init(struct config *cfg);

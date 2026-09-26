@@ -59,3 +59,9 @@ void canvas_put(struct canvas *c, int x, int y, const char *glyph, int glyph_len
     next->cont = true;
   }
 }
+
+void canvas_reduce_colors(struct canvas *c, int colors_mode) {
+  if (colors_mode == 16) return;
+  int n = c->width * c->height;
+  for (int i = 0; i < n; i++) color_reduce(colors_mode, &c->cells[i].col, &c->cells[i].bold);
+}

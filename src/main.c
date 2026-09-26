@@ -123,7 +123,8 @@ int main(int argc, char **argv) {
   sigaction(SIGUSR1, &feed_sa, NULL);
 #endif
   struct app app;
-  app_init(&app, args.classic, args.aquatic, args.pace, args.fps, now_seconds());
+  int colors_mode = tt != NULL ? 16 : args.colors_mode;
+  app_init(&app, args.classic, args.aquatic, args.pace, args.fps, colors_mode, now_seconds());
   scene_set_castle(&app.scene, !args.no_castle);
   if (args.castle_name[0] != '\0') scene_set_castle_name(&app.scene, args.castle_name);
   if (args.message_color_arg != NULL) scene_set_message_color(&app.scene, color_from_name(args.message_color_arg));

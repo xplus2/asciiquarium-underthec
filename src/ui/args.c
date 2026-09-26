@@ -79,6 +79,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   int classic_ver = 0; /* 0=off, 1=1.0, 2=1.1 */
   bool message_position_given = false;
   bool u_given = false;
+  bool colors_given = false;
   bool f_given = false;
   bool glyphs_given = false;
   bool ttl_given = false;
@@ -94,6 +95,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   out->pace = 1.0;
   out->fps = 10;
   out->uturn_chance = 200;
+  out->colors_mode = 16;
   out->message_arg = NULL;
   out->message_color_arg = NULL;
   out->message_position = MSG_POS_MIDDLE;
@@ -144,6 +146,16 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
         return false;
       }
       u_given = true;
+      i += 2;
+    } else if (strcmp(a, "-C") == 0 || strcmp(a, "--colors") == 0) {
+      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
+      char errbuf[128];
+      if (!opts_parse_colors(argv[i + 1], &out->colors_mode, errbuf, sizeof errbuf)) {
+        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
+        *exit_code = 2;
+        return false;
+      }
+      colors_given = true;
       i += 2;
     } else if (strcmp(a, "-f") == 0 || strcmp(a, "--fps") == 0) {
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
@@ -317,6 +329,16 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       char errbuf[128];
       if (!opts_parse_uturn_chance(env_val, &out->uturn_chance, errbuf, sizeof errbuf)) {
         *exit_code = err_env_bad(argv[0], "UNDERTHEC_UTURN_CHANCE", errbuf);
+        return false;
+      }
+    }
+  }
+  if (!colors_given) {
+    const char *env_val = getenv("UNDERTHEC_COLORS");
+    if (env_val != NULL) {
+      char errbuf[128];
+      if (!opts_parse_colors(env_val, &out->colors_mode, errbuf, sizeof errbuf)) {
+        *exit_code = err_env_bad(argv[0], "UNDERTHEC_COLORS", errbuf);
         return false;
       }
     }

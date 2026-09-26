@@ -104,6 +104,7 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       case ENT_RUBBLE:
       case ENT_DUCK:
       case ENT_SWAN:
+      case ENT_SAILBOAT:
       case ENT_CRAB:           e->x += e->vx;
                                e->y += e->vy;
                                advance_frame(e);            break;

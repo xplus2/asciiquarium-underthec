@@ -16,6 +16,7 @@ with the same values as on the command line:
 | `message-position` | `P`   | `?P=middle`            |
 | `pace`             | `p`   | `?p=2`                 |
 | `uturn-chance`     | `u`   | `?u=50`                |
+| `colors`           | `C`   | `?colors=16`            |
 | `fps`              | `f`   | `?f=30`                |
 | `castle-name`      | `n`   | `?n=MyCastle`          |
 | `no-castle`        |       | `?no-castle`           |

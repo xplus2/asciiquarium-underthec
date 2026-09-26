@@ -10,19 +10,20 @@
 
 #define REG_PATH L"Software\\underthec\\Screensaver"
 
-enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COUNT };
+enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT };
 
 /* long CLI names */
 static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps",
+  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors",
 };
 
 /* dialog names in errors */
 static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS",
+  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors",
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
+static const char *const colors_items[] = {"1", "2", "7", "16"};
 static const char *const color_items[] = {
   "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
   "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
@@ -31,6 +32,11 @@ static const char *const color_items[] = {
 static const char *const position_items[] = {"middle", "center", "marquee", "swim", "event"};
 
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
+
+static int colors_index(int mode) {
+  for (size_t i = 0; i < COUNT(colors_items); i++) if (atoi(colors_items[i]) == mode) return (int)i;
+  return (int)COUNT(colors_items) - 1;
+}
 
 _Static_assert(SCENE_AQUATIC_FLAG_COUNT == SCR_FLAG_SLOTS, "dialog checkboxes out of sync with creatures");
 
@@ -192,6 +198,7 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   item_set_text(dlg, IDC_FPS, buf);
   snprintf(buf, sizeof buf, "%d", cfg->uturn_chance);
   item_set_text(dlg, IDC_UTURN, buf);
+  SendDlgItemMessageW(dlg, IDC_COLORS, CB_SETCURSEL, (WPARAM)colors_index(cfg->colors_mode), 0);
   update_enabled(dlg);
 }
 
@@ -236,6 +243,7 @@ static bool apply(HWND dlg) {
   vals[OPT_PACE] = item_text(dlg, IDC_PACE);
   vals[OPT_UTURN] = item_text(dlg, IDC_UTURN);
   vals[OPT_FPS] = item_text(dlg, IDC_FPS);
+  vals[OPT_COLORS] = opts_strdup(colors_items[combo_sel(dlg, IDC_COLORS)]);
 
   char err[256];
   struct config cfg;
@@ -285,6 +293,7 @@ static void init_dialog(HWND dlg) {
   combo_fill(dlg, IDC_CLASSIC, classic_items, COUNT(classic_items));
   combo_fill(dlg, IDC_MSG_COLOR, color_items, COUNT(color_items));
   combo_fill(dlg, IDC_MSG_POS, position_items, COUNT(position_items));
+  combo_fill(dlg, IDC_COLORS, colors_items, COUNT(colors_items));
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) item_set_text(dlg, IDC_FLAG0 + (int)i, scene_aquatic_flag_name(i));
   message_font_set(dlg, window_dpi(dlg));
   item_set_text(dlg, IDC_VERSION, TOOL_DISPLAY_NAME " v" TOOL_VERSION);

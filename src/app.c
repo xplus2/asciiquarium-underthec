@@ -1,6 +1,6 @@
 #include "app.h"
 
-void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double pace, int fps, double now) {
+void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double pace, int fps, int colors_mode, double now) {
   scene_init(&a->scene, classic, aquatic);
   canvas_init(&a->canvas);
   a->w = -1;
@@ -9,8 +9,9 @@ void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double p
   a->tick_accum = 0.0;
   a->pace = pace;
   a->fps = fps;
+  a->colors_mode = colors_mode;
   a->last = now;
-  settings_ui_init(&a->settings, &a->fps, &a->pace, &a->scene);
+  settings_ui_init(&a->settings, &a->fps, &a->pace, &a->colors_mode, &a->scene);
   help_ui_init(&a->help, &a->fps, &a->pace);
 }
 
@@ -67,6 +68,7 @@ void app_frame(struct app *a, double now) {
   }
   canvas_clear(&a->canvas);
   scene_draw(&a->scene, &a->canvas, a->tick_accum);
+  canvas_reduce_colors(&a->canvas, a->colors_mode);
   settings_ui_draw(&a->settings, &a->canvas);
   help_ui_draw(&a->help, &a->canvas);
 }

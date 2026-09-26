@@ -16,6 +16,7 @@ void config_init(struct config *cfg) {
       .pace = 1.0,
       .uturn_chance = 200,
       .fps = 10,
+      .colors_mode = 16,
   };
 }
 
@@ -72,6 +73,8 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
     if (!opts_parse_uturn_chance(value, &cfg->uturn_chance, eb, sizeof eb)) return fail(err, err_len, eb, shown);
   } else if (strcmp(name, "fps") == 0) {
     if (!opts_parse_fps(value, &cfg->fps, eb, sizeof eb)) return fail(err, err_len, eb, shown);
+  } else if (strcmp(name, "colors") == 0) {
+    if (!opts_parse_colors(value, &cfg->colors_mode, eb, sizeof eb)) return fail(err, err_len, eb, shown);
   } else {
     return fail(err, err_len, "unknown option", shown);
   }
@@ -89,7 +92,7 @@ bool config_check(const struct config *cfg, char *err, size_t err_len) {
 void config_start(const struct config *cfg, struct app *app, double now) {
   struct aquatic_life aquatic = cfg->classic_ver == 2 ? scene_aquatic_classic11() : cfg->aquatic;
   rng_seed((uint64_t)time(NULL) ^ ((uint64_t)clock() << 32));
-  app_init(app, cfg->classic_ver == 1, aquatic, cfg->pace, cfg->fps, now);
+  app_init(app, cfg->classic_ver == 1, aquatic, cfg->pace, cfg->fps, cfg->colors_mode, now);
   if (cfg->message_color != NULL) scene_set_message_color(&app->scene, color_from_name(cfg->message_color));
   scene_set_message_position(&app->scene, cfg->message_position);
   scene_set_uturn_chance(&app->scene, cfg->uturn_chance);

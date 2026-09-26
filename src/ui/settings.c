@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-enum field_kind { FIELD_NONE, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
+enum field_kind { FIELD_NONE, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
 
 static bool is_checkbox_kind(enum field_kind k) { return k == FIELD_SPECIES || k == FIELD_CASTLE; }
 
@@ -18,13 +18,13 @@ struct grid_cell {
 
 #define SP(field) offsetof(struct aquatic_life, field)
 
-#define GRID_ROWS 12
+#define GRID_ROWS 13
 
 static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_FPS, "fps", 0},                       {FIELD_PACE, "pace", 0}},
-{{FIELD_UTURN, "uturn", 0},                   {FIELD_NONE, NULL, 0}},
+{{FIELD_UTURN, "uturn", 0},                   {FIELD_COLORS, "color", 0}},
 {{FIELD_FISH, "fish", 0},                     {FIELD_NONE, NULL, 0}},
-{{FIELD_SPECIES, "bigfish", SP(bigfish)},     {FIELD_SPECIES, "rowers", SP(rowers)}},
+{{FIELD_SPECIES, "bigfish", SP(bigfish)},     {FIELD_SPECIES, "sailboat", SP(sailboat)}},
 {{FIELD_SPECIES, "crab", SP(crab)},           {FIELD_SPECIES, "seahorse", SP(seahorse)}},
 {{FIELD_SPECIES, "dolphins", SP(dolphins)},   {FIELD_SPECIES, "shark", SP(shark)}},
 {{FIELD_SPECIES, "ducks", SP(ducks)},         {FIELD_SPECIES, "ship", SP(ship)}},
@@ -32,13 +32,14 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_SPECIES, "jellyfish", SP(jellyfish)}, {FIELD_SPECIES, "swan", SP(swan)}},
 {{FIELD_SPECIES, "kaiju", SP(kaiju)},         {FIELD_SPECIES, "swordfish", SP(swordfish)}},
 {{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "whale", SP(whale)}},
+{{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_NONE, NULL, 0}},
 {{FIELD_CASTLE, "castle", 0},                 {FIELD_NONE, NULL, 0}},
 };
 
 #undef SP
 
 #define CONTENT_W 28
-#define CONTENT_H 15
+#define CONTENT_H 16
 #define MARGIN 1
 #define BOX_W (CONTENT_W + 2 * MARGIN)
 #define BOX_H (CONTENT_H + 2 * MARGIN)
@@ -59,6 +60,14 @@ static int clampi(int v, int lo, int hi) {
   if (v < lo) return lo;
   if (v > hi) return hi;
   return v;
+}
+
+static const int COLORS_MODES[] = {1, 2, 7, 16};
+#define COLORS_MODES_N (int)(sizeof(COLORS_MODES) / sizeof(COLORS_MODES[0]))
+
+static int colors_mode_index(int mode) {
+  for (int i = 0; i < COLORS_MODES_N; i++) if (COLORS_MODES[i] == mode) return i;
+  return COLORS_MODES_N - 1;
 }
 
 static double clampd(double v, double lo, double hi) {
@@ -88,10 +97,11 @@ static int logical_for_draw_row(int dr) {
   return -1;
 }
 
-void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, struct scene *scene) {
+void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, struct scene *scene) {
   ui->open = false;
   ui->fps = fps;
   ui->pace = pace;
+  ui->colors_mode = colors_mode;
   ui->scene = scene;
   ui->sel_row = 0;
   ui->sel_col = 0;
@@ -137,6 +147,9 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
     }
     case FIELD_UTURN:
       scene_set_uturn_chance(ui->scene, clampi(ui->scene->uturn_chance + dir, 0, 999));
+      break;
+    case FIELD_COLORS:
+      *ui->colors_mode = COLORS_MODES[clampi(colors_mode_index(*ui->colors_mode) + dir, 0, COLORS_MODES_N - 1)];
       break;
     case FIELD_FISH: {
       int next = clampi(current_fish_value(ui->scene) + dir, 0, 999);
@@ -230,8 +243,13 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   else { row0_off = -1; row0_len = 0; }
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, row0_off, row0_len);
 
-  snprintf(line, sizeof line, "%-7s-%3d+", "uturn", ui->scene->uturn_chance);
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, ui->sel_row == 1 ? MINUS0_X + 1 : -1, ui->sel_row == 1 ? 3 : 0);
+  bool row1_sel = ui->sel_row == 1;
+  snprintf(line, sizeof line, "%-7s-%3d+   %-5s-%5d+", "uturn", ui->scene->uturn_chance, "color", *ui->colors_mode);
+  int row1_off, row1_len;
+  if (row1_sel && ui->sel_col == 0) { row1_off = MINUS0_X + 1; row1_len = 3; }
+  else if (row1_sel && ui->sel_col == 1) { row1_off = MINUS1_X + 1; row1_len = 5; }
+  else { row1_off = -1; row1_len = 0; }
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, row1_off, row1_len);
 
   snprintf(line, sizeof line, "%-7s-%3d+", "fish", current_fish_value(ui->scene));
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(2), line, ui->sel_row == 2 ? MINUS0_X + 1 : -1, ui->sel_row == 2 ? 3 : 0);

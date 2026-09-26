@@ -20,11 +20,12 @@ struct app {
   double tick_accum;
   double pace;
   int fps;
+  int colors_mode;
   double last;
 };
 
 /* now=secs */
-void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double pace, int fps, double now);
+void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double pace, int fps, int colors_mode, double now);
 void app_free(struct app *a);
 
 void app_resize(struct app *a, int w, int h);

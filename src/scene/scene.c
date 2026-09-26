@@ -16,8 +16,9 @@ struct aquatic_flag {
 static const struct aquatic_flag aquatic_flags[] = {
   AQ_FLAG(bigfish),   AQ_FLAG(crab),     AQ_FLAG(dolphins),  AQ_FLAG(ducks),
   AQ_FLAG(fishhook),  AQ_FLAG(jellyfish),AQ_FLAG(kaiju),     AQ_FLAG(monster),
-  AQ_FLAG(rowers),    AQ_FLAG(seahorse), AQ_FLAG(shark),     AQ_FLAG(ship),
-  AQ_FLAG(submarine), AQ_FLAG(swan),     AQ_FLAG(swordfish), AQ_FLAG(whale),
+  AQ_FLAG(rowers),    AQ_FLAG(sailboat), AQ_FLAG(seahorse),  AQ_FLAG(shark),
+  AQ_FLAG(ship),      AQ_FLAG(submarine),AQ_FLAG(swan),      AQ_FLAG(swordfish),
+  AQ_FLAG(whale),
 };
 #define AQUATIC_FLAG_COUNT (sizeof(aquatic_flags) / sizeof(aquatic_flags[0]))
 _Static_assert(AQUATIC_FLAG_COUNT == SCENE_AQUATIC_FLAG_COUNT, "SCENE_AQUATIC_FLAG_COUNT out of sync");
@@ -266,7 +267,7 @@ void scene_on_species_toggled(struct scene *sc, int w, int h) {
   bool pool_enabled = sc->aquatic.ship || sc->aquatic.whale || sc->aquatic.monster || sc->aquatic.bigfish ||
                       sc->aquatic.shark || sc->aquatic.submarine || sc->aquatic.swordfish || sc->aquatic.ducks ||
                       sc->aquatic.dolphins || sc->aquatic.swan || sc->aquatic.fishhook || sc->aquatic.crab ||
-                      sc->aquatic.seahorse || sc->aquatic.rowers;
+                      sc->aquatic.seahorse || sc->aquatic.rowers || sc->aquatic.sailboat;
   if (pool_enabled) {
     bool has_timer = false;
     bool has_live = false;
@@ -277,7 +278,7 @@ void scene_on_species_toggled(struct scene *sc, int w, int h) {
       switch (e->type) {
         case ENT_SHIP: case ENT_WHALE: case ENT_MONSTER: case ENT_BIGFISH: case ENT_SHARK:
         case ENT_SUBMARINE: case ENT_SWORDFISH: case ENT_DUCK: case ENT_DOLPHIN: case ENT_SWAN:
-        case ENT_FISHHOOK: case ENT_CRAB: case ENT_SEAHORSE: case ENT_ROWERS:
+        case ENT_FISHHOOK: case ENT_CRAB: case ENT_SEAHORSE: case ENT_ROWERS: case ENT_SAILBOAT:
           has_live = true;
           break;
         default:

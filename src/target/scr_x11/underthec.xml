@@ -58,4 +58,12 @@ Under The C - a C-port of Asciiquarium.
     <_label>Frames per second</_label>
     <number id="fps" type="slider" arg="--fps %" low="1" high="144" default="10"/>
   </hgroup>
+  <hgroup>
+    <select id="colors">
+      <option id="colors-16" _label="16 (ANSI, default)" arg-set="--colors 16"/>
+      <option id="colors-7" _label="7 (Teletext)" arg-set="--colors 7"/>
+      <option id="colors-2" _label="2 (white/gray)" arg-set="--colors 2"/>
+      <option id="colors-1" _label="1 (white only)" arg-set="--colors 1"/>
+    </select>
+  </hgroup>
 </screensaver>

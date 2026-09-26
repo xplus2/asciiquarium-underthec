@@ -24,5 +24,6 @@ void canvas_free(struct canvas *c);
 void canvas_resize(struct canvas *c, int width, int height);
 void canvas_clear(struct canvas *c);
 void canvas_put(struct canvas *c, int x, int y, const char *glyph, int glyph_len, struct attr a, int cols);
+void canvas_reduce_colors(struct canvas *c, int colors_mode);
 
 #endif

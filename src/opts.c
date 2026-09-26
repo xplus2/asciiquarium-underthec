@@ -120,6 +120,17 @@ bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) 
   return true;
 }
 
+bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len) {
+  char *endptr = NULL;
+  long n = strtol(val, &endptr, 10);
+  if (val[0] == '\0' || *endptr != '\0' || (n != 1 && n != 2 && n != 7 && n != 16)) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid colors '", val, "', expected 1, 2, 7 or 16"}, 3);
+    return false;
+  }
+  *out = (int)n;
+  return true;
+}
+
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len) {
   size_t dot_count = 0;
   for (const char *p = s; *p != '\0'; p++) {

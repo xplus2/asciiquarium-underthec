@@ -10,12 +10,13 @@ struct settings_ui {
   bool open;
   int *fps;
   double *pace;
+  int *colors_mode;
   struct scene *scene;
   int sel_row;
   int sel_col;
 };
 
-void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, struct scene *scene);
+void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, struct scene *scene);
 bool settings_ui_is_open(const struct settings_ui *ui);
 void settings_ui_toggle(struct settings_ui *ui);
 void settings_ui_close(struct settings_ui *ui);

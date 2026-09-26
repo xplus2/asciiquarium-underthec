@@ -27,6 +27,7 @@
 #define Z_JELLYFISH 4
 #define Z_SEAHORSE 4
 #define Z_ROWERS 3
+#define Z_SAILBOAT 3
 #define Z_FLAKE 1
 #define CASTLE_X_OFFSET 32
 #define CASTLE_WIDTH 31

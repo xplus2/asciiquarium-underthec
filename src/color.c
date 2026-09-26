@@ -59,6 +59,36 @@ bool color_name_valid(const char *name) {
   return false;
 }
 
+void color_reduce(int colors_mode, enum color *col, bool *bold) {
+  switch (colors_mode) {
+    case 1:
+      *col = COL_WHITE;
+      *bold = false;
+      break;
+    case 2:
+      if (*bold) *col = COL_WHITE;
+      else *col = COL_BLACK;
+      *bold = !*bold;
+      break;
+    case 7:
+      switch (*col) {
+      case COL_RED: case COL_GREEN: case COL_YELLOW:
+      case COL_BLUE: case COL_MAGENTA: case COL_CYAN:
+        break;
+      case COL_BLACK:
+        if (*bold) *col = COL_WHITE;
+        break;
+      default:
+        *col = COL_WHITE;
+        break;
+      }
+      *bold = false;
+      break;
+    default:
+      break;
+  }
+}
+
 void color_randomize_mask(const char *in, char *out) {
   static const char letters[] = {'c','C','r','R','y','Y','b','B','g','G','m','M'};
   char pick[10];

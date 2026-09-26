@@ -37,7 +37,8 @@ enum entity_type {
   ENT_SEAHORSE,
   ENT_CASTLE_DOOR,
   ENT_SEAWEED_DEBRIS,
-  ENT_ROWERS
+  ENT_ROWERS,
+  ENT_SAILBOAT
 };
 
 enum death_action {

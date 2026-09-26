@@ -21,6 +21,8 @@ bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errb
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len);
+/* 1,2,7,16 */
+bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len);
 /* out_cap incl NUL, printable ASCII (0x20-0x7E) */
 bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);
