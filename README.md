@@ -132,7 +132,7 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 ### Key bindings
 
 | Key | Alternative | Action                         |
-|-----|----------------------------------------------|
+|-----|-------------|--------------------------------|
 | `f` |  SIGUSR1    | Feed: drop flakes for the fish |
 | `h` |             | Help                           |
 | `p` | `[space]`   | Pause / resume                 |
