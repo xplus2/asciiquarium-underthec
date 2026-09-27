@@ -64,6 +64,20 @@ Under The C - a C-port of Asciiquarium.
       <option id="colors-7" _label="7 (Teletext)" arg-set="--colors 7"/>
       <option id="colors-2" _label="2 (white/gray)" arg-set="--colors 2"/>
       <option id="colors-1" _label="1 (white only)" arg-set="--colors 1"/>
+      <option id="colors-1-green" _label="1, green" arg-set="--colors 1-green"/>
+      <option id="colors-2-green" _label="2, green" arg-set="--colors 2-green"/>
+      <option id="colors-1-red" _label="1, red" arg-set="--colors 1-red"/>
+      <option id="colors-2-red" _label="2, red" arg-set="--colors 2-red"/>
+      <option id="colors-1-blue" _label="1, blue" arg-set="--colors 1-blue"/>
+      <option id="colors-2-blue" _label="2, blue" arg-set="--colors 2-blue"/>
+      <option id="colors-1-yellow" _label="1, yellow" arg-set="--colors 1-yellow"/>
+      <option id="colors-2-yellow" _label="2, yellow" arg-set="--colors 2-yellow"/>
+      <option id="colors-1-magenta" _label="1, magenta" arg-set="--colors 1-magenta"/>
+      <option id="colors-2-magenta" _label="2, magenta" arg-set="--colors 2-magenta"/>
+      <option id="colors-1-cyan" _label="1, cyan" arg-set="--colors 1-cyan"/>
+      <option id="colors-2-cyan" _label="2, cyan" arg-set="--colors 2-cyan"/>
+      <option id="colors-1-white" _label="1, white" arg-set="--colors 1-white"/>
+      <option id="colors-2-white" _label="2, white" arg-set="--colors 2-white"/>
     </select>
   </hgroup>
 </screensaver>

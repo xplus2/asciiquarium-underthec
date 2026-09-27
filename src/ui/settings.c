@@ -22,8 +22,8 @@ struct grid_cell {
 
 static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_FPS, "fps", 0},                       {FIELD_PACE, "pace", 0}},
-{{FIELD_UTURN, "uturn", 0},                   {FIELD_COLORS, "color", 0}},
-{{FIELD_FISH, "fish", 0},                     {FIELD_NONE, NULL, 0}},
+{{FIELD_COLORS, "color", 0},                  {FIELD_NONE, NULL, 0}},
+{{FIELD_UTURN, "uturn", 0},                   {FIELD_FISH, "fish", 0}},
 {{FIELD_SPECIES, "bigfish", SP(bigfish)},     {FIELD_SPECIES, "sailboat", SP(sailboat)}},
 {{FIELD_SPECIES, "crab", SP(crab)},           {FIELD_SPECIES, "seahorse", SP(seahorse)}},
 {{FIELD_SPECIES, "dolphins", SP(dolphins)},   {FIELD_SPECIES, "shark", SP(shark)}},
@@ -45,11 +45,12 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #define BOX_H (CONTENT_H + 2 * MARGIN)
 #define COL0_X 0
 #define COL1_X 14
-/* -/+ x in numeric rows, col 1 only in row 0 */
 #define MINUS0_X 7
 #define PLUS0_X 11
 #define MINUS1_X 20
 #define PLUS1_X 26
+#define PLUS_COLORS_X 26
+#define PLUS1_FISH_X 24
 /* "[x] " before species label */
 #define CHECK_PREFIX 4
 
@@ -62,12 +63,21 @@ static int clampi(int v, int lo, int hi) {
   return v;
 }
 
-static const int COLORS_MODES[] = {1, 2, 7, 16};
+static const int COLORS_MODES[] = {1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52, 62, 72, 7, 16};
 #define COLORS_MODES_N (int)(sizeof(COLORS_MODES) / sizeof(COLORS_MODES[0]))
 
 static int colors_mode_index(int mode) {
   for (int i = 0; i < COLORS_MODES_N; i++) if (COLORS_MODES[i] == mode) return i;
   return COLORS_MODES_N - 1;
+}
+
+static void colors_mode_label(int mode, char *out, size_t out_cap) {
+  int base, accent_id;
+  color_mode_decode(mode, &base, &accent_id);
+  if (accent_id != 0) { snprintf(out, out_cap, " %d-%s", base, color_accent_names[accent_id - 1]); return; }
+  if (mode == 7) { memcpy(out, " 7 (Teletext)", sizeof " 7 (Teletext)"); return; }
+  if (mode == 16) { memcpy(out, "16 (ANSI)", sizeof "16 (ANSI)"); return; }
+  snprintf(out, out_cap, " %d", mode);
 }
 
 static double clampd(double v, double lo, double hi) {
@@ -84,12 +94,7 @@ static int current_fish_value(const struct scene *sc) {
   return sc->aquatic.fish_count >= 0 ? sc->aquatic.fish_count : scene_fish_display_count(sc);
 }
 
-static int draw_row_for_logical(int lr) {
-  if (lr == 0) return 2;
-  if (lr == 1) return 3;
-  if (lr == 2) return 5;
-  return lr + 3;
-}
+static int draw_row_for_logical(int lr) { return lr + 2; }
 
 static int logical_for_draw_row(int dr) {
   for (int lr = 0; lr < GRID_ROWS; lr++)
@@ -148,9 +153,11 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
     case FIELD_UTURN:
       scene_set_uturn_chance(ui->scene, clampi(ui->scene->uturn_chance + dir, 0, 999));
       break;
-    case FIELD_COLORS:
-      *ui->colors_mode = COLORS_MODES[clampi(colors_mode_index(*ui->colors_mode) + dir, 0, COLORS_MODES_N - 1)];
+    case FIELD_COLORS: {
+      int idx = (colors_mode_index(*ui->colors_mode) + dir + COLORS_MODES_N) % COLORS_MODES_N;
+      *ui->colors_mode = COLORS_MODES[idx];
       break;
+    }
     case FIELD_FISH: {
       int next = clampi(current_fish_value(ui->scene) + dir, 0, 999);
       scene_set_fish_count(ui->scene, term_w, term_h, next);
@@ -196,11 +203,13 @@ bool settings_ui_click(struct settings_ui *ui, int x, int y, int term_w, int ter
   int col;
   int dir = 0;
   if (!is_checkbox_kind(grid[lr][0].kind)) {
-    if (cx == MINUS0_X || cx == PLUS0_X) col = 0;
-    else if (cx == MINUS1_X || cx == PLUS1_X) col = 1;
+    int plus0_x = grid[lr][0].kind == FIELD_COLORS ? PLUS_COLORS_X : PLUS0_X;
+    int plus1_x = grid[lr][1].kind == FIELD_FISH ? PLUS1_FISH_X : PLUS1_X;
+    if (cx == MINUS0_X || cx == plus0_x) col = 0;
+    else if (cx == MINUS1_X || cx == plus1_x) col = 1;
     else return true;
     if (grid[lr][col].kind == FIELD_NONE) return true;
-    dir = (cx == PLUS0_X || cx == PLUS1_X) ? 1 : -1;
+    dir = (cx == plus0_x || cx == plus1_x) ? 1 : -1;
   } else {
     col = cx >= COL1_X ? 1 : 0;
     const struct grid_cell *cell = &grid[lr][col];
@@ -243,16 +252,18 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   else { row0_off = -1; row0_len = 0; }
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, row0_off, row0_len);
 
-  bool row1_sel = ui->sel_row == 1;
-  snprintf(line, sizeof line, "%-7s-%3d+   %-5s-%5d+", "uturn", ui->scene->uturn_chance, "color", *ui->colors_mode);
-  int row1_off, row1_len;
-  if (row1_sel && ui->sel_col == 0) { row1_off = MINUS0_X + 1; row1_len = 3; }
-  else if (row1_sel && ui->sel_col == 1) { row1_off = MINUS1_X + 1; row1_len = 5; }
-  else { row1_off = -1; row1_len = 0; }
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, row1_off, row1_len);
+  char colors_label[14];
+  colors_mode_label(*ui->colors_mode, colors_label, sizeof colors_label);
+  snprintf(line, sizeof line, "%-7s-%-18s+", "color", colors_label);
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, ui->sel_row == 1 ? MINUS0_X + 1 : -1, ui->sel_row == 1 ? 18 : 0);
 
-  snprintf(line, sizeof line, "%-7s-%3d+", "fish", current_fish_value(ui->scene));
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(2), line, ui->sel_row == 2 ? MINUS0_X + 1 : -1, ui->sel_row == 2 ? 3 : 0);
+  bool row2_sel = ui->sel_row == 2;
+  snprintf(line, sizeof line, "%-7s-%3d+   %-5s-%3d+", "uturn", ui->scene->uturn_chance, "fish", current_fish_value(ui->scene));
+  int row2_off, row2_len;
+  if (row2_sel && ui->sel_col == 0) { row2_off = MINUS0_X + 1; row2_len = 3; }
+  else if (row2_sel && ui->sel_col == 1) { row2_off = MINUS1_X + 1; row2_len = 3; }
+  else { row2_off = -1; row2_len = 0; }
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(2), line, row2_off, row2_len);
 
   for (int lr = 3; lr < GRID_ROWS; lr++) {
     int y = MARGIN + draw_row_for_logical(lr);

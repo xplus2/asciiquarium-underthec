@@ -59,15 +59,37 @@ bool color_name_valid(const char *name) {
   return false;
 }
 
+const char *const color_accent_names[COLOR_ACCENT_COUNT] = {"green", "red", "blue", "yellow", "magenta", "cyan", "white"};
+static const enum color color_accent_cols[COLOR_ACCENT_COUNT] = {COL_GREEN, COL_RED, COL_BLUE, COL_YELLOW, COL_MAGENTA, COL_CYAN, COL_WHITE};
+
+void color_mode_decode(int colors_mode, int *base, int *accent_id) {
+  *base = colors_mode;
+  *accent_id = 0;
+  int ones = colors_mode % 10;
+  if (colors_mode >= 11 && (ones == 1 || ones == 2)) {
+    int id = colors_mode / 10;
+    if (id >= 1 && id <= COLOR_ACCENT_COUNT) {
+      *base = ones;
+      *accent_id = id;
+    }
+  }
+}
+
 void color_reduce(int colors_mode, enum color *col, bool *bold) {
-  switch (colors_mode) {
+  int base, accent_id;
+  color_mode_decode(colors_mode, &base, &accent_id);
+  switch (base) {
     case 1:
-      *col = COL_WHITE;
+      *col = accent_id == 0 ? COL_WHITE : color_accent_cols[accent_id - 1];
       *bold = false;
       break;
     case 2:
-      if (*bold) *col = COL_WHITE;
-      else *col = COL_BLACK;
+      if (accent_id == 0) {
+        if (*bold) *col = COL_WHITE;
+        else *col = COL_BLACK;
+      } else {
+        *col = color_accent_cols[accent_id - 1];
+      }
       *bold = !*bold;
       break;
     case 7:

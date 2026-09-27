@@ -1,8 +1,10 @@
 #include "opts.h"
+#include "color.h"
 #include "xalloc.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 void opts_append_bounded(char *dst, size_t dst_cap, size_t *pos, const char *src) {
   size_t src_len = strlen(src);
@@ -121,6 +123,26 @@ bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) 
 }
 
 bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len) {
+  const char *dash = strchr(val, '-');
+  if (dash != NULL) {
+    if ((dash != val + 1) || (val[0] != '1' && val[0] != '2')) {
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1 or 2"}, 3);
+      return false;
+    }
+    int accent_id = 0;
+    for (int i = 0; i < COLOR_ACCENT_COUNT; i++) {
+      if (strcasecmp(dash + 1, color_accent_names[i]) == 0) {
+        accent_id = i + 1;
+        break;
+      }
+    }
+    if (accent_id == 0) {
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid colors accent '", dash + 1, "'"}, 3);
+      return false;
+    }
+    *out = (val[0] - '0') + accent_id * 10;
+    return true;
+  }
   char *endptr = NULL;
   long n = strtol(val, &endptr, 10);
   if (val[0] == '\0' || *endptr != '\0' || (n != 1 && n != 2 && n != 7 && n != 16)) {

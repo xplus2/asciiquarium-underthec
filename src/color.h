@@ -32,4 +32,8 @@ bool color_name_valid(const char *name);
 void color_randomize_mask(const char *in, char *out);
 void color_reduce(int colors_mode, enum color *col, bool *bold);
 
+#define COLOR_ACCENT_COUNT 7
+extern const char *const color_accent_names[COLOR_ACCENT_COUNT];
+void color_mode_decode(int colors_mode, int *base, int *accent_id);
+
 #endif

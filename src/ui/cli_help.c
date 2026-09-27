@@ -24,6 +24,7 @@ void print_help(const char *prog) {
     "  -p, --pace <pace>         speed multiplier, 0.01-10 (default: 1)\n"
     "  -u, --uturn-chance <N>    fish turn per N ticks (default: 200, 0 = never)\n"
     "  -C, --colors <1|2|7|16>   fg colors (default: 16)\n"
+    "                            1|2 also take a -<color> suffix, e.g. 2-green\n"
     "  -f, --fps <N>             render frames per second, 1-144 (default: 10)\n"
     "  -s, --screensaver         exit on any keypress\n"
     "  -t, --transparent         transparent background (default: opaque black)\n"

@@ -23,7 +23,16 @@ static const char *const opt_labels[OPT_COUNT] = {
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
-static const char *const colors_items[] = {"1", "2", "7", "16"};
+static const char *const colors_items[] = {
+  "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
+  "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
+  "7", "16",
+};
+static const char *const colors_labels[] = {
+  " 1", " 1-green", " 1-red", " 1-blue", " 1-yellow", " 1-magenta", " 1-cyan", " 1-white",
+  " 2", " 2-green", " 2-red", " 2-blue", " 2-yellow", " 2-magenta", " 2-cyan", " 2-white",
+  " 7 (Teletext)", "16 (ANSI)",
+};
 static const char *const color_items[] = {
   "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
   "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
@@ -34,7 +43,11 @@ static const char *const position_items[] = {"middle", "center", "marquee", "swi
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
 static int colors_index(int mode) {
-  for (size_t i = 0; i < COUNT(colors_items); i++) if (atoi(colors_items[i]) == mode) return (int)i;
+  char eb[128];
+  for (size_t i = 0; i < COUNT(colors_items); i++) {
+    int parsed;
+    if (opts_parse_colors(colors_items[i], &parsed, eb, sizeof eb) && parsed == mode) return (int)i;
+  }
   return (int)COUNT(colors_items) - 1;
 }
 
@@ -293,7 +306,7 @@ static void init_dialog(HWND dlg) {
   combo_fill(dlg, IDC_CLASSIC, classic_items, COUNT(classic_items));
   combo_fill(dlg, IDC_MSG_COLOR, color_items, COUNT(color_items));
   combo_fill(dlg, IDC_MSG_POS, position_items, COUNT(position_items));
-  combo_fill(dlg, IDC_COLORS, colors_items, COUNT(colors_items));
+  combo_fill(dlg, IDC_COLORS, colors_labels, COUNT(colors_labels));
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) item_set_text(dlg, IDC_FLAG0 + (int)i, scene_aquatic_flag_name(i));
   message_font_set(dlg, window_dpi(dlg));
   item_set_text(dlg, IDC_VERSION, TOOL_DISPLAY_NAME " v" TOOL_VERSION);

@@ -16,10 +16,10 @@ Release platforms:
 * Windows
   - Terminal: amd64, arm64
   - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
-* WebAssembly
+* WebAssembly (see [doc/wasm.md](doc.wasm.md))
 * EBU Teletext: text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
 
-... or build it yourself:
+... or build it yourself on others.
 
 ## Build
 See [doc/build.md](doc/build.md) for detailed instructions.
@@ -77,7 +77,7 @@ Limit the foreground colors.
 * 7: same as for teletext
 * 16: ANSI (default)
 
-There is no color mapping. On terminals, this is the terminal's job.
+`1` and `2` can optionally be suffixed by `-<colorname>` to differ from white. Example: `-C 2-green`. 
 
 ### Message color `-M`|`--message-color`
 > Valid text colors: `red`, `green`, `blue`, `yellow`, `magenta`, `cyan`, `white`, `black`.
