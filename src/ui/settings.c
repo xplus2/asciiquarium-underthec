@@ -21,8 +21,8 @@ struct grid_cell {
 #define GRID_ROWS 13
 
 static const struct grid_cell grid[GRID_ROWS][2] = {
+{{FIELD_COLORS, "colors", 0},                 {FIELD_NONE, NULL, 0}},
 {{FIELD_FPS, "fps", 0},                       {FIELD_PACE, "pace", 0}},
-{{FIELD_COLORS, "color", 0},                  {FIELD_NONE, NULL, 0}},
 {{FIELD_UTURN, "uturn", 0},                   {FIELD_FISH, "fish", 0}},
 {{FIELD_SPECIES, "bigfish", SP(bigfish)},     {FIELD_SPECIES, "sailboat", SP(sailboat)}},
 {{FIELD_SPECIES, "crab", SP(crab)},           {FIELD_SPECIES, "seahorse", SP(seahorse)}},
@@ -39,7 +39,7 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #undef SP
 
 #define CONTENT_W 28
-#define CONTENT_H 16
+#define CONTENT_H 15
 #define MARGIN 1
 #define BOX_W (CONTENT_W + 2 * MARGIN)
 #define BOX_H (CONTENT_H + 2 * MARGIN)
@@ -48,9 +48,9 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #define MINUS0_X 7
 #define PLUS0_X 11
 #define MINUS1_X 20
-#define PLUS1_X 26
-#define PLUS_COLORS_X 26
-#define PLUS1_FISH_X 24
+#define PLUS1_X 25
+#define PLUS_COLORS_X 25
+#define PLUS1_FISH_X 25
 /* "[x] " before species label */
 #define CHECK_PREFIX 4
 
@@ -74,10 +74,10 @@ static int colors_mode_index(int mode) {
 static void colors_mode_label(int mode, char *out, size_t out_cap) {
   int base, accent_id;
   color_mode_decode(mode, &base, &accent_id);
-  if (accent_id != 0) { snprintf(out, out_cap, " %d-%s", base, color_accent_names[accent_id - 1]); return; }
-  if (mode == 7) { memcpy(out, " 7 (Teletext)", sizeof " 7 (Teletext)"); return; }
-  if (mode == 16) { memcpy(out, "16 (ANSI)", sizeof "16 (ANSI)"); return; }
-  snprintf(out, out_cap, " %d", mode);
+  if (accent_id != 0) { snprintf(out, out_cap, "  %d-%s", base, color_accent_names[accent_id - 1]); return; }
+  if (mode == 7) { memcpy(out, "  7 (Teletext)", sizeof "  7 (Teletext)"); return; }
+  if (mode == 16) { memcpy(out, " 16 (ANSI)", sizeof " 16 (ANSI)"); return; }
+  snprintf(out, out_cap, "  %d", mode);
 }
 
 static double clampd(double v, double lo, double hi) {
@@ -146,8 +146,8 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
       *ui->fps = clampi(*ui->fps + dir, 1, 144);
       break;
     case FIELD_PACE: {
-      int hundredths = (int)(*ui->pace * 100.0 + (*ui->pace >= 0 ? 0.5 : -0.5)) + dir;
-      *ui->pace = clampd((double)hundredths / 100.0, 0.01, 10.0);
+      int tenths = (int)(*ui->pace * 10.0 + (*ui->pace >= 0 ? 0.5 : -0.5)) + dir;
+      *ui->pace = clampd((double)tenths / 10.0, 0.01, 10.0);
       break;
     }
     case FIELD_UTURN:
@@ -224,9 +224,7 @@ bool settings_ui_click(struct settings_ui *ui, int x, int y, int term_w, int ter
 }
 
 static void fill_rect(struct canvas *c, int x0, int y0, int w, int h, struct attr a) {
-  for (int y = 0; y < h; y++)
-    for (int x = 0; x < w; x++)
-      canvas_put(c, x0 + x, y0 + y, " ", 1, a, 1);
+  for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) canvas_put(c, x0 + x, y0 + y, " ", 1, a, 1);
 }
 
 static void draw_row_text(struct canvas *c, int x0, int y, const char *s, int hl_start, int hl_len) {
@@ -244,24 +242,25 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   draw_row_text(c, MARGIN, MARGIN + 0, "Settings", -1, 0);
 
   char line[CONTENT_W + 1];
-  bool row0_sel = ui->sel_row == 0;
-  snprintf(line, sizeof line, "%-7s-%3d+   %-5s-%5.2f+", "fps", *ui->fps, "pace", *ui->pace);
-  int row0_off, row0_len;
-  if (row0_sel && ui->sel_col == 0) { row0_off = MINUS0_X + 1; row0_len = 3; }
-  else if (row0_sel && ui->sel_col == 1) { row0_off = MINUS1_X + 1; row0_len = 5; }
-  else { row0_off = -1; row0_len = 0; }
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, row0_off, row0_len);
 
-  char colors_label[14];
+  char colors_label[15];
   colors_mode_label(*ui->colors_mode, colors_label, sizeof colors_label);
-  snprintf(line, sizeof line, "%-7s-%-18s+", "color", colors_label);
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, ui->sel_row == 1 ? MINUS0_X + 1 : -1, ui->sel_row == 1 ? 18 : 0);
+  snprintf(line, sizeof line, "%-7s-%-17s+", "colors", colors_label);
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, ui->sel_row == 0 ? MINUS0_X + 1 : -1, ui->sel_row == 0 ? 17 : 0);
+
+  bool row1_sel = ui->sel_row == 1;
+  snprintf(line, sizeof line, "%-7s-%3d+  %-6s-%4.1f+", "fps", *ui->fps, "pace", *ui->pace);
+  int row1_off, row1_len;
+  if (row1_sel && ui->sel_col == 0) { row1_off = MINUS0_X + 1; row1_len = 3; }
+  else if (row1_sel && ui->sel_col == 1) { row1_off = MINUS1_X + 1; row1_len = 4; }
+  else { row1_off = -1; row1_len = 0; }
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, row1_off, row1_len);
 
   bool row2_sel = ui->sel_row == 2;
-  snprintf(line, sizeof line, "%-7s-%3d+   %-5s-%3d+", "uturn", ui->scene->uturn_chance, "fish", current_fish_value(ui->scene));
+  snprintf(line, sizeof line, "%-7s-%3d+  %-6s-%4d+", "uturn", ui->scene->uturn_chance, "fish", current_fish_value(ui->scene));
   int row2_off, row2_len;
   if (row2_sel && ui->sel_col == 0) { row2_off = MINUS0_X + 1; row2_len = 3; }
-  else if (row2_sel && ui->sel_col == 1) { row2_off = MINUS1_X + 1; row2_len = 3; }
+  else if (row2_sel && ui->sel_col == 1) { row2_off = MINUS1_X + 1; row2_len = 4; }
   else { row2_off = -1; row2_len = 0; }
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(2), line, row2_off, row2_len);
 
