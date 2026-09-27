@@ -3,6 +3,7 @@
 
 #define TOOL_NAME "underthec"
 #define TOOL_DISPLAY_NAME "Under The C"
+#define TOOL_SCREENSAVER_NAME "Under The C screensaver"
 
 #define TOOL_WIDEN_(x) L##x
 #define TOOL_WIDEN(x) TOOL_WIDEN_(x)
