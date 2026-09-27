@@ -79,11 +79,9 @@ static void compute_wh(struct entity *e) {
   ascii_rows rows = entity_shape(e);
   int w = 0;
   int h = 0;
-  if (rows != NULL) {
-    for (; rows[h] != NULL; h++) {
-      int len = utf8_col_width(rows[h]);
-      if (len > w) w = len;
-    }
+  if (rows != NULL) for (; rows[h] != NULL; h++) {
+    int len = utf8_col_width(rows[h]);
+    if (len > w) w = len;
   }
   e->cached_w = w;
   e->cached_h = h;

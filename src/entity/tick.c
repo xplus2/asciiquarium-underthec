@@ -75,18 +75,18 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
     e->prev_y = e->y;
     e->has_prev = true;
     switch (e->type) {
-      case ENT_SUBMARINE:      tick_submarine(e, term_w);   break;
+      case ENT_SUBMARINE:      tick_submarine(e, term_w);       break;
       case ENT_LASER:
       case ENT_FISHHOOK:
       case ENT_KAIJU_TIMER:
       case ENT_RANDOM_OBJECT_TIMER:
       case ENT_FLAKE:
-      case ENT_CASTLE_DOOR:                                 break;
+      case ENT_CASTLE_DOOR:                                     break;
       case ENT_DOLPHIN:        tick_dolphin(e);
-                               advance_frame(e);            break;
+                               advance_frame(e);                break;
       case ENT_JELLYFISH:
       case ENT_SEAHORSE:       tick_bob(e, term_h);
-                               advance_frame(e);            break;
+                               advance_frame(e);                break;
       case ENT_WATERLINE:
       case ENT_CASTLE:
       case ENT_FISH:
@@ -107,12 +107,12 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       case ENT_SAILBOAT:
       case ENT_CRAB:           e->x += e->vx;
                                e->y += e->vy;
-                               advance_frame(e);            break;
+                               advance_frame(e);                break;
       case ENT_SEAWEED:        tick_seaweed_growth(e);
-                               advance_frame(e);            break;
-      case ENT_SEAWEED_DEBRIS: tick_seaweed_debris(e, term_h); break;
+                               advance_frame(e);                break;
+      case ENT_SEAWEED_DEBRIS: tick_seaweed_debris(e, term_h);  break;
       case ENT_ROWERS:         tick_rowers(e);
-                               advance_frame(e);            break;
+                               advance_frame(e);                break;
     }
     if (e->type == ENT_CASTLE && e->frame_cur == e->frame_count - 1) e->frame_interval = 0.0;
     if (e->die_frame >= 0) {

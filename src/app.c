@@ -30,7 +30,7 @@ void app_resize(struct app *a, int w, int h) {
 
 void app_key(struct app *a, int key) {
   if (key == 'r') scene_reset(&a->scene, a->w, a->h);
-  if (key == 'p') a->paused = !a->paused;
+  if (key == 'p' || (key == ' ' && !settings_ui_is_open(&a->settings))) a->paused = !a->paused;
   if (key == 'f') app_feed(a, FEED_COL_AUTO);
   if (key == 's') {
     if (help_ui_is_open(&a->help)) help_ui_close(&a->help);

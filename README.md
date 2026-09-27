@@ -131,17 +131,19 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 
 ### Key bindings
 
-| Key | Action                                                                   |
-|-----|--------------------------------------------------------------------------|
-| `f` | Feed: drop flakes for the fish                                           |
-| `h` | Help about keys                                                          |
-| `p` | Pause / resume                                                           |
-| `r` | Redraw (recreate everything with fresh random positions)                 |
-| `s` | Settings. Arrow to move the selector, `+`/`-`/`[space]` to make changes  |
-| `t` | Toggle background transparency                                           |
-| `q` | Quit (`^C` works too)                                                    |
+| Key | Alternative | Action                         |
+|-----|----------------------------------------------|
+| `f` |  SIGUSR1    | Feed: drop flakes for the fish |
+| `h` |             | Help                           |
+| `p` | `[space]`   | Pause / resume                 |
+| `r` |             | Redraw                         |
+| `s` |             | Open settings                  |
+| `t` |             | Toggle background transparency |
+| `q` | `^C`        | Quit                           |
 
-`SIGUSR1` also triggers a feed.
+In the settings dialog, the arrow keys are used to select a setting, 
+`+`, `-` or `[space]` make changes. While the settings dialog is shown,
+`[space]` does not pause/resume.
 
 ## Credits
 

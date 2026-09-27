@@ -386,7 +386,7 @@ void add_message(struct scene *sc, int w, int h) {
 
   switch (sc->message_position) {
     case MSG_POS_EVENT:
-      break; /* spawned via spawn_message_event, part of the random-object rotation */
+      break;
     case MSG_POS_CENTER:
       spawn_message_entity(sc, (w - block_w) / 2, message_surface_y(rows));
       break;

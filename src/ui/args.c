@@ -1,6 +1,5 @@
 #include "args.h"
 #include "cli_help.h"
-
 #include "../color.h"
 #include "../opts.h"
 #include "../version.h"

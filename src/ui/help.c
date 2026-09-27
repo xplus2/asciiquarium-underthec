@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#define CONTENT_W 20
+#define CONTENT_W 24
 #define CONTENT_H 10
 #define MARGIN 1
 #define BOX_W (CONTENT_W + 2 * MARGIN)
@@ -47,12 +47,12 @@ void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   draw_row_text(c, MARGIN, y++, line, TITLE_ATTR);
   y++;
   draw_row_text(c, MARGIN, y++, "keys:", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  f   feed the fish", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  h   toggle help", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  p   pause/resume", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  q   quit", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  r   redraw", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  s   settings", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  t   transparency", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  f         feed", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  h         help", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  p [space] pause", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  q Ctrl+c  quit", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  r         redraw", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  s         settings", BOX_ATTR);
+  draw_row_text(c, MARGIN, y++, "  t         transparency", BOX_ATTR);
   y++;
 }

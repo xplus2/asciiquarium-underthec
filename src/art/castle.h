@@ -4,37 +4,37 @@
 #include "../sprite.h"
 
 static const char *const castle_image[] = {
-	"               T~~",
-	"               |",
-	"              /^\\",
-	"             /   \\",
-	" _   _   _  /     \\  _   _   _",
-	"[ ]_[ ]_[ ]/ _   _ \\[ ]_[ ]_[ ]",
-	"|_=__-_ =_|_[ ]_[ ]_|_=-___-__|",
-	" | _- =  | =_ = _    |= _=   |",
-	" |= -[]  |- = _ =    |_-=[]  |",
-	" | =_    |= - ___    | =_ =  |",
-	" |=  []- |-  /| |\\   |=_ []  |",
-	" |- =_   | =|=|=|=|  |- = -  |",
-	" |_______|__|_|_|_|__|_______|",
-	NULL
+  "               T~~",
+  "               |",
+  "              /^\\",
+  "             /   \\",
+  " _   _   _  /     \\  _   _   _",
+  "[ ]_[ ]_[ ]/ _   _ \\[ ]_[ ]_[ ]",
+  "|_=__-_ =_|_[ ]_[ ]_|_=-___-__|",
+  " | _- =  | =_ = _    |= _=   |",
+  " |= -[]  |- = _ =    |_-=[]  |",
+  " | =_    |= - ___    | =_ =  |",
+  " |=  []- |-  /| |\\   |=_ []  |",
+  " |- =_   | =|=|=|=|  |- = -  |",
+  " |_______|__|_|_|_|__|_______|",
+  NULL
 };
 
 static const char *const castle_mask[] = {
-	"               wRR",
-	"               w",
-	"              rrr",
-	"             r   r",
-	"            r     r",
-	"           r       r",
-	"",
-	"",
-	"",
-	"              yyy",
-	"             yy yy",
-	"            yyyyyyy",
-	"            yyyyyyy",
-	NULL
+  "               wRR",
+  "               w",
+  "              rrr",
+  "             r   r",
+  "            r     r",
+  "           r       r",
+  "",
+  "",
+  "",
+  "              yyy",
+  "             yy yy",
+  "            yyyyyyy",
+  "            yyyyyyy",
+  NULL
 };
 
 static const struct sprite_pair castle = { castle_image, castle_mask };
@@ -63,27 +63,27 @@ static const char *const door_lift_3_mask[] = { "yyCCy", "yyyyy", "yyyyy", NULL 
 #define CASTLE_DOOR_OPEN_STEP 6
 
 static const struct sprite_pair castle_door_frames[CASTLE_DOOR_STEPS] = {
-	{ door_bars_2, door_mask },
-	{ door_bars_1, door_mask },
-	{ door_bars_0, door_mask },
-	{ door_lift_1, door_lift_1_mask },
-	{ door_lift_2, door_lift_2_mask },
-	{ door_lift_3, door_lift_3_mask },
-	{ door_open, door_mask },
-	{ door_drop_1, door_mask },
-	{ door_drop_2, door_mask },
-	{ door_bars_0, door_mask },
-	{ door_bars_1, door_mask },
-	{ door_bars_2, door_mask },
+  { door_bars_2, door_mask },
+  { door_bars_1, door_mask },
+  { door_bars_0, door_mask },
+  { door_lift_1, door_lift_1_mask },
+  { door_lift_2, door_lift_2_mask },
+  { door_lift_3, door_lift_3_mask },
+  { door_open, door_mask },
+  { door_drop_1, door_mask },
+  { door_drop_2, door_mask },
+  { door_bars_0, door_mask },
+  { door_bars_1, door_mask },
+  { door_bars_2, door_mask },
 };
 
 static const char *const rubble_image[] = {
-	"    ,   .     o   .      ,",
-	" __/|_  / \\   _|_  /\\   __|\\__",
-	"[_/=\\_]\\_/\\ [_=_]\\/[_/=\\_/]",
-	" |_-_|   '   |_-_|   '   |_-_|",
-	"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-	NULL
+  "    ,   .     o   .      ,",
+  " __/|_  / \\   _|_  /\\   __|\\__",
+  "[_/=\\_]\\_/\\ [_=_]\\/[_/=\\_/]",
+  " |_-_|   '   |_-_|   '   |_-_|",
+  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  NULL
 };
 
 static const struct sprite_pair rubble = { rubble_image, NULL };

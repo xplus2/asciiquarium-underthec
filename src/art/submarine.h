@@ -285,8 +285,16 @@ static const char *const submarine_mask_1[] = {
 
 /* one mask per direction, reused across all 9 periscope frames */
 static const struct sprite_pair submarine[2][9] = {
-	{ { submarine_image_0_0, submarine_mask_0 }, { submarine_image_0_1, submarine_mask_0 }, { submarine_image_0_2, submarine_mask_0 }, { submarine_image_0_3, submarine_mask_0 }, { submarine_image_0_4, submarine_mask_0 }, { submarine_image_0_5, submarine_mask_0 }, { submarine_image_0_6, submarine_mask_0 }, { submarine_image_0_7, submarine_mask_0 }, { submarine_image_0_8, submarine_mask_0 } },
-	{ { submarine_image_1_0, submarine_mask_1 }, { submarine_image_1_1, submarine_mask_1 }, { submarine_image_1_2, submarine_mask_1 }, { submarine_image_1_3, submarine_mask_1 }, { submarine_image_1_4, submarine_mask_1 }, { submarine_image_1_5, submarine_mask_1 }, { submarine_image_1_6, submarine_mask_1 }, { submarine_image_1_7, submarine_mask_1 }, { submarine_image_1_8, submarine_mask_1 } },
+  {
+    { submarine_image_0_0, submarine_mask_0 }, { submarine_image_0_1, submarine_mask_0 }, { submarine_image_0_2, submarine_mask_0 },
+    { submarine_image_0_3, submarine_mask_0 }, { submarine_image_0_4, submarine_mask_0 }, { submarine_image_0_5, submarine_mask_0 },
+    { submarine_image_0_6, submarine_mask_0 }, { submarine_image_0_7, submarine_mask_0 }, { submarine_image_0_8, submarine_mask_0 }
+  },
+  {
+    { submarine_image_1_0, submarine_mask_1 }, { submarine_image_1_1, submarine_mask_1 }, { submarine_image_1_2, submarine_mask_1 },
+    { submarine_image_1_3, submarine_mask_1 }, { submarine_image_1_4, submarine_mask_1 }, { submarine_image_1_5, submarine_mask_1 },
+    { submarine_image_1_6, submarine_mask_1 }, { submarine_image_1_7, submarine_mask_1 }, { submarine_image_1_8, submarine_mask_1 }
+  },
 };
 
 #endif

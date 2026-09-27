@@ -77,7 +77,6 @@ static bool find_kaiju_eye(const struct entity *kaiju_ent, int *row_out, int *co
 
 static void update_laser_shape(struct entity *e, int length) {
   if (length < 1) length = 1;
-
   if (e->owned_shape_rows != NULL) {
     char *row = e->owned_shape_rows[0][0];
     size_t old_len = strlen(row);
@@ -205,7 +204,6 @@ static void handle_castle_reveal(struct scene *sc) {
     }
   }
   if (!leaving) return;
-
   for (int i = 0; i < sc->entities.count; i++) {
     if (sc->entities.items[i].type == ENT_RUBBLE) sc->entities.items[i].marked_dead = true;
   }

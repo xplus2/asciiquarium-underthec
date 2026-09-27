@@ -68,7 +68,6 @@ bool entity_glyph_overlap(struct entity *a, struct entity *b) {
   int ay = round_to_int(a->y);
   int bx = round_to_int(b->x);
   int by = round_to_int(b->y);
-
   int x0 = ax > bx ? ax : bx;
   int x1 = (ax + aw) < (bx + bw) ? (ax + aw) : (bx + bw);
   int y0 = ay > by ? ay : by;
