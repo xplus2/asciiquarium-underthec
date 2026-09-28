@@ -3,28 +3,6 @@
 
 #include "../sprite.h"
 
-static const char *const whale_mask_0[] = {
-  "             C C",
-  "           CCCCCCC",
-  "           C  C  C",
-  "        BBBBBBB",
-  "      BB       BB",
-  "B    B       BWB B",
-  "BBBBB          BBBB",
-  NULL
-};
-
-static const char *const whale_mask_1[] = {
-  "   C C",
-  " CCCCCCC",
-  " C  C  C",
-  "    BBBBBBB",
-  "  BB       BB",
-  " B BWB       B    B",
-  "BBBB          BBBBB",
-  NULL
-};
-
 static const char *const whale_frame_0_0[] = {
   "",
   "",
@@ -286,6 +264,28 @@ static const char *const whale_frame_1_11[] = {
   "  .'       `.",
   " / (o)       \\\?\?\?\?,",
   "(__,          \\_.'/",
+  NULL
+};
+
+static const char *const whale_mask_0[] = {
+  "             C C",
+  "           CCCCCCC",
+  "           C  C  C",
+  "        BBBBBBB",
+  "      BB       BB",
+  "B    B       BWB B",
+  "BBBBB          BBBB",
+  NULL
+};
+
+static const char *const whale_mask_1[] = {
+  "   C C",
+  " CCCCCCC",
+  " C  C  C",
+  "    BBBBBBB",
+  "  BB       BB",
+  " B BWB       B    B",
+  "BBBB          BBBBB",
   NULL
 };
 

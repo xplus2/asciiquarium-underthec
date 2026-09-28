@@ -1,9 +1,9 @@
 #include "settings.h"
 #include "../color.h"
+#include "../opts.h"
 #include "../target/terminal/term.h"
 
 #include <stddef.h>
-#include <stdio.h>
 #include <string.h>
 
 enum field_kind { FIELD_NONE, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
@@ -31,8 +31,8 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_SPECIES, "fishhook", SP(fishhook)},   {FIELD_SPECIES, "submarine", SP(submarine)}},
 {{FIELD_SPECIES, "jellyfish", SP(jellyfish)}, {FIELD_SPECIES, "swan", SP(swan)}},
 {{FIELD_SPECIES, "kaiju", SP(kaiju)},         {FIELD_SPECIES, "swordfish", SP(swordfish)}},
-{{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "whale", SP(whale)}},
-{{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_NONE, NULL, 0}},
+{{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "turtle", SP(turtle)}},
+{{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_SPECIES, "whale", SP(whale)}},
 {{FIELD_CASTLE, "castle", 0},                 {FIELD_NONE, NULL, 0}},
 };
 
@@ -63,7 +63,7 @@ static int clampi(int v, int lo, int hi) {
   return v;
 }
 
-static const int COLORS_MODES[] = {1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52, 62, 72, 7, 16};
+static const int COLORS_MODES[] = {1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52, 62, 72, 4, 7, 8, 108, 16};
 #define COLORS_MODES_N (int)(sizeof(COLORS_MODES) / sizeof(COLORS_MODES[0]))
 
 static int colors_mode_index(int mode) {
@@ -74,10 +74,20 @@ static int colors_mode_index(int mode) {
 static void colors_mode_label(int mode, char *out, size_t out_cap) {
   int base, accent_id;
   color_mode_decode(mode, &base, &accent_id);
-  if (accent_id != 0) { snprintf(out, out_cap, "  %d-%s", base, color_accent_names[accent_id - 1]); return; }
+  if (accent_id != 0) {
+    size_t p = 0;
+    opts_append_bounded(out, out_cap - 1, &p, "  ");
+    opts_append_int_bounded(out, out_cap - 1, &p, base, 0);
+    opts_append_bounded(out, out_cap - 1, &p, "-");
+    opts_append_bounded(out, out_cap - 1, &p, color_accent_names[accent_id - 1]);
+    out[p] = '\0';
+    return;
+  }
+  if (mode == 4) { memcpy(out, "  4 (RGBW)", sizeof "  4 (RGBW)"); return; }
   if (mode == 7) { memcpy(out, "  7 (Teletext)", sizeof "  7 (Teletext)"); return; }
+  if (mode == 108) { memcpy(out, "  8-bold", sizeof "  8-bold"); return; }
   if (mode == 16) { memcpy(out, " 16 (ANSI)", sizeof " 16 (ANSI)"); return; }
-  snprintf(out, out_cap, "  %d", mode);
+  { size_t p = 0; opts_append_bounded(out, out_cap - 1, &p, "  "); opts_append_int_bounded(out, out_cap - 1, &p, mode, 0); out[p] = '\0'; }
 }
 
 static double clampd(double v, double lo, double hi) {
@@ -143,7 +153,7 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
   const struct grid_cell *cell = &grid[ui->sel_row][ui->sel_col];
   switch (cell->kind) {
     case FIELD_FPS:
-      *ui->fps = clampi(*ui->fps + dir, 1, 144);
+      *ui->fps = clampi(*ui->fps + dir, 1, 240);
       break;
     case FIELD_PACE: {
       int tenths = (int)(*ui->pace * 10.0 + (*ui->pace >= 0 ? 0.5 : -0.5)) + dir;
@@ -245,11 +255,29 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
 
   char colors_label[15];
   colors_mode_label(*ui->colors_mode, colors_label, sizeof colors_label);
-  snprintf(line, sizeof line, "%-7s-%-17s+", "colors", colors_label);
+  {
+    size_t p = 0;
+    opts_append_bounded_w(line, sizeof line - 1, &p, "colors", 7);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    opts_append_bounded_w(line, sizeof line - 1, &p, colors_label, 17);
+    opts_append_bounded(line, sizeof line - 1, &p, "+");
+    line[p] = '\0';
+  }
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, ui->sel_row == 0 ? MINUS0_X + 1 : -1, ui->sel_row == 0 ? 17 : 0);
 
   bool row1_sel = ui->sel_row == 1;
-  snprintf(line, sizeof line, "%-7s-%3d+  %-6s-%4.1f+", "fps", *ui->fps, "pace", *ui->pace);
+  {
+    size_t p = 0;
+    opts_append_bounded_w(line, sizeof line - 1, &p, "fps", 7);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    opts_append_int_bounded(line, sizeof line - 1, &p, *ui->fps, 3);
+    opts_append_bounded(line, sizeof line - 1, &p, "+  ");
+    opts_append_bounded_w(line, sizeof line - 1, &p, "pace", 6);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    opts_append_float_bounded(line, sizeof line - 1, &p, *ui->pace, 4, 1);
+    opts_append_bounded(line, sizeof line - 1, &p, "+");
+    line[p] = '\0';
+  }
   int row1_off, row1_len;
   if (row1_sel && ui->sel_col == 0) { row1_off = MINUS0_X + 1; row1_len = 3; }
   else if (row1_sel && ui->sel_col == 1) { row1_off = MINUS1_X + 1; row1_len = 4; }
@@ -257,7 +285,18 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, row1_off, row1_len);
 
   bool row2_sel = ui->sel_row == 2;
-  snprintf(line, sizeof line, "%-7s-%3d+  %-6s-%4d+", "uturn", ui->scene->uturn_chance, "fish", current_fish_value(ui->scene));
+  {
+    size_t p = 0;
+    opts_append_bounded_w(line, sizeof line - 1, &p, "uturn", 7);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    opts_append_int_bounded(line, sizeof line - 1, &p, ui->scene->uturn_chance, 3);
+    opts_append_bounded(line, sizeof line - 1, &p, "+  ");
+    opts_append_bounded_w(line, sizeof line - 1, &p, "fish", 6);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    opts_append_int_bounded(line, sizeof line - 1, &p, current_fish_value(ui->scene), 4);
+    opts_append_bounded(line, sizeof line - 1, &p, "+");
+    line[p] = '\0';
+  }
   int row2_off, row2_len;
   if (row2_sel && ui->sel_col == 0) { row2_off = MINUS0_X + 1; row2_len = 3; }
   else if (row2_sel && ui->sel_col == 1) { row2_off = MINUS1_X + 1; row2_len = 4; }
@@ -271,7 +310,14 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
       if (cell->kind == FIELD_NONE) continue;
       bool on = cell->kind == FIELD_CASTLE ? ui->scene->castle : *species_field(&ui->scene->aquatic, cell->species_offset);
       char buf[16];
-      snprintf(buf, sizeof buf, "[%c] %s", on ? 'x' : ' ', cell->label);
+      {
+        size_t p = 0;
+        opts_append_bounded(buf, sizeof buf - 1, &p, "[");
+        opts_append_char_bounded(buf, sizeof buf - 1, &p, on ? 'x' : ' ');
+        opts_append_bounded(buf, sizeof buf - 1, &p, "] ");
+        opts_append_bounded(buf, sizeof buf - 1, &p, cell->label);
+        buf[p] = '\0';
+      }
       bool sel = ui->sel_row == lr && ui->sel_col == col;
       draw_row_text(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, sel ? 0 : -1, sel ? 3 : 0);
     }

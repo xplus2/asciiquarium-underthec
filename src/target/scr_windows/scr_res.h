@@ -23,6 +23,6 @@
 
 /* creature features */
 #define IDC_FLAG0 1100
-#define SCR_FLAG_SLOTS 17
+#define SCR_FLAG_SLOTS 18
 
 #endif

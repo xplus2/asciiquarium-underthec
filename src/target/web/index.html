@@ -10,41 +10,55 @@
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
     canvas { display: block; }
     pre { margin: 16px; color: #c0c0c0; font: 16px monospace; white-space: pre-wrap; }
+    #settings-gear {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      background: none;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #settings-gear svg { width: 100%; height: 100%; fill: #808080; transition: fill .15s ease; }
+    #settings-gear:hover svg { fill: #fff; }
+    #settings-gear[hidden] { display: none; }
   </style>
 </head>
 <body>
 <canvas id="tank"></canvas>
+<button id="settings-gear" type="button" title="Settings" aria-label="Settings">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.61.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.58-.22 1.13-.54 1.63-.94l2.39.96c.24.1.47.02.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+  </svg>
+</button>
 <pre id="error" hidden></pre>
 <script src="underthec.js"></script>
 <script>
 "use strict";
 /* [long, short], long wins */
 const OPTIONS = [
-  ["classic", "c"],
-  ["aquatic-life", "a"],
-  ["message", "m"],
-  ["message-color", "M"],
+  ["classic",          "c"],
+  ["aquatic-life",     "a"],
+  ["message",          "m"],
+  ["message-color",    "M"],
   ["message-position", "P"],
-  ["pace", "p"],
-  ["uturn-chance", "u"],
-  ["colors", "C"],
-  ["fps", "f"],
-  ["castle-name", "n"],
+  ["pace",             "p"],
+  ["uturn-chance",     "u"],
+  ["colors",           "C"],
+  ["fps",              "f"],
+  ["castle-name",      "n"],
 ];
 const FONT_PX = 16;
 const FONT = FONT_PX + "px monospace";
 const FONT_BOLD = "bold " + FONT;
 /* index: enum color. [normal, bold]. bg: [40-47, 100-107] */
 const PALETTE = [
-  ["#c0c0c0", "#ffffff"],
-  ["#000000", "#808080"],
-  ["#c00000", "#ff5555"],
-  ["#00c000", "#55ff55"],
-  ["#c0c000", "#ffff55"],
-  ["#0000c0", "#5555ff"],
-  ["#c000c0", "#ff55ff"],
-  ["#00c0c0", "#55ffff"],
-  ["#c0c0c0", "#ffffff"],
+  ["#c0c0c0", "#ffffff"], ["#000000", "#808080"], ["#c00000", "#ff5555"],
+  ["#00c000", "#55ff55"], ["#c0c000", "#ffff55"], ["#0000c0", "#5555ff"],
+  ["#c000c0", "#ff55ff"], ["#00c0c0", "#55ffff"], ["#c0c0c0", "#ffffff"],
 ];
 
 /* TERM_KEY_* in term.h */
@@ -52,10 +66,13 @@ const KEYS = { ArrowUp: -2, ArrowDown: -3, ArrowLeft: -4, ArrowRight: -5, Escape
 
 const canvas = document.getElementById("tank");
 const ctx = canvas.getContext("2d");
+const gear = document.getElementById("settings-gear");
 let cellW = 0;
 let cellH = 0;
 let cols = 0;
 let rows = 0;
+
+const SETTINGS_KEY = "s".charCodeAt(0);
 
 function measure() {
   ctx.font = FONT;
@@ -79,8 +96,6 @@ function layout(M) {
   rows = M._web_height();
 }
 
-/* full repaint: glyph overhang would leave stale pixels with per-cell diffing */
-/* cell: codepoint << 10 | bg_bold << 9 | bg << 5 | color << 1 | bold. codepoint 0 = wide glyph tail */
 function present(M, ptr) {
   const cells = M.HEAPU32.subarray(ptr >>> 2, (ptr >>> 2) + cols * rows);
   ctx.fillStyle = "#000";
@@ -135,7 +150,11 @@ underthec().then((M) => {
     showError(e);
     return;
   }
+  function syncGear() {
+    gear.hidden = !!M._web_settings_open();
+  }
   layout(M);
+  syncGear();
   window.addEventListener("resize", () => layout(M));
   window.addEventListener("keydown", (e) => {
     let key = KEYS[e.key];
@@ -143,8 +162,16 @@ underthec().then((M) => {
     if (key === undefined) return;
     if (key < 0 || e.key === " ") e.preventDefault();
     M._web_key(key);
+    syncGear();
   });
-  canvas.addEventListener("pointerdown", (e) => M._web_click(Math.floor(e.offsetX / cellW), Math.floor(e.offsetY / cellH)));
+  gear.addEventListener("click", () => {
+    M._web_key(SETTINGS_KEY);
+    syncGear();
+  });
+  canvas.addEventListener("pointerdown", (e) => {
+    M._web_click(Math.floor(e.offsetX / cellW), Math.floor(e.offsetY / cellH));
+    syncGear();
+  });
   let next = performance.now();
   function tick(now) {
     if (now >= next) {

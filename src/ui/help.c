@@ -1,8 +1,9 @@
 #include "help.h"
 #include "../color.h"
+#include "../opts.h"
 #include "../version.h"
 
-#include <stdio.h>
+#include <stddef.h>
 
 #define CONTENT_W 24
 #define CONTENT_H 10
@@ -43,7 +44,10 @@ void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
 
   char line[CONTENT_W + 1];
   int y = MARGIN;
-  snprintf(line, sizeof line, TOOL_DISPLAY_NAME " v%s", TOOL_VERSION);
+  size_t line_pos = 0;
+  opts_append_bounded(line, sizeof line - 1, &line_pos, TOOL_DISPLAY_NAME " v");
+  opts_append_bounded(line, sizeof line - 1, &line_pos, TOOL_VERSION);
+  line[line_pos] = '\0';
   draw_row_text(c, MARGIN, y++, line, TITLE_ATTR);
   y++;
   draw_row_text(c, MARGIN, y++, "keys:", BOX_ATTR);

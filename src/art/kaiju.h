@@ -13,7 +13,7 @@ static const char *const kaiju_image_0[] = {
   " / }\\/       \\  \\\\",
   "{ {_/  }      ww|w",
   " \\    /   }\\    }",
-  "  '~^\\vvvV} \\Vvvv}",
+  "  '~^\\vvvV}\?\\Vvvv}",
   NULL
 };
 
@@ -41,7 +41,7 @@ static const char *const kaiju_image_1[] = {
   " //  /       \\/{ \\",
   " w|ww       { \\_} }",
   "  {    /{    \\   /",
-  " {vvvV/ {Vvvv/^~'",
+  " {vvvV/\?{Vvvv/^~'",
   NULL
 };
 

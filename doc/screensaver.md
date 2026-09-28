@@ -43,3 +43,23 @@ cmake --build build-win
 `underthec.scr` is a native Windows multi-monitor screensaver.
 Right-click it and choose "Install", or copy it to `%windir%\System32`,
 then select it in the screensaver settings.
+
+## vlock screen locker plugin
+> Linux (virtual) consoles only.
+
+### Building it
+`cmake -B build && cmake --build build` also builds `underthec.so`, a vlock plugin module.
+You can override the installation path like this: 
+`cmake -B build -DUNDERTHEC_VLOCK_MODULEDIR=/usr/lib/vlock/modules` or 
+`./configure --vlock-moduledir=DIR`
+
+### Installation
+`cmake --install build` (or `make install`) copies `underthec.so` into
+the configured module directory. vlock must have been built with plugin support (enabled on most distros).
+
+### Usage
+Run vlock with an idle timeout and the plugin name: `vlock -t 10 underthec`
+
+### Configuration
+Environment variables (see [README.md](../README.md) for a list) do the job and can also be set/exported
+in `~/.vlockrc`.

@@ -38,7 +38,9 @@ enum entity_type {
   ENT_CASTLE_DOOR,
   ENT_SEAWEED_DEBRIS,
   ENT_ROWERS,
-  ENT_SAILBOAT
+  ENT_SAILBOAT,
+  ENT_TURTLE,
+  ENT_TURTLE_TIMER
 };
 
 enum death_action {
@@ -50,7 +52,8 @@ enum death_action {
   DEATH_SHARK,
   DEATH_ADD_KAIJU_COOLDOWN,
   DEATH_ADD_RANDOM_OBJECT,
-  DEATH_ADD_MESSAGE
+  DEATH_ADD_MESSAGE,
+  DEATH_ADD_TURTLE
 };
 
 enum turn_state {
@@ -96,6 +99,7 @@ struct entity {
   double splat_x;
   double splat_y;
   int splat_z;
+  double fishhook_wait;
 
   enum turn_state turn_state;
   int turn_step;

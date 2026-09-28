@@ -4,7 +4,6 @@
 #include "../../version.h"
 #include "../../xalloc.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,12 +25,12 @@ static const char *const classic_items[] = {"off", "1.0", "1.1"};
 static const char *const colors_items[] = {
   "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
   "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
-  "7", "16",
+  "4", "7", "8", "8-bold", "16",
 };
 static const char *const colors_labels[] = {
   " 1", " 1-green", " 1-red", " 1-blue", " 1-yellow", " 1-magenta", " 1-cyan", " 1-white",
   " 2", " 2-green", " 2-red", " 2-blue", " 2-yellow", " 2-magenta", " 2-cyan", " 2-white",
-  " 7 (Teletext)", "16 (ANSI)",
+  " 4 (RGBW)", " 7 (Teletext)", " 8", " 8-bold", "16 (ANSI)",
 };
 static const char *const color_items[] = {
   "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
@@ -185,7 +184,7 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   SendDlgItemMessageW(dlg, IDC_CLASSIC, CB_SETCURSEL, (WPARAM)cfg->classic_ver, 0);
   bool fish_auto = cfg->aquatic.fish_count < 0;
   CheckDlgButton(dlg, IDC_FISH_AUTO, fish_auto ? BST_CHECKED : BST_UNCHECKED);
-  snprintf(buf, sizeof buf, "%d", fish_auto ? 0 : cfg->aquatic.fish_count);
+  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, fish_auto ? 0 : cfg->aquatic.fish_count, 0); buf[p] = '\0'; }
   item_set_text(dlg, IDC_FISH, fish_auto ? "" : buf);
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) {
     bool on = *scene_aquatic_flag(&cfg->aquatic, i);
@@ -202,14 +201,14 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   CheckDlgButton(dlg, IDC_CASTLE_ENABLED, cfg->no_castle ? BST_UNCHECKED : BST_CHECKED);
   item_set_text(dlg, IDC_CASTLE_NAME, cfg->castle_name != NULL ? cfg->castle_name : "");
   castle_update_enabled(dlg);
-  snprintf(buf, sizeof buf, "%.2f", cfg->pace);
+  { size_t p = 0; opts_append_float_bounded(buf, sizeof buf - 1, &p, cfg->pace, 0, 2); buf[p] = '\0'; }
   char *end = buf + strlen(buf);
   while (end[-1] == '0') *--end = '\0';
   if (end[-1] == '.') end[-1] = '\0';
   item_set_text(dlg, IDC_PACE, buf);
-  snprintf(buf, sizeof buf, "%d", cfg->fps);
+  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->fps, 0); buf[p] = '\0'; }
   item_set_text(dlg, IDC_FPS, buf);
-  snprintf(buf, sizeof buf, "%d", cfg->uturn_chance);
+  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->uturn_chance, 0); buf[p] = '\0'; }
   item_set_text(dlg, IDC_UTURN, buf);
   SendDlgItemMessageW(dlg, IDC_COLORS, CB_SETCURSEL, (WPARAM)colors_index(cfg->colors_mode), 0);
   update_enabled(dlg);
@@ -326,7 +325,7 @@ static void show_load_error(HWND dlg) {
   ShowWindow(dlg, SW_SHOW);
   UpdateWindow(dlg);
   char msg[320];
-  snprintf(msg, sizeof msg, "Stored settings are invalid, showing defaults.\n\n%s", load_err);
+  opts_set_errbuf(msg, sizeof msg, (const char *[]){"Stored settings are invalid, showing defaults.\n\n", load_err}, 2);
   WCHAR *w = wide_from_utf8(msg);
   MessageBoxW(dlg, w, TOOL_DISPLAY_NAME_W, MB_OK | MB_ICONWARNING);
   free(w);

@@ -23,18 +23,18 @@ static const char *const sailboat_image_1[] = {
 
 static const char *const sailboat_mask_0[] = {
   "  Yw",
-  "   yb",
-  "  by b",
-  " bwywwb",
+  "   yB",
+  "  By B",
+  " BwywwB",
   "yyyyyyyy",
   NULL
 };
 
 static const char *const sailboat_mask_1[] = {
   "    wY",
-  "   by",
-  "  b yb",
-  " bwwywb",
+  "   By",
+  "  B yB",
+  " BwwywB",
   "yyyyyyyy",
   NULL
 };

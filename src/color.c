@@ -92,6 +92,28 @@ void color_reduce(int colors_mode, enum color *col, bool *bold) {
       }
       *bold = !*bold;
       break;
+    case 4:
+      switch (*col) {
+      case COL_RED: case COL_GREEN: case COL_BLUE: case COL_WHITE:
+        break;
+      case COL_YELLOW:
+        *col = COL_WHITE;
+        break;
+      case COL_MAGENTA:
+        *col = COL_RED;
+        break;
+      case COL_CYAN:
+        *col = COL_BLUE;
+        break;
+      case COL_BLACK:
+        if (*bold) *col = COL_WHITE;
+        break;
+      default:
+        *col = COL_WHITE;
+        break;
+      }
+      *bold = false;
+      break;
     case 7:
       switch (*col) {
       case COL_RED: case COL_GREEN: case COL_YELLOW:
@@ -105,6 +127,12 @@ void color_reduce(int colors_mode, enum color *col, bool *bold) {
         break;
       }
       *bold = false;
+      break;
+    case 8:
+      *bold = false;
+      break;
+    case 108:
+      *bold = true;
       break;
     default:
       break;

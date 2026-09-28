@@ -4,16 +4,16 @@
 #include "../sprite.h"
 
 static const char *const crab_frame_0[] = {
-  " (\\/) (\\/)",
+  " (\\/)\?(\\/)",
   "  \\(..)/",
-  "  /\"  \"\\",
+  "  /\"\?\?\"\\",
   NULL
 };
 
 static const char *const crab_frame_1[] = {
-  "(\\/) (\\/)",
+  "(\\/)\?(\\/)",
   "  \\(..)/",
-  "  /\"  \"\\",
+  "  /\"\?\?\"\\",
   NULL
 };
 

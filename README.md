@@ -11,6 +11,7 @@ Release platforms:
 * Linux
   - Terminal: amd64, arm64, armel, armhf, i386, riscv64
   - XScreensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
+  - vlock plugin: amd64, arm64, armel, armhf, i386, riscv64 (see [doc/screensaver.md](doc/screensaver.md))
 * macOS
   - Terminal: arm64
 * Windows
@@ -35,34 +36,34 @@ From time to time, it is recommended to feed the fish.
 ## Usage
 
 ```sh
-underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|7|16] [-f N] [-m text|-] [-M color] [-P position] [-n text] [--no-castle]
+underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|4|7|8|8-bold|16] [-f N] [-m text|-] [-M color] [-P position] [-n text] [--no-castle]
           [-a definition] [teletext options...]
 underthec {-h|-v}
 ```
 
-| Short | Long                 | Parameter        | Description                           |
-|-------|----------------------|------------------|---------------------------------------|
-| `-a`  | `--aquatic-life`     | `<def>`          | decide what's in (see below)          |
-| `-c`  | `--classic`          | `[1.0\|1.1]`     | Asciiquarium 1.0 / 1.1 modes          |
-| `-m`  | `--message`          | `<text>`         | background `text`. `-` for stdin      |
-| `-M`  | `--message-color`    | `<color>`        | `-m`'s text color (see below)         |
-| `-P`  | `--message-position` | `<pos>`          | `-m`'s placement (see below)          |
-| `-p`  | `--pace`             | `<pace>`         | speed, 0.01-10 (default: 1)           |
-| `-u`  | `--uturn-chance`     | `<N>`            | fish turn chance (default: 1 in 200)  |
-| `-C`  | `--colors`           | `<1\|2\|7\|16>`  | fg colors (default: 16)               |
-| `-f`  | `--fps`              | `<N>`            | render fps, 1-120 (default: 10)       |
-| `-s`  | `--screensaver`      |                  | (terminal) exit on any keypress       |
-| `-t`  | `--transparent`      |                  | transparent background                |
-|       | `--teletext`         | `<t42\|ts>`      | Teletext to stdout (see below)        |
-|       | `--teletext-mode`    | `<text\|mosaic>` | teletext glyphs, default: text        |
-|       | `--mcast`            | `<GROUP:PORT>`   | MPEG-TS teletext multicast group      |
-|       | `--ttl`              | `<N>`            | multicast TTL (default: 1)            |
-|       | `--iface`            | `<if>`           | multicast interface                   |
-|       | `--teletext-caption` | `<text>`         | teletext caption (default: UNDERTHEC) |
-| `-n`  | `--castle-name`      | `<text>`         | text on the castle, max 11 chars      |
-|       | `--no-castle`        |                  | disable the castle                    |
-| `-h`  | `--help`             |                  | show usage                            |
-| `-v`  | `--version`          |                  | show version                          |
+| Short | Long                 | Parameter                     | Description                           |
+|-------|----------------------|-------------------------------|---------------------------------------|
+| `-a`  | `--aquatic-life`     | `<def>`                       | decide what's in (see below)          |
+| `-c`  | `--classic`          | `[1.0\|1.1]`                  | Asciiquarium 1.0 / 1.1 modes          |
+| `-m`  | `--message`          | `<text>`                      | background `text`. `-` for stdin      |
+| `-M`  | `--message-color`    | `<color>`                     | `-m`'s text color (see below)         |
+| `-P`  | `--message-position` | `<pos>`                       | `-m`'s placement (see below)          |
+| `-p`  | `--pace`             | `<pace>`                      | speed, 0.01-10 (default: 1)           |
+| `-u`  | `--uturn-chance`     | `<N>`                         | fish turn chance (default: 1 in 400)  |
+| `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|8-bold\|16>` | fg colors (default: 16)               |
+| `-f`  | `--fps`              | `<N>`                         | render fps, 1-240 (default: 10)       |
+| `-s`  | `--screensaver`      |                               | (terminal) exit on any keypress       |
+| `-t`  | `--transparent`      |                               | transparent background                |
+|       | `--teletext`         | `<t42\|ts>`                   | Teletext to stdout (see below)        |
+|       | `--teletext-mode`    | `<text\|mosaic>`              | teletext glyphs, default: text        |
+|       | `--mcast`            | `<GROUP:PORT>`                | MPEG-TS teletext multicast group      |
+|       | `--ttl`              | `<N>`                         | multicast TTL (default: 1)            |
+|       | `--iface`            | `<if>`                        | multicast interface                   |
+|       | `--teletext-caption` | `<text>`                      | teletext caption (default: UNDERTHEC) |
+| `-n`  | `--castle-name`      | `<text>`                      | text on the castle, max 11 chars      |
+|       | `--no-castle`        |                               | disable the castle                    |
+| `-h`  | `--help`             |                               | show usage                            |
+| `-v`  | `--version`          |                               | show version                          |
 
 ### Classic mode `-c`/`--classic`
 - `-c 1.0` (or bare `-c`): original 1.0 fish/monster look
@@ -74,7 +75,10 @@ Not combinable with `-a`.
 Limit the foreground colors.
 * 1: just white
 * 2: white and gray (ANSI "bold black")
+* 4: RGBW (red, green, blue, white)
 * 7: same as for teletext
+* 8: 8 colors, no bold
+* 8-bold: 8 colors, bold
 * 16: ANSI (default)
 
 `1` and `2` can optionally be suffixed by `-<colorname>` to differ from white. Example: `-C 2-green`. 
@@ -98,7 +102,7 @@ Define what's going on in your asciiquarium. It takes a comma-separated definiti
 - `fish=<N|auto>`: number of fish (default: `auto`, sized to the terminal)
 - flags, present=on, omitted=off: `ducks`, `dolphins`, `ship`, `swan`, `kaiju`, `fishhook`,
   `submarine`, `whale`, `shark`, `jellyfish`, `monster`, `bigfish`, `swordfish`, `crab`,
-  `seahorse`, `rowers`, `sailboat`
+  `seahorse`, `rowers`, `sailboat`, `turtle`
 
 Default (no `-a`): every flag on, `fish=auto`. Example: `-a fish=10,jellyfish,dolphins`
 
@@ -106,28 +110,28 @@ Default (no `-a`): every flag on, `fish=auto`. Example: `-a fish=10,jellyfish,do
 Each mirrors a command-line option.
 If both an env var and its cmdline option are given, the cmdline option wins.
 
-| Variable                               | Mirrors               |
-|----------------------------------------|-----------------------|
-| `UNDERTHEC_FISH=auto\|number`          | `fish=` from `-a`     |
-| `UNDERTHEC_AQUATIC_LIFE=<def>`         | `-a`, except fish     |
-| `UNDERTHEC_CLASSIC=1.0\|1.1`           | `-c`                  |
-| `UNDERTHEC_MESSAGE=<text>`             | `-m`                  |
-| `UNDERTHEC_MESSAGE_COLOR=<color>`      | `-M`                  |
-| `UNDERTHEC_MESSAGE_POSITION=<pos>`     | `-P`                  |
-| `UNDERTHEC_PACE=<pace>`                | `-p`                  |
-| `UNDERTHEC_FPS=<N>`                    | `-f`                  |
-| `UNDERTHEC_SCREENSAVER=0\|1`           | `-s`                  |
-| `UNDERTHEC_UTURN_CHANCE=<N>`           | `-u`                  |
-| `UNDERTHEC_COLORS=<1\|2\|7\|16>`       | `-C`                  |
-| `UNDERTHEC_TRANSPARENT=0\|1`           | `-t`                  |
-| `UNDERTHEC_TELETEXT=t42\|ts`           | `--teletext`          |
-| `UNDERTHEC_TELETEXT_MODE=text\|mosaic` | `--teletext-mode`     |
-| `UNDERTHEC_TELETEXT_CAPTION=<text>`    | `--teletext-caption`  |
-| `UNDERTHEC_MCAST=<GROUP:PORT>`         | `--mcast`             |
-| `UNDERTHEC_MCAST_TTL=<N>`              | `--ttl`               |
-| `UNDERTHEC_MCAST_IFACE=<if>`           | `--iface`             |
-| `UNDERTHEC_CASTLE_NAME=<text>`         | `-n`                  |
-| `UNDERTHEC_NO_CASTLE=0\|1`             | `--no-castle`         |
+| Variable                                       | Mirrors              |
+|------------------------------------------------|----------------------|
+| `UNDERTHEC_FISH=auto\|number`                  | `fish=` from `-a`    |
+| `UNDERTHEC_AQUATIC_LIFE=<def>`                 | `-a`, except fish    |
+| `UNDERTHEC_CLASSIC=1.0\|1.1`                   | `-c`                 |
+| `UNDERTHEC_MESSAGE=<text>`                     | `-m`                 |
+| `UNDERTHEC_MESSAGE_COLOR=<color>`              | `-M`                 |
+| `UNDERTHEC_MESSAGE_POSITION=<pos>`             | `-P`                 |
+| `UNDERTHEC_PACE=<pace>`                        | `-p`                 |
+| `UNDERTHEC_FPS=<N>`                            | `-f`                 |
+| `UNDERTHEC_SCREENSAVER=0\|1`                   | `-s`                 |
+| `UNDERTHEC_UTURN_CHANCE=<N>`                   | `-u`                 |
+| `UNDERTHEC_COLORS=<1\|2\|4\|7\|8\|8-bold\|16>` | `-C`                 |
+| `UNDERTHEC_TRANSPARENT=0\|1`                   | `-t`                 |
+| `UNDERTHEC_TELETEXT=t42\|ts`                   | `--teletext`         |
+| `UNDERTHEC_TELETEXT_MODE=text\|mosaic`         | `--teletext-mode`    |
+| `UNDERTHEC_TELETEXT_CAPTION=<text>`            | `--teletext-caption` |
+| `UNDERTHEC_MCAST=<GROUP:PORT>`                 | `--mcast`            |
+| `UNDERTHEC_MCAST_TTL=<N>`                      | `--ttl`              |
+| `UNDERTHEC_MCAST_IFACE=<if>`                   | `--iface`            |
+| `UNDERTHEC_CASTLE_NAME=<text>`                 | `-n`                 |
+| `UNDERTHEC_NO_CASTLE=0\|1`                     | `--no-castle`        |
 
 ### Key bindings
 

@@ -14,7 +14,7 @@ void config_init(struct config *cfg) {
       .no_castle = false,
       .message_position = MSG_POS_MIDDLE,
       .pace = 1.0,
-      .uturn_chance = 200,
+      .uturn_chance = 400,
       .fps = 10,
       .colors_mode = 16,
   };

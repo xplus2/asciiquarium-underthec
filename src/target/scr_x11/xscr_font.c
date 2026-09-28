@@ -1,9 +1,9 @@
 #include "xscr_font.h"
 
+#include "../../opts.h"
 #include "../../xalloc.h"
 
 #include <locale.h>
-#include <stdio.h>
 #include <string.h>
 
 #ifdef HAVE_XFT
@@ -48,10 +48,14 @@ struct xscr_font {
 static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, size_t err_len) {
   char name[64];
   for (int b = 0; b < 2; b++) {
-    snprintf(name, sizeof name, "monospace:pixelsize=%d%s", font_px, b ? ":style=Bold" : "");
+    size_t p = 0;
+    opts_append_bounded(name, sizeof name - 1, &p, "monospace:pixelsize=");
+    opts_append_int_bounded(name, sizeof name - 1, &p, font_px, 0);
+    opts_append_bounded(name, sizeof name - 1, &p, b ? ":style=Bold" : "");
+    name[p] = '\0';
     f->font[b] = XftFontOpenName(f->dpy, screen, name);
     if (f->font[b] == NULL) {
-      snprintf(err, err_len, "XftFontOpenName failed for '%s'", name);
+      opts_set_errbuf(err, err_len, (const char *[]){"XftFontOpenName failed for '", name, "'"}, 3);
       return false;
     }
   }
@@ -106,6 +110,20 @@ static bool fontset_try(struct xscr_font *f, int b, const char *base, char ***mi
   return f->fontset[b] != NULL;
 }
 
+static void build_xlfd(char *out, size_t out_cap, const char *weight, int font_px) {
+  size_t p = 0;
+  opts_append_bounded(out, out_cap - 1, &p, "-*-*-");
+  opts_append_bounded(out, out_cap - 1, &p, weight);
+  opts_append_bounded(out, out_cap - 1, &p, "-r-normal--");
+  opts_append_int_bounded(out, out_cap - 1, &p, font_px, 0);
+  opts_append_bounded(out, out_cap - 1, &p, "-*-*-*-*-*-iso10646-1,-*-*-");
+  opts_append_bounded(out, out_cap - 1, &p, weight);
+  opts_append_bounded(out, out_cap - 1, &p, "-r-normal--");
+  opts_append_int_bounded(out, out_cap - 1, &p, font_px, 0);
+  opts_append_bounded(out, out_cap - 1, &p, "-*-*-*-*-*-iso8859-1,fixed");
+  out[p] = '\0';
+}
+
 static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, size_t err_len) {
   (void)screen;
   (void)err;
@@ -113,8 +131,8 @@ static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, 
   setlocale(LC_CTYPE, "");
   char normal[256];
   char bold[256];
-  snprintf(normal, sizeof normal, "-*-*-medium-r-normal--%d-*-*-*-*-*-iso10646-1,-*-*-medium-r-normal--%d-*-*-*-*-*-iso8859-1,fixed", font_px, font_px);
-  snprintf(bold, sizeof bold, "-*-*-bold-r-normal--%d-*-*-*-*-*-iso10646-1,-*-*-bold-r-normal--%d-*-*-*-*-*-iso8859-1,fixed", font_px, font_px);
+  build_xlfd(normal, sizeof normal, "medium", font_px);
+  build_xlfd(bold, sizeof bold, "bold", font_px);
   char **missing;
   int nmissing;
   char *def;

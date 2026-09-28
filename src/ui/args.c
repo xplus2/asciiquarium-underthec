@@ -93,7 +93,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   out->no_castle = false;
   out->pace = 1.0;
   out->fps = 10;
-  out->uturn_chance = 200;
+  out->uturn_chance = 400;
   out->colors_mode = 16;
   out->message_arg = NULL;
   out->message_color_arg = NULL;
@@ -101,7 +101,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   out->mcast_arg = NULL;
   out->iface_arg = NULL;
   out->mcast_ttl = 1;
-  snprintf(out->teletext_caption, sizeof(out->teletext_caption), "%s", TT_TITLE);
+  { size_t p = 0; opts_append_bounded(out->teletext_caption, sizeof(out->teletext_caption) - 1, &p, TT_TITLE); out->teletext_caption[p] = '\0'; }
   memset(out->castle_name, 0, sizeof(out->castle_name));
   out->aquatic = scene_aquatic_default();
 

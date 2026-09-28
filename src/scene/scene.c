@@ -18,7 +18,7 @@ static const struct aquatic_flag aquatic_flags[] = {
   AQ_FLAG(fishhook),  AQ_FLAG(jellyfish),AQ_FLAG(kaiju),     AQ_FLAG(monster),
   AQ_FLAG(rowers),    AQ_FLAG(sailboat), AQ_FLAG(seahorse),  AQ_FLAG(shark),
   AQ_FLAG(ship),      AQ_FLAG(submarine),AQ_FLAG(swan),      AQ_FLAG(swordfish),
-  AQ_FLAG(whale),
+  AQ_FLAG(turtle),    AQ_FLAG(whale),
 };
 #define AQUATIC_FLAG_COUNT (sizeof(aquatic_flags) / sizeof(aquatic_flags[0]))
 _Static_assert(AQUATIC_FLAG_COUNT == SCENE_AQUATIC_FLAG_COUNT, "SCENE_AQUATIC_FLAG_COUNT out of sync");
@@ -87,6 +87,7 @@ static void on_death(const struct entity *dead, void *ctx) {
     case DEATH_SHARK:               schedule_random_object_return(sctx->sc);         break;
     case DEATH_ADD_RANDOM_OBJECT:   spawn_random_object(sctx->sc, sctx->w, sctx->h); break;
     case DEATH_ADD_MESSAGE:         add_message(sctx->sc, sctx->w, sctx->h);         break;
+    case DEATH_ADD_TURTLE:          turtle_timer_fire(sctx->sc, sctx->w, sctx->h);   break;
     case DEATH_NONE:
     default:                                                                         break;
   }
@@ -103,7 +104,7 @@ void scene_init(struct scene *sc, bool classic_mode, struct aquatic_life aquatic
   sc->message_frame.mask = NULL;
   sc->message_attr = color_from_name("blue");
   sc->message_position = MSG_POS_MIDDLE;
-  sc->uturn_chance = 200;
+  sc->uturn_chance = 400;
   sc->feed_alerted = true;
 }
 
@@ -124,6 +125,7 @@ void scene_reset(struct scene *sc, int term_w, int term_h) {
   add_all_seaweed(sc, term_w, term_h);
   add_all_fish(sc, term_w, term_h);
   if (sc->aquatic.kaiju) schedule_kaiju_return(sc);
+  if (sc->aquatic.turtle) schedule_turtle_return(sc);
   spawn_random_object(sc, term_w, term_h);
   spawn_jellyfish(sc, term_w, term_h);
 }
@@ -262,6 +264,15 @@ void scene_on_species_toggled(struct scene *sc, int w, int h) {
       if (e->type == ENT_KAIJU) has_live = true;
     }
     if (!has_timer && !has_live) schedule_kaiju_return(sc);
+  }
+
+  if (sc->aquatic.turtle) {
+    bool has_timer = false;
+    for (int i = 0; i < sc->entities.count; i++) {
+      const struct entity *e = &sc->entities.items[i];
+      if (!e->marked_dead && e->type == ENT_TURTLE_TIMER) has_timer = true;
+    }
+    if (!has_timer) schedule_turtle_return(sc);
   }
 
   bool pool_enabled = sc->aquatic.ship || sc->aquatic.whale || sc->aquatic.monster || sc->aquatic.bigfish ||

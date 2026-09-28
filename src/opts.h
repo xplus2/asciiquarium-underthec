@@ -9,6 +9,10 @@
 /* value parsers shared by CLI and web. false: errbuf set */
 
 void opts_append_bounded(char *dst, size_t dst_cap, size_t *pos, const char *src);
+void opts_append_bounded_w(char *dst, size_t dst_cap, size_t *pos, const char *src, int width);
+void opts_append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c);
+void opts_append_int_bounded(char *dst, size_t dst_cap, size_t *pos, long v, int width);
+void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v, int width, int decimals);
 void opts_set_errbuf(char *errbuf, size_t errbuf_len, const char *const *parts, size_t count);
 char *opts_strdup(const char *s);
 
@@ -21,7 +25,7 @@ bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errb
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len);
-/* 1,2,7,16 */
+/* 1,2,4,7,8,8-bold,16 */
 bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len);
 /* out_cap incl NUL, printable ASCII (0x20-0x7E) */

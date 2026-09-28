@@ -14,6 +14,63 @@ void opts_append_bounded(char *dst, size_t dst_cap, size_t *pos, const char *src
   *pos += src_len;
 }
 
+static void append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c) {
+  if (*pos < dst_cap) dst[(*pos)++] = c;
+}
+
+void opts_append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c) {
+  append_char_bounded(dst, dst_cap, pos, c);
+}
+
+void opts_append_bounded_w(char *dst, size_t dst_cap, size_t *pos, const char *src, int width) {
+  size_t start = *pos;
+  opts_append_bounded(dst, dst_cap, pos, src);
+  int written = (int)(*pos - start);
+  for (int i = written; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
+}
+
+static int uint_to_digits(unsigned long v, char *tmp) {
+  int n = 0;
+  do { tmp[n++] = (char)('0' + v % 10); v /= 10; } while (v != 0);
+  return n;
+}
+
+void opts_append_int_bounded(char *dst, size_t dst_cap, size_t *pos, long v, int width) {
+  bool neg = v < 0;
+  unsigned long uv = neg ? (unsigned long)(-v) : (unsigned long)v;
+  char tmp[24];
+  int n = uint_to_digits(uv, tmp);
+  int total = n + (neg ? 1 : 0);
+  for (int i = total; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
+  if (neg) append_char_bounded(dst, dst_cap, pos, '-');
+  while (n > 0) append_char_bounded(dst, dst_cap, pos, tmp[--n]);
+}
+
+void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v, int width, int decimals) {
+  bool neg = v < 0;
+  if (neg) v = -v;
+  unsigned long scale = 1;
+  for (int i = 0; i < decimals; i++) scale *= 10;
+  unsigned long scaled = (unsigned long)(v * (double)scale + 0.5);
+  unsigned long whole = scaled / scale;
+  unsigned long frac = scaled % scale;
+  char body[32];
+  size_t blen = 0;
+  if (neg) body[blen++] = '-';
+  char tmp[24];
+  int n = uint_to_digits(whole, tmp);
+  while (n > 0) body[blen++] = tmp[--n];
+  if (decimals > 0) {
+    body[blen++] = '.';
+    n = uint_to_digits(frac, tmp);
+    for (int i = n; i < decimals; i++) body[blen++] = '0';
+    while (n > 0) body[blen++] = tmp[--n];
+  }
+  body[blen] = '\0';
+  for (int i = (int)blen; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
+  opts_append_bounded(dst, dst_cap, pos, body);
+}
+
 void opts_set_errbuf(char *errbuf, size_t errbuf_len, const char *const *parts, size_t count) {
   if (errbuf_len == 0) return;
   size_t pos = 0;
@@ -114,8 +171,8 @@ bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t err
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   char *endptr = NULL;
   long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || n < 1 || n > 144) {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fps '", val, "', expected 1-144"}, 3);
+  if (val[0] == '\0' || *endptr != '\0' || n < 1 || n > 240) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fps '", val, "', expected 1-240"}, 3);
     return false;
   }
   *out = (int)n;
@@ -125,8 +182,16 @@ bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) 
 bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   const char *dash = strchr(val, '-');
   if (dash != NULL) {
+    if (dash == val + 1 && val[0] == '8') {
+      if (strcasecmp(dash + 1, "bold") == 0) {
+        *out = 108;
+        return true;
+      }
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1, 2 or 8-bold"}, 3);
+      return false;
+    }
     if ((dash != val + 1) || (val[0] != '1' && val[0] != '2')) {
-      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1 or 2"}, 3);
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1, 2 or 8-bold"}, 3);
       return false;
     }
     int accent_id = 0;
@@ -145,8 +210,8 @@ bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_le
   }
   char *endptr = NULL;
   long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || (n != 1 && n != 2 && n != 7 && n != 16)) {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid colors '", val, "', expected 1, 2, 7 or 16"}, 3);
+  if (val[0] == '\0' || *endptr != '\0' || (n != 1 && n != 2 && n != 4 && n != 7 && n != 8 && n != 16)) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid colors '", val, "', expected 1, 2, 4, 7, 8, 8-bold or 16"}, 3);
     return false;
   }
   *out = (int)n;

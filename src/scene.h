@@ -7,7 +7,7 @@
 #include "entity.h"
 
 /* creature flags, excl. fish_count */
-#define SCENE_AQUATIC_FLAG_COUNT 17
+#define SCENE_AQUATIC_FLAG_COUNT 18
 
 struct aquatic_life {
   int fish_count; /* < 0 = auto, screen-size based */
@@ -28,6 +28,7 @@ struct aquatic_life {
   bool crab;
   bool rowers;
   bool sailboat;
+  bool turtle;
 };
 
 #define CASTLE_NAME_LEN 11

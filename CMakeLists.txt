@@ -49,6 +49,7 @@ set(UNDERTHEC_CORE_SOURCES
         src/scene/kaiju.c
         src/scene/fishhook.c
         src/scene/feed.c
+        src/scene/turtle.c
 )
 set(UNDERTHEC_SOURCES ${UNDERTHEC_CORE_SOURCES})
 
@@ -91,7 +92,7 @@ if (EMSCRIPTEN)
             -sEXPORT_NAME=underthec
             -sENVIRONMENT=web
             -sALLOW_MEMORY_GROWTH=1
-            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height
+            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open
             -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall
     )
     add_custom_command(TARGET underthec POST_BUILD
@@ -104,6 +105,7 @@ else ()
         target_link_options(underthec PRIVATE -static)
     endif ()
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+    set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} -s")
 endif ()
 
 if (WIN32 AND NOT EMSCRIPTEN)
@@ -160,6 +162,27 @@ if (NOT WIN32 AND NOT EMSCRIPTEN)
     else ()
         message(STATUS "X11 development headers not found, skipping the xscreensaver target")
     endif ()
+endif ()
+
+if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
+    set(UNDERTHEC_VLOCK_MODULEDIR "/usr/lib/vlock/modules" CACHE PATH "install dir for the vlock plugin module")
+    add_library(underthec_vlock MODULE
+            ${UNDERTHEC_CORE_SOURCES}
+            src/config.c
+            src/target/terminal/term_common.c
+            src/target/terminal/term_posix.c
+            src/target/vlock/vlock_module.c
+    )
+    target_include_directories(underthec_vlock PRIVATE src)
+    set_target_properties(underthec_vlock PROPERTIES
+            OUTPUT_NAME underthec
+            PREFIX ""
+            POSITION_INDEPENDENT_CODE ON
+    )
+    if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(underthec_vlock PRIVATE -Wall -Wextra)
+    endif ()
+    install(TARGETS underthec_vlock LIBRARY DESTINATION ${UNDERTHEC_VLOCK_MODULEDIR})
 endif ()
 
 if (NOT EMSCRIPTEN)

@@ -93,6 +93,7 @@ void spawn_fishhook(struct scene *sc, int w, int h) {
   e->splat_x = 0.0;
   e->death_action = DEATH_RANDOM_OBJECT;
   e->default_attr = color_from_name("WHITE");
+  e->fishhook_wait = -1.0;
   update_fishhook_shape(e, 0);
 }
 
@@ -105,8 +106,11 @@ void fishhook_tick(struct scene *sc, int term_h) {
       if (hook->splat_x < resting) {
         hook->splat_x += 1.0;
         update_fishhook_shape(hook, (int)hook->splat_x);
-      } else if (hook->die_after < 0.0) {
-        hook->die_after = rng_double(10.0) + 5.0; /* avoid stuck hook when nothing bites */
+      } else if (hook->fishhook_wait < 0.0) {
+        hook->fishhook_wait = rng_double(10.0) + 5.0; /* avoid stuck hook when nothing bites */
+      } else {
+        hook->fishhook_wait -= 0.1;
+        if (hook->fishhook_wait <= 0.0) hook->physical = false; /* retract */
       }
       struct sprite_pair barb_pair = { fishhook_tip_row, NULL };
       struct entity barb = *hook;
@@ -121,7 +125,6 @@ void fishhook_tick(struct scene *sc, int term_h) {
         if (candidate->type != ENT_FISH) continue;
         if (!entity_glyph_overlap(&barb, candidate)) continue;
         hook->physical = false;
-        hook->die_after = -1.0;
         candidate->physical = false;
         candidate->vx = 0;
         candidate->vy = -1;

@@ -51,6 +51,10 @@ void app_feed(struct app *a, int col) { scene_feed(&a->scene, a->w, a->h, col); 
 
 void app_click(struct app *a, int x, int y) {
   if (settings_ui_click(&a->settings, x, y, a->w, a->h)) return;
+  if (settings_ui_is_open(&a->settings)) {
+    settings_ui_close(&a->settings);
+    return;
+  }
   app_feed(a, x);
 }
 

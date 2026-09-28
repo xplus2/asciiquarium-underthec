@@ -4,23 +4,23 @@
 #include "../sprite.h"
 
 static const char *const rowers_image_0_0[] = {
-  "  q  q  q  q",
+  "  q\?\?q\?\?q\?\?q",
   "\\==\\==\\==\\==\\==/",
-  "    \\  \\  \\  \\",
+  "    \\\?\?\\\?\?\\\?\?\\",
   NULL
 };
 
 static const char *const rowers_image_0_1[] = {
-  "   o  o  o  o",
+  "   o\?\?o\?\?o\?\?o",
   "\\==|==|==|==|==/",
-  "   |  |  |  |",
+  "   |\?\?|\?\?|\?\?|",
   NULL
 };
 
 static const char *const rowers_image_0_2[] = {
-  "    p  p  p  p",
+  "    p\?\?p\?\?p\?\?p",
   "\\==/==/==/==/==/",
-  "  /  /  /  /",
+  "  /\?\?/\?\?/\?\?/",
   NULL
 };
 
@@ -37,23 +37,23 @@ static const char *const rowers_image_0_4[] = {
 };
 
 static const char *const rowers_image_1_0[] = {
-  "    p  p  p  p  ",
+  "    p\?\?p\?\?p\?\?p  ",
   "\\==/==/==/==/==/",
-  "  /  /  /  /    ",
+  "  /\?\?/\?\?/\?\?/    ",
   NULL
 };
 
 static const char *const rowers_image_1_1[] = {
-  "   o  o  o  o   ",
+  "   o\?\?o\?\?o\?\?o   ",
   "\\==|==|==|==|==/",
-  "   |  |  |  |   ",
+  "   |\?\?|\?\?|\?\?|   ",
   NULL
 };
 
 static const char *const rowers_image_1_2[] = {
-  "  q  q  q  q    ",
+  "  q\?\?q\?\?q\?\?q    ",
   "\\==\\==\\==\\==\\==/",
-  "    \\  \\  \\  \\  ",
+  "    \\\?\?\\\?\?\\\?\?\\  ",
   NULL
 };
 

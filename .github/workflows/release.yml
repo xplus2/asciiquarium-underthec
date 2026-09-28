@@ -43,7 +43,7 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir "$name"
-          cp build/underthec build-xscr/underthec_xscr src/target/scr_x11/underthec.xml LICENSE "$name"/
+          cp build/underthec build/underthec.so build-xscr/underthec_xscr src/target/scr_x11/underthec.xml LICENSE "$name"/
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -89,7 +89,7 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir "$name"
-          cp build/underthec LICENSE "$name"/
+          cp build/underthec build/underthec.so LICENSE "$name"/
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

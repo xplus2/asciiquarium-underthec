@@ -14,6 +14,7 @@ void web_click(int col, int row);
 const uint32_t *web_frame(double now_ms);
 int web_width(void);
 int web_height(void);
+bool web_settings_open(void);
 
 static struct app app;
 static uint32_t *packed;
@@ -79,3 +80,5 @@ const uint32_t *web_frame(double now_ms) {
 int web_width(void) { return app.canvas.width; }
 
 int web_height(void) { return app.canvas.height; }
+
+bool web_settings_open(void) { return settings_ui_is_open(&app.settings); }

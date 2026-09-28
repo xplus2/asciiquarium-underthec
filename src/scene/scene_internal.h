@@ -28,6 +28,7 @@
 #define Z_SEAHORSE 4
 #define Z_ROWERS 3
 #define Z_SAILBOAT 3
+#define Z_TURTLE 3
 #define Z_FLAKE 1
 #define CASTLE_X_OFFSET 32
 #define CASTLE_WIDTH 31
@@ -77,5 +78,10 @@ void fishhook_tick(struct scene *sc, int term_h);
 /* feed.c */
 void feed_trigger(struct scene *sc, int w, int h, int col);
 void feed_tick(struct scene *sc, int w, int h);
+
+/* turtle.c */
+void spawn_turtle(struct scene *sc, int w, int h);
+void schedule_turtle_return(struct scene *sc);
+void turtle_timer_fire(struct scene *sc, int w, int h);
 
 #endif
