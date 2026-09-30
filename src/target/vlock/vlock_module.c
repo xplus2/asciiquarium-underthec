@@ -36,7 +36,7 @@ static const struct {
 static bool build_config(struct config *cfg) {
   config_init(cfg);
   char err[256];
-  for (size_t i = 0; i < sizeof(CONFIG_ENV_VARS) / sizeof(*CONFIG_ENV_VARS); i++) {
+  for (size_t i = 0; i < sizeof(CONFIG_ENV_VARS) / sizeof(CONFIG_ENV_VARS[0]); i++) {
     const char *value = getenv(CONFIG_ENV_VARS[i].env);
     if (value == NULL) continue;
     if (!config_set(cfg, CONFIG_ENV_VARS[i].opt, value, CONFIG_ENV_VARS[i].env, err, sizeof err)) {

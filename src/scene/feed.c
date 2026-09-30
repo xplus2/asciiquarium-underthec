@@ -165,6 +165,14 @@ static void feed_advance_heading_fish(struct scene *sc) {
   }
 }
 
+static bool shape_col_has_ink(ascii_rows rows, int h, int c) {
+  for (int r = 0; r < h; r++) {
+    const char *row = rows[r];
+    if (row != NULL && c < (int)strlen(row) && row[c] != ' ') return true;
+  }
+  return false;
+}
+
 static bool fish_mouth_touch(struct entity *fish, const struct entity *flake) {
   ascii_rows rows = entity_shape(fish);
   int w = entity_width(fish);
@@ -172,12 +180,9 @@ static bool fish_mouth_touch(struct entity *fish, const struct entity *flake) {
   if (rows == NULL || w <= 0 || h <= 0) return false;
   int front_cols[2];
   int found = 0;
-  int step = fish->vx >= 0.0 ? -1 : 1;
-  for (int c = fish->vx >= 0.0 ? w - 1 : 0; c >= 0 && c < w && found < 2; c += step) {
-    for (int r = 0; r < h; r++) {
-      const char *row = rows[r];
-      if (row != NULL && c < (int)strlen(row) && row[c] != ' ') { front_cols[found++] = c; break; }
-    }
+  for (int i = 0; i < w && found < 2; i++) {
+    int c = fish->vx >= 0.0 ? w - 1 - i : i;
+    if (shape_col_has_ink(rows, h, c)) front_cols[found++] = c;
   }
   if (found == 0) return false;
   int fx = round_to_int(fish->x);

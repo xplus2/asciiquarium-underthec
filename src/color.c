@@ -79,7 +79,8 @@ void color_mode_decode(int colors_mode, int *base, int *accent_id) {
 }
 
 void color_reduce(int colors_mode, enum color *col, bool *bold) {
-  int base, accent_id;
+  int base;
+  int accent_id;
   color_mode_decode(colors_mode, &base, &accent_id);
   switch (base) {
     case 1:

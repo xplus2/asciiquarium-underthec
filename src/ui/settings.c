@@ -72,7 +72,8 @@ static int colors_mode_index(int mode) {
 }
 
 static void colors_mode_label(int mode, char *out, size_t out_cap) {
-  int base, accent_id;
+  int base;
+  int accent_id;
   color_mode_decode(mode, &base, &accent_id);
   if (accent_id != 0) {
     size_t p = 0;
@@ -282,7 +283,8 @@ static void draw_adjustable_row(const struct settings_ui *ui, struct canvas *c, 
   char line[CONTENT_W + 1];
   size_t p = 0;
   bool sel = ui->sel_row == lr;
-  int hl_off = -1, hl_len = 0;
+  int hl_off = -1;
+  int hl_len = 0;
   for (int col = 0; col < 2; col++) {
     if (row[col].kind == FIELD_NONE) break;
     if (col == 1) opts_append_bounded(line, sizeof line - 1, &p, "  ");

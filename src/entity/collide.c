@@ -34,7 +34,7 @@ void entity_collide_all(struct entity_list *list) {
   int teeth_n = 0;
   int wl_n = 0;
   for (int j = 0; j < n; j++) {
-    struct entity *e = &list->items[j];
+    const struct entity *e = &list->items[j];
     if (e->marked_dead || !e->physical) continue;
     if (e->type == ENT_TEETH) g_teeth_idx[teeth_n++] = j;
     else if (e->type == ENT_WATERLINE) g_wl_idx[wl_n++] = j;

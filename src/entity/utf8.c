@@ -15,7 +15,7 @@ unsigned utf8_decode(const char *s, int seq_len) {
   if (seq_len == 2) mask = 0x1F;
   else if (seq_len == 3) mask = 0x0F;
   else mask = 0x07;
-  unsigned cp = (unsigned)(c0 & mask);
+  unsigned cp = c0 & mask;
   for (int k = 1; k < seq_len; k++) cp = (cp << 6) | (unsigned)((unsigned char)s[k] & 0x3F);
   return cp;
 }

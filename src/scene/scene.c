@@ -264,7 +264,8 @@ static void scan_live_and_timer(const struct scene *sc, const enum entity_type *
 }
 
 void scene_on_species_toggled(struct scene *sc, int w, int h) {
-  bool has_live, has_timer;
+  bool has_live;
+  bool has_timer;
 
   if (sc->aquatic.kaiju) {
     static const enum entity_type kaiju_live[] = {ENT_KAIJU};
