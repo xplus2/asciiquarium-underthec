@@ -1,16 +1,27 @@
 #include "../../color.h"
+#include "../../xalloc.h"
 #include "term.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static struct canvas prev;
 static bool prev_valid = false;
 static bool transparent = false;
 
+static int *row_min = NULL;
+static int *row_max = NULL;
+static int row_bounds_cap = 0;
+
 void term_common_shutdown(void) {
   canvas_free(&prev);
   prev_valid = false;
+  free(row_min);
+  free(row_max);
+  row_min = NULL;
+  row_max = NULL;
+  row_bounds_cap = 0;
 }
 
 void term_set_transparent(bool on) {
@@ -88,9 +99,27 @@ void term_present(const struct canvas *c) {
     prev_valid = true;
   }
 
+  if (c->height > row_bounds_cap) {
+    row_min = xrealloc(row_min, (size_t)c->height * sizeof(*row_min));
+    row_max = xrealloc(row_max, (size_t)c->height * sizeof(*row_max));
+    row_bounds_cap = c->height;
+  }
   for (int y = 0; y < c->height; y++) {
-    int x = 0;
-    while (x < c->width) {
+    row_min[y] = c->width;
+    row_max[y] = -1;
+  }
+  for (int i = 0; i < c->touched_count; i++) {
+    int idx = c->touched[i];
+    int y = idx / c->width;
+    int x = idx % c->width;
+    if (x < row_min[y]) row_min[y] = x;
+    if (x > row_max[y]) row_max[y] = x;
+  }
+  for (int y = 0; y < c->height; y++) {
+    if (row_max[y] < row_min[y]) continue;
+    int row_end = row_max[y] + 1;
+    int x = row_min[y];
+    while (x < row_end) {
       const struct cell *cur = &c->cells[(size_t)y * (size_t)c->width + (size_t)x];
       struct cell *old = &prev.cells[(size_t)y * (size_t)c->width + (size_t)x];
       if (cells_equal(cur, old)) {
@@ -105,7 +134,7 @@ void term_present(const struct canvas *c) {
       enum color last_bg = COL_DEFAULT;
       bool last_bg_bold = false;
       bool first = true;
-      while (x < c->width) {
+      while (x < row_end) {
         cur = &c->cells[(size_t)y * (size_t)c->width + (size_t)x];
         old = &prev.cells[(size_t)y * (size_t)c->width + (size_t)x];
         if (cur->cont) {

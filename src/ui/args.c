@@ -24,19 +24,6 @@ static int err_env_bad(const char *prog, const char *name, const char *errbuf) {
   return 2;
 }
 
-static bool parse_bool_env(const char *val, bool *out, char *errbuf, size_t errbuf_len) {
-  if (strcmp(val, "0") == 0) {
-    *out = false;
-    return true;
-  }
-  if (strcmp(val, "1") == 0) {
-    *out = true;
-    return true;
-  }
-  opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid value '", val, "', expected 0 or 1"}, 3);
-  return false;
-}
-
 static bool parse_teletext_mode(const char *val, enum tt_mode *out, char *errbuf, size_t errbuf_len) {
   if (strcmp(val, "t42") == 0) *out = TT_T42;
   else if (strcmp(val, "ts") == 0) *out = TT_TS;
@@ -58,13 +45,67 @@ static bool parse_teletext_glyphs(const char *val, enum tt_glyphs *out, char *er
 }
 
 static bool parse_ttl(const char *val, int *out, char *errbuf, size_t errbuf_len) {
-  char *endptr = NULL;
-  long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || n < 1 || n > 255) {
+  if (!opts_parse_int_range(val, 1, 255, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid ttl '", val, "', expected 1-255"}, 3);
     return false;
   }
-  *out = (int)n;
+  return true;
+}
+
+/* shared opt + env fallback table: (val, dest, errbuf, errbuf_len) -> ok */
+typedef bool (*opt_parser_fn)(const char *val, void *out, char *errbuf, size_t errbuf_len);
+
+static bool w_bool(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_bool(val, out, errbuf, errbuf_len);
+}
+static bool w_pace(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_pace(val, out, errbuf, errbuf_len);
+}
+static bool w_fps(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_fps(val, out, errbuf, errbuf_len);
+}
+static bool w_uturn(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_uturn_chance(val, out, errbuf, errbuf_len);
+}
+static bool w_colors(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_colors(val, out, errbuf, errbuf_len);
+}
+static bool w_ttl(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return parse_ttl(val, out, errbuf, errbuf_len);
+}
+static bool w_msgpos(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  return opts_parse_message_position(val, out, errbuf, errbuf_len);
+}
+
+/* buffer-out parsers (val, buf, cap, errbuf, errbuf_len) wrapped behind opt_parser_fn */
+struct buf_arg {
+  char *buf;
+  size_t cap;
+  bool (*parse)(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);
+};
+
+static bool w_buf(const char *val, void *out, char *errbuf, size_t errbuf_len) {
+  struct buf_arg *ba = out;
+  return ba->parse(val, ba->buf, ba->cap, errbuf, errbuf_len);
+}
+
+struct cli_opt {
+  const char *short_opt;
+  const char *long_opt;
+  opt_parser_fn parse;
+  void *out;
+  bool *given;
+};
+
+static bool apply_env(bool given, const char *env_name, const char *prog, opt_parser_fn parse, void *out, int *exit_code) {
+  if (given) return true;
+  const char *env_val = getenv(env_name);
+  if (env_val == NULL) return true;
+  char errbuf[128];
+  if (!parse(env_val, out, errbuf, sizeof errbuf)) {
+    *exit_code = err_env_bad(prog, env_name, errbuf);
+    return false;
+  }
   return true;
 }
 
@@ -105,9 +146,41 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   memset(out->castle_name, 0, sizeof(out->castle_name));
   out->aquatic = scene_aquatic_default();
 
+  struct buf_arg teletext_caption_arg = { out->teletext_caption, sizeof(out->teletext_caption), opts_parse_teletext_caption };
+  struct buf_arg castle_name_arg = { out->castle_name, sizeof(out->castle_name), opts_parse_castle_name };
+
+  struct cli_opt table[] = {
+    {"-p", "--pace", w_pace, &out->pace, &p_given},
+    {"-u", "--uturn-chance", w_uturn, &out->uturn_chance, &u_given},
+    {"-C", "--colors", w_colors, &out->colors_mode, &colors_given},
+    {"-f", "--fps", w_fps, &out->fps, &f_given},
+    {NULL, "--ttl", w_ttl, &out->mcast_ttl, &ttl_given},
+    {NULL, "--teletext-caption", w_buf, &teletext_caption_arg, &teletext_caption_given},
+    {"-n", "--castle-name", w_buf, &castle_name_arg, &castle_name_given},
+    {"-P", "--message-position", w_msgpos, &out->message_position, &message_position_given},
+  };
+
   int i = 1;
   while (i < argc) {
     const char *a = argv[i];
+    bool table_matched = false;
+    for (size_t k = 0; k < sizeof(table) / sizeof(table[0]); k++) {
+      bool short_hit = table[k].short_opt != NULL && strcmp(a, table[k].short_opt) == 0;
+      bool long_hit = table[k].long_opt != NULL && strcmp(a, table[k].long_opt) == 0;
+      if (!short_hit && !long_hit) continue;
+      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
+      char errbuf[128];
+      if (!table[k].parse(argv[i + 1], table[k].out, errbuf, sizeof errbuf)) {
+        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
+        *exit_code = 2;
+        return false;
+      }
+      *table[k].given = true;
+      i += 2;
+      table_matched = true;
+      break;
+    }
+    if (table_matched) continue;
     if (strcmp(a, "-c") == 0 || strcmp(a, "--classic") == 0) {
       c_given = true;
       classic_ver = 1;
@@ -126,46 +199,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       out->transparent = true;
       t_given = true;
       i++;
-    } else if (strcmp(a, "-p") == 0 || strcmp(a, "--pace") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_pace(argv[i + 1], &out->pace, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      p_given = true;
-      i += 2;
-    } else if (strcmp(a, "-u") == 0 || strcmp(a, "--uturn-chance") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_uturn_chance(argv[i + 1], &out->uturn_chance, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      u_given = true;
-      i += 2;
-    } else if (strcmp(a, "-C") == 0 || strcmp(a, "--colors") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_colors(argv[i + 1], &out->colors_mode, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      colors_given = true;
-      i += 2;
-    } else if (strcmp(a, "-f") == 0 || strcmp(a, "--fps") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_fps(argv[i + 1], &out->fps, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      f_given = true;
-      i += 2;
     } else if (strncmp(a, "--teletext=", 11) == 0) {
       teletext_arg = a + 11;
       i++;
@@ -190,40 +223,10 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
       out->iface_arg = argv[i + 1];
       i += 2;
-    } else if (strcmp(a, "--ttl") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!parse_ttl(argv[i + 1], &out->mcast_ttl, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      ttl_given = true;
-      i += 2;
-    } else if (strcmp(a, "--teletext-caption") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_teletext_caption(argv[i + 1], out->teletext_caption, sizeof out->teletext_caption, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      teletext_caption_given = true;
-      i += 2;
     } else if (strcmp(a, "--no-castle") == 0) {
       out->no_castle = true;
       no_castle_given = true;
       i++;
-    } else if (strcmp(a, "-n") == 0 || strcmp(a, "--castle-name") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_castle_name(argv[i + 1], out->castle_name, sizeof out->castle_name, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      castle_name_given = true;
-      i += 2;
     } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
       print_help(argv[0]);
       *exit_code = 0;
@@ -250,16 +253,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       }
       out->message_color_arg = argv[i + 1];
       i += 2;
-    } else if (strcmp(a, "-P") == 0 || strcmp(a, "--message-position") == 0) {
-      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!opts_parse_message_position(argv[i + 1], &out->message_position, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      message_position_given = true;
-      i += 2;
     } else if (strcmp(a, "-a") == 0 || strcmp(a, "--aquatic-life") == 0) {
       a_given = true;
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
@@ -282,110 +275,20 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
 
   bool c_flag = c_given;
   bool a_flag = a_given;
-  if (!t_given) {
-    const char *env_val = getenv("UNDERTHEC_TRANSPARENT");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!parse_bool_env(env_val, &out->transparent, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_TRANSPARENT", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!s_given) {
-    const char *env_val = getenv("UNDERTHEC_SCREENSAVER");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!parse_bool_env(env_val, &out->screensaver, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_SCREENSAVER", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!p_given) {
-    const char *env_val = getenv("UNDERTHEC_PACE");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_pace(env_val, &out->pace, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_PACE", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!f_given) {
-    const char *env_val = getenv("UNDERTHEC_FPS");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_fps(env_val, &out->fps, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_FPS", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!u_given) {
-    const char *env_val = getenv("UNDERTHEC_UTURN_CHANCE");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_uturn_chance(env_val, &out->uturn_chance, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_UTURN_CHANCE", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!colors_given) {
-    const char *env_val = getenv("UNDERTHEC_COLORS");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_colors(env_val, &out->colors_mode, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_COLORS", errbuf);
-        return false;
-      }
-    }
-  }
+  if (!apply_env(t_given, "UNDERTHEC_TRANSPARENT", argv[0], w_bool, &out->transparent, exit_code)) return false;
+  if (!apply_env(s_given, "UNDERTHEC_SCREENSAVER", argv[0], w_bool, &out->screensaver, exit_code)) return false;
+  if (!apply_env(p_given, "UNDERTHEC_PACE", argv[0], w_pace, &out->pace, exit_code)) return false;
+  if (!apply_env(f_given, "UNDERTHEC_FPS", argv[0], w_fps, &out->fps, exit_code)) return false;
+  if (!apply_env(u_given, "UNDERTHEC_UTURN_CHANCE", argv[0], w_uturn, &out->uturn_chance, exit_code)) return false;
+  if (!apply_env(colors_given, "UNDERTHEC_COLORS", argv[0], w_colors, &out->colors_mode, exit_code)) return false;
   if (teletext_arg == NULL) teletext_arg = getenv("UNDERTHEC_TELETEXT");
   if (glyphs_arg == NULL) glyphs_arg = getenv("UNDERTHEC_TELETEXT_MODE");
   if (out->mcast_arg == NULL) out->mcast_arg = getenv("UNDERTHEC_MCAST");
   if (out->iface_arg == NULL) out->iface_arg = getenv("UNDERTHEC_MCAST_IFACE");
-  if (!ttl_given) {
-    const char *env_val = getenv("UNDERTHEC_MCAST_TTL");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!parse_ttl(env_val, &out->mcast_ttl, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_MCAST_TTL", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!teletext_caption_given) {
-    const char *env_val = getenv("UNDERTHEC_TELETEXT_CAPTION");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_teletext_caption(env_val, out->teletext_caption, sizeof out->teletext_caption, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_TELETEXT_CAPTION", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!no_castle_given) {
-    const char *env_val = getenv("UNDERTHEC_NO_CASTLE");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!parse_bool_env(env_val, &out->no_castle, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_NO_CASTLE", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!castle_name_given) {
-    const char *env_val = getenv("UNDERTHEC_CASTLE_NAME");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_castle_name(env_val, out->castle_name, sizeof out->castle_name, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_CASTLE_NAME", errbuf);
-        return false;
-      }
-    }
-  }
+  if (!apply_env(ttl_given, "UNDERTHEC_MCAST_TTL", argv[0], w_ttl, &out->mcast_ttl, exit_code)) return false;
+  if (!apply_env(teletext_caption_given, "UNDERTHEC_TELETEXT_CAPTION", argv[0], w_buf, &teletext_caption_arg, exit_code)) return false;
+  if (!apply_env(no_castle_given, "UNDERTHEC_NO_CASTLE", argv[0], w_bool, &out->no_castle, exit_code)) return false;
+  if (!apply_env(castle_name_given, "UNDERTHEC_CASTLE_NAME", argv[0], w_buf, &castle_name_arg, exit_code)) return false;
   if (out->message_arg == NULL) {
     const char *env_val = getenv("UNDERTHEC_MESSAGE");
     if (env_val != NULL) out->message_arg = env_val;
@@ -402,16 +305,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       out->message_color_arg = env_val;
     }
   }
-  if (!message_position_given) {
-    const char *env_val = getenv("UNDERTHEC_MESSAGE_POSITION");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_message_position(env_val, &out->message_position, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_MESSAGE_POSITION", errbuf);
-        return false;
-      }
-    }
-  }
+  if (!apply_env(message_position_given, "UNDERTHEC_MESSAGE_POSITION", argv[0], w_msgpos, &out->message_position, exit_code)) return false;
   if (!fish_given) {
     const char *env_val = getenv("UNDERTHEC_FISH");
     if (env_val != NULL) {
@@ -482,7 +376,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       return false;
     }
   }
-
   *exit_code = 0;
   return true;
 }

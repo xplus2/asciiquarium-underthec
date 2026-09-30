@@ -7,59 +7,22 @@
 #include "sprite.h"
 
 enum entity_type {
-  ENT_WATERLINE,
-  ENT_CASTLE,
-  ENT_SEAWEED,
-  ENT_FISH,
-  ENT_BUBBLE,
-  ENT_SPLAT,
-  ENT_TEETH,
-  ENT_SHARK,
-  ENT_SHIP,
-  ENT_WHALE,
-  ENT_MONSTER,
-  ENT_BIGFISH,
-  ENT_MESSAGE,
-  ENT_KAIJU,
-  ENT_SUBMARINE,
-  ENT_SWORDFISH,
-  ENT_RUBBLE,
-  ENT_LASER,
-  ENT_DUCK,
-  ENT_DOLPHIN,
-  ENT_SWAN,
-  ENT_FISHHOOK,
-  ENT_CRAB,
-  ENT_KAIJU_TIMER,
-  ENT_JELLYFISH,
-  ENT_RANDOM_OBJECT_TIMER,
-  ENT_FLAKE,
-  ENT_SEAHORSE,
-  ENT_CASTLE_DOOR,
-  ENT_SEAWEED_DEBRIS,
-  ENT_ROWERS,
-  ENT_SAILBOAT,
-  ENT_TURTLE,
-  ENT_TURTLE_TIMER
+  ENT_WATERLINE,           ENT_CASTLE,   ENT_SEAWEED,  ENT_FISH,        ENT_BUBBLE,
+  ENT_SPLAT,               ENT_TEETH,    ENT_SHARK,    ENT_SHIP,        ENT_WHALE,
+  ENT_MONSTER,             ENT_BIGFISH,  ENT_MESSAGE,  ENT_KAIJU,       ENT_SUBMARINE,
+  ENT_SWORDFISH,           ENT_RUBBLE,   ENT_LASER,    ENT_DUCK,        ENT_DOLPHIN,
+  ENT_SWAN,                ENT_FISHHOOK, ENT_CRAB,     ENT_KAIJU_TIMER, ENT_JELLYFISH,
+  ENT_RANDOM_OBJECT_TIMER, ENT_FLAKE,    ENT_SEAHORSE, ENT_CASTLE_DOOR, ENT_SEAWEED_DEBRIS,
+  ENT_ROWERS,              ENT_SAILBOAT, ENT_TURTLE,   ENT_TURTLE_TIMER
 };
 
 enum death_action {
-  DEATH_NONE,
-  DEATH_ADD_FISH,
-  DEATH_ADD_SEAWEED,
-  DEATH_ADD_KAIJU,
-  DEATH_RANDOM_OBJECT,
-  DEATH_SHARK,
-  DEATH_ADD_KAIJU_COOLDOWN,
-  DEATH_ADD_RANDOM_OBJECT,
-  DEATH_ADD_MESSAGE,
-  DEATH_ADD_TURTLE
+  DEATH_NONE,  DEATH_ADD_FISH,           DEATH_ADD_SEAWEED,       DEATH_ADD_KAIJU,   DEATH_RANDOM_OBJECT,
+  DEATH_SHARK, DEATH_ADD_KAIJU_COOLDOWN, DEATH_ADD_RANDOM_OBJECT, DEATH_ADD_MESSAGE, DEATH_ADD_TURTLE
 };
 
 enum turn_state {
-  TURN_NONE,
-  TURN_SHRINK,
-  TURN_GROW
+  TURN_NONE,   TURN_SHRINK,   TURN_GROW
 };
 
 struct entity {
@@ -153,10 +116,12 @@ ascii_rows entity_shape(const struct entity *e);
 ascii_rows entity_mask(const struct entity *e);
 int entity_width(struct entity *e);
 int entity_utf8_display_width(const char *s);
+int entity_utf8_byte_offset(const char *s, int col);
 int entity_height(struct entity *e);
 void entity_shape_changed(struct entity *e);
 void entity_tick_all(struct entity_list *list, int term_w, int term_h);
 void entity_collide_all(struct entity_list *list);
+void entity_collide_shutdown(void);
 bool entity_glyph_overlap(struct entity *a, struct entity *b);
 typedef void (*entity_death_fn)(const struct entity *dead, void *ctx);
 void entity_reap(struct entity_list *list, entity_death_fn fn, void *ctx);

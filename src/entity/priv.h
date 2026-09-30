@@ -8,6 +8,7 @@ static inline int round_to_int(double v) {
 }
 
 int utf8_seq_len(unsigned char lead);
+unsigned utf8_decode(const char *s, int seq_len);
 int utf8_char_width(const char *s, int seq_len);
 int utf8_col_width(const char *s);
 int utf8_byte_offset(const char *s, int col);

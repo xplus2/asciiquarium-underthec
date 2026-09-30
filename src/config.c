@@ -56,17 +56,12 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
   } else if (strcmp(name, "message-position") == 0) {
     if (!opts_parse_message_position(value, &cfg->message_position, eb, sizeof eb)) return fail(err, err_len, eb, shown);
   } else if (strcmp(name, "castle-name") == 0) {
-    char name_buf[CASTLE_NAME_LEN + 1];
+    char name_buf[CASTLE_NAME_MAX_BYTES + 1];
     if (!opts_parse_castle_name(value, name_buf, sizeof name_buf, eb, sizeof eb)) return fail(err, err_len, eb, shown);
     free(cfg->castle_name);
     cfg->castle_name = opts_strdup(name_buf);
   } else if (strcmp(name, "no-castle") == 0) {
-    if (strcmp(value, "0") == 0) cfg->no_castle = false;
-    else if (strcmp(value, "1") == 0) cfg->no_castle = true;
-    else {
-      opts_set_errbuf(eb, sizeof eb, (const char *[]){"invalid value '", value, "', expected 0 or 1"}, 3);
-      return fail(err, err_len, eb, shown);
-    }
+    if (!opts_parse_bool(value, &cfg->no_castle, eb, sizeof eb)) return fail(err, err_len, eb, shown);
   } else if (strcmp(name, "pace") == 0) {
     if (!opts_parse_pace(value, &cfg->pace, eb, sizeof eb)) return fail(err, err_len, eb, shown);
   } else if (strcmp(name, "uturn-chance") == 0) {

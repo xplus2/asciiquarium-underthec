@@ -66,29 +66,24 @@ static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, 
 }
 
 static void fonts_free(struct xscr_font *f) {
-  for (int b = 0; b < 2; b++) {
-    if (f->font[b] != NULL) XftFontClose(f->dpy, f->font[b]);
-  }
+  for (int b = 0; b < 2; b++) if (f->font[b] != NULL) XftFontClose(f->dpy, f->font[b]);
 }
 
 static void palette_load(struct xscr_font *f) {
-  for (int c = 0; c < 9; c++) {
-    for (int b = 0; b < 2; b++) {
-      XRenderColor rc = {
-          .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
-          .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
-          .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
-          .alpha = 0xffff,
-      };
-      XftColorAllocValue(f->dpy, f->visual, f->cmap, &rc, &f->xcolor[c][b]);
-      f->pixel[c][b] = f->xcolor[c][b].pixel;
-    }
+  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) {
+    XRenderColor rc = {
+        .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
+        .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
+        .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
+        .alpha = 0xffff,
+    };
+    XftColorAllocValue(f->dpy, f->visual, f->cmap, &rc, &f->xcolor[c][b]);
+    f->pixel[c][b] = f->xcolor[c][b].pixel;
   }
 }
 
 static void palette_free(struct xscr_font *f) {
-  for (int c = 0; c < 9; c++)
-    for (int b = 0; b < 2; b++) XftColorFree(f->dpy, f->visual, f->cmap, &f->xcolor[c][b]);
+  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) XftColorFree(f->dpy, f->visual, f->cmap, &f->xcolor[c][b]);
 }
 
 void xscr_font_retarget(struct xscr_font *f, Drawable d) {
@@ -165,17 +160,15 @@ static void fonts_free(struct xscr_font *f) {
 }
 
 static void palette_load(struct xscr_font *f) {
-  for (int c = 0; c < 9; c++) {
-    for (int b = 0; b < 2; b++) {
-      XColor xc = {
-          .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
-          .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
-          .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
-          .flags = DoRed | DoGreen | DoBlue,
-      };
-      if (XAllocColor(f->dpy, f->cmap, &xc)) f->pixel[c][b] = xc.pixel;
-      else f->pixel[c][b] = b ? WhitePixel(f->dpy, DefaultScreen(f->dpy)) : BlackPixel(f->dpy, DefaultScreen(f->dpy));
-    }
+  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) {
+    XColor xc = {
+        .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
+        .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
+        .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
+        .flags = DoRed | DoGreen | DoBlue,
+    };
+    if (XAllocColor(f->dpy, f->cmap, &xc)) f->pixel[c][b] = xc.pixel;
+    else f->pixel[c][b] = b ? WhitePixel(f->dpy, DefaultScreen(f->dpy)) : BlackPixel(f->dpy, DefaultScreen(f->dpy));
   }
 }
 
@@ -188,7 +181,7 @@ static void palette_free(struct xscr_font *f) {
 
 void xscr_font_retarget(struct xscr_font *f, Drawable d) {
   (void)f;
-  (void)d; /* core-font drawing takes the drawable per call, nothing to rebind */
+  (void)d; /* core-font drawing takes drawable per call. nothing to rebind */
 }
 
 void xscr_font_draw_run(struct xscr_font *f, Drawable d, GC gc, int x, int y, const char *utf8, int nbytes, int col, bool bold) {
@@ -209,6 +202,7 @@ struct xscr_font *xscr_font_create(Display *dpy, int screen, Visual *visual, Col
   f->visual = visual;
   f->cmap = cmap;
   if (!fonts_load(f, screen, font_px, err, err_len)) {
+    fonts_free(f);
     free(f);
     return NULL;
   }

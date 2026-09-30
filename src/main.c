@@ -22,6 +22,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 static volatile sig_atomic_t g_should_quit = 0;
@@ -68,7 +69,29 @@ static char *read_all_stdin(void) {
   return buf;
 }
 
+#ifdef _WIN32
+static char **win_utf8_argv(int *argc_inout) {
+  int wargc = 0;
+  LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+  if (wargv == NULL) return NULL;
+  char **argv = xmalloc((size_t)(wargc + 1) * sizeof(*argv));
+  for (int i = 0; i < wargc; i++) {
+    int n = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL, NULL);
+    argv[i] = xmalloc(n > 0 ? (size_t)n : 1);
+    if (n <= 0 || WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], n, NULL, NULL) <= 0) argv[i][0] = '\0';
+  }
+  argv[wargc] = NULL;
+  LocalFree(wargv);
+  *argc_inout = wargc;
+  return argv;
+}
+#endif
+
 int main(int argc, char **argv) {
+#ifdef _WIN32
+  char **win_argv = win_utf8_argv(&argc);
+  if (win_argv != NULL) argv = win_argv;
+#endif
   struct cli_args args;
   int exit_code = 0;
   if (!args_parse(argc, argv, &args, &exit_code)) return exit_code;

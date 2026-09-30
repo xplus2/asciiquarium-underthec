@@ -1,4 +1,5 @@
 #include "scene_internal.h"
+#include "../entity/priv.h"
 #include "color.h"
 #include "rng.h"
 #include "xalloc.h"
@@ -13,7 +14,6 @@
 #define FLAKE_BOTTOM_LINGER 3.0
 #define FLAKE_SPEED_MULT_BASE 0.8
 #define FLAKE_SPEED_MULT_RANGE 0.4
-#define FLAKE_MAX_TRACKED_COLS 16
 #define FEED_HEADING_SPEEDUP 1.5
 
 static const char flake_chars[] = ",'`_-";
@@ -53,7 +53,6 @@ void feed_trigger(struct scene *sc, int w, int h, int col) {
     if (e->marked_dead || e->type != ENT_FLAKE) continue;
     if (e->y <= lowest_fish_y) return;
   }
-
   int max_band = w - FLAKE_BAND_WIDTH;
   if (max_band < 1) max_band = 1;
   int band_x0;
@@ -72,7 +71,6 @@ static void feed_tick_flakes(struct scene *sc, int floor_row) {
     struct entity *e = &sc->entities.items[i];
     if (e->marked_dead || e->type != ENT_FLAKE) continue;
     if (e->die_after >= 0.0) continue;
-
     double old_y = e->y;
     double vy;
     if (old_y < WATER_SURFACE_ROW) vy = FLAKE_FALL_SPEED;
@@ -80,7 +78,6 @@ static void feed_tick_flakes(struct scene *sc, int floor_row) {
     else vy = FLAKE_MAIN_BASE * e->feed_speed_mult;
     e->y = old_y + vy;
     if (e->y > floor_row) e->y = floor_row;
-
     bool crossed_surface = old_y < WATER_SURFACE_ROW && e->y >= WATER_SURFACE_ROW;
     if (crossed_surface) e->y = WATER_SURFACE_ROW;
     bool at_floor = e->y >= floor_row;
@@ -100,19 +97,32 @@ static void feed_tick_flakes(struct scene *sc, int floor_row) {
   }
 }
 
+static int *g_cols_buf = NULL;
+static int g_cols_cap = 0;
+
+void feed_shutdown(void) {
+  free(g_cols_buf);
+  g_cols_buf = NULL;
+  g_cols_cap = 0;
+}
+
 static void feed_alert_fish(struct scene *sc) {
   if (sc->feed_alerted) return;
-  int cols[FLAKE_MAX_TRACKED_COLS];
+  if (sc->entities.count > g_cols_cap) {
+    g_cols_buf = xrealloc(g_cols_buf, (size_t)sc->entities.count * sizeof(*g_cols_buf));
+    g_cols_cap = sc->entities.count;
+  }
+  int *cols = g_cols_buf;
   int col_count = 0;
   bool any_in_main = false;
   for (int i = 0; i < sc->entities.count; i++) {
     const struct entity *e = &sc->entities.items[i];
     if (e->marked_dead || e->type != ENT_FLAKE || e->die_after >= 0.0) continue;
     if (e->y >= MAIN_REGION_TOP_ROW) any_in_main = true;
-    int col = (int)(e->x + 0.5);
+    int col = round_to_int(e->x);
     bool dup = false;
     for (int k = 0; k < col_count; k++) if (cols[k] == col) { dup = true; break; }
-    if (!dup && col_count < FLAKE_MAX_TRACKED_COLS) cols[col_count++] = col;
+    if (!dup) cols[col_count++] = col;
   }
   if (!any_in_main || col_count == 0) return;
 
@@ -162,29 +172,19 @@ static bool fish_mouth_touch(struct entity *fish, const struct entity *flake) {
   if (rows == NULL || w <= 0 || h <= 0) return false;
   int front_cols[2];
   int found = 0;
-  if (fish->vx >= 0.0) {
-    for (int c = w - 1; c >= 0; c--) {
-      if (found >= 2) break;
-      for (int r = 0; r < h; r++) {
-        const char *row = rows[r];
-        if (row != NULL && c < (int)strlen(row) && row[c] != ' ') { front_cols[found++] = c; break; }
-      }
-    }
-  } else {
-    for (int c = 0; c < w; c++) {
-      if (found >= 2) break;
-      for (int r = 0; r < h; r++) {
-        const char *row = rows[r];
-        if (row != NULL && c < (int)strlen(row) && row[c] != ' ') { front_cols[found++] = c; break; }
-      }
+  int step = fish->vx >= 0.0 ? -1 : 1;
+  for (int c = fish->vx >= 0.0 ? w - 1 : 0; c >= 0 && c < w && found < 2; c += step) {
+    for (int r = 0; r < h; r++) {
+      const char *row = rows[r];
+      if (row != NULL && c < (int)strlen(row) && row[c] != ' ') { front_cols[found++] = c; break; }
     }
   }
   if (found == 0) return false;
-  int fx = (int)(fish->x + 0.5);
-  int fy = (int)(fish->y + 0.5);
-  int flake_row = (int)(flake->y + 0.5) - fy;
+  int fx = round_to_int(fish->x);
+  int fy = round_to_int(fish->y);
+  int flake_row = round_to_int(flake->y) - fy;
   if (flake_row < 0 || flake_row >= h) return false;
-  int flake_col = (int)(flake->x + 0.5) - fx;
+  int flake_col = round_to_int(flake->x) - fx;
   for (int k = 0; k < found; k++) if (front_cols[k] == flake_col) return true;
   return false;
 }

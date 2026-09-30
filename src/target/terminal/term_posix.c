@@ -21,14 +21,23 @@ static char stdout_buf[1 << 16];
 int term_init(void) {
   tty_fd = open("/dev/tty", O_RDWR);
   if (tty_fd < 0) return -1;
-  if (tcgetattr(tty_fd, &orig_termios) != 0) return -1;
+  if (tcgetattr(tty_fd, &orig_termios) != 0) {
+    close(tty_fd);
+    tty_fd = -1;
+    return -1;
+  }
   have_orig_termios = true;
   struct termios raw = orig_termios;
   cfmakeraw(&raw);
   raw.c_lflag |= ISIG; /* keep ctrl+c/ctrl+\ generating SIGINT/SIGQUIT */
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 0;
-  if (tcsetattr(tty_fd, TCSAFLUSH, &raw) != 0) return -1;
+  if (tcsetattr(tty_fd, TCSAFLUSH, &raw) != 0) {
+    close(tty_fd);
+    tty_fd = -1;
+    have_orig_termios = false;
+    return -1;
+  }
   setvbuf(stdout, stdout_buf, _IOFBF, sizeof(stdout_buf));
   fputs("\x1b[?1049h\x1b[?25l\x1b[2J\x1b[H", stdout);
   fflush(stdout);

@@ -62,7 +62,7 @@ static void seaweed_cap(struct entity *e) {
   mask_frames[1] = seaweed_mask_frame(e->owned_shape_rows[1], total, brown_rows);
   entity_set_owned_shape_frame_masks(e, mask_frames);
   e->seaweed_capped = true;
-  e->seaweed_split_timer = rng_double(180.0) + 90.0;
+  e->seaweed_split_timer = rng_range(90.0, 270.0);
 }
 
 void tick_seaweed_growth(struct entity *e) {
@@ -74,7 +74,7 @@ void tick_seaweed_growth(struct entity *e) {
   if (e->seaweed_grow_timer > 0.0) return;
   seaweed_grow_row(e);
   if (seaweed_reached_limit(e)) seaweed_cap(e);
-  else e->seaweed_grow_timer = rng_double(180.0) + 90.0;
+  else e->seaweed_grow_timer = rng_range(90.0, 270.0);
 }
 
 void tick_seaweed_debris(struct entity *e, int term_h) {

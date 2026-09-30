@@ -10,10 +10,9 @@
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
     canvas { display: block; }
     pre { margin: 16px; color: #c0c0c0; font: 16px monospace; white-space: pre-wrap; }
-    #settings-gear {
+    .icon-btn {
       position: fixed;
       top: 8px;
-      left: 8px;
       width: 28px;
       height: 28px;
       padding: 0;
@@ -22,16 +21,23 @@
       cursor: pointer;
       z-index: 10;
     }
-    #settings-gear svg { width: 100%; height: 100%; fill: #808080; transition: fill .15s ease; }
-    #settings-gear:hover svg { fill: #fff; }
-    #settings-gear[hidden] { display: none; }
+    #settings-gear { left: 8px; }
+    #help-question { left: 44px; }
+    .icon-btn svg { width: 100%; height: 100%; fill: #808080; transition: fill .15s ease; }
+    .icon-btn:hover svg { fill: #fff; }
+    .icon-btn[hidden] { display: none; }
   </style>
 </head>
 <body>
 <canvas id="tank"></canvas>
-<button id="settings-gear" type="button" title="Settings" aria-label="Settings">
+<button id="settings-gear" class="icon-btn" type="button" title="Settings" aria-label="Settings">
   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.61.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.58-.22 1.13-.54 1.63-.94l2.39.96c.24.1.47.02.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+  </svg>
+</button>
+<button id="help-question" class="icon-btn" type="button" title="Help" aria-label="Help">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 17.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm1.3-6.13c-.5.3-.68.51-.68 1.05v.33h-1.98v-.4c0-1.1.4-1.7 1.24-2.2.8-.48 1.24-.8 1.24-1.47 0-.63-.47-1.05-1.24-1.05-.72 0-1.24.36-1.6.98l-1.6-.98c.6-1.15 1.7-1.83 3.2-1.83 1.83 0 3.24 1 3.24 2.7 0 1.15-.6 1.8-1.82 2.87z"/>
   </svg>
 </button>
 <pre id="error" hidden></pre>
@@ -67,12 +73,14 @@ const KEYS = { ArrowUp: -2, ArrowDown: -3, ArrowLeft: -4, ArrowRight: -5, Escape
 const canvas = document.getElementById("tank");
 const ctx = canvas.getContext("2d");
 const gear = document.getElementById("settings-gear");
+const question = document.getElementById("help-question");
 let cellW = 0;
 let cellH = 0;
 let cols = 0;
 let rows = 0;
 
 const SETTINGS_KEY = "s".charCodeAt(0);
+const HELP_KEY = "h".charCodeAt(0);
 
 function measure() {
   ctx.font = FONT;
@@ -88,7 +96,7 @@ function layout(M) {
   canvas.style.height = window.innerHeight + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   measure();
-  ctx.textBaseline = "top";
+  ctx.textBaseline = "middle";
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
   M._web_resize(Math.max(1, Math.floor(window.innerWidth / cellW)), Math.max(1, Math.floor(window.innerHeight / cellH)));
@@ -118,7 +126,7 @@ function present(M, ptr) {
       font = f;
     }
     ctx.fillStyle = PALETTE[(v >>> 1) & 0xf][bold];
-    ctx.fillText(String.fromCodePoint(cp), (i % cols) * cellW, Math.floor(i / cols) * cellH);
+    ctx.fillText(String.fromCodePoint(cp), (i % cols) * cellW, Math.floor(i / cols) * cellH + cellH / 2 + 1);
   }
 }
 
@@ -150,11 +158,13 @@ underthec().then((M) => {
     showError(e);
     return;
   }
-  function syncGear() {
-    gear.hidden = !!M._web_settings_open();
+  function syncIcons() {
+    const open = !!M._web_settings_open() || !!M._web_help_open();
+    gear.hidden = open;
+    question.hidden = open;
   }
   layout(M);
-  syncGear();
+  syncIcons();
   window.addEventListener("resize", () => layout(M));
   window.addEventListener("keydown", (e) => {
     let key = KEYS[e.key];
@@ -162,15 +172,19 @@ underthec().then((M) => {
     if (key === undefined) return;
     if (key < 0 || e.key === " ") e.preventDefault();
     M._web_key(key);
-    syncGear();
+    syncIcons();
   });
   gear.addEventListener("click", () => {
     M._web_key(SETTINGS_KEY);
-    syncGear();
+    syncIcons();
+  });
+  question.addEventListener("click", () => {
+    M._web_key(HELP_KEY);
+    syncIcons();
   });
   canvas.addEventListener("pointerdown", (e) => {
     M._web_click(Math.floor(e.offsetX / cellW), Math.floor(e.offsetY / cellH));
-    syncGear();
+    syncIcons();
   });
   let next = performance.now();
   function tick(now) {

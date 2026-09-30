@@ -8,7 +8,7 @@ int utf8_seq_len(unsigned char lead) {
   return 1;
 }
 
-static unsigned utf8_decode(const char *s, int seq_len) {
+unsigned utf8_decode(const char *s, int seq_len) {
   unsigned char c0 = (unsigned char)s[0];
   if (seq_len == 1) return c0;
   unsigned mask;
@@ -79,4 +79,8 @@ int utf8_byte_offset(const char *s, int col) {
 
 int entity_utf8_display_width(const char *s) {
   return utf8_col_width(s);
+}
+
+int entity_utf8_byte_offset(const char *s, int col) {
+  return utf8_byte_offset(s, col);
 }

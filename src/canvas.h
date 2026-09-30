@@ -16,6 +16,12 @@ struct canvas {
   int width;
   int height;
   struct cell *cells;
+  int *touched;
+  int touched_count;
+  int touched_cap;
+  int *active;
+  int active_count;
+  int active_cap;
 };
 
 /* w/h may start being 0 */

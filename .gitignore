@@ -5,6 +5,8 @@
 *.o
 src/*.o
 *.d
+*.EFI
+/esp/
 
 # result binaries
 /underthec

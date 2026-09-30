@@ -32,7 +32,7 @@ struct cli_args {
   int mcast_ttl;
   char teletext_caption[TT_HDR_LEN + 1];
 
-  char castle_name[CASTLE_NAME_LEN + 1];
+  char castle_name[CASTLE_NAME_MAX_BYTES + 1];
 };
 
 /* false: *exit_code 0 = h/v, 2 = usage error, caller ret as-is */

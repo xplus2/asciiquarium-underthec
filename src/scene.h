@@ -32,6 +32,7 @@ struct aquatic_life {
 };
 
 #define CASTLE_NAME_LEN 11
+#define CASTLE_NAME_MAX_BYTES (CASTLE_NAME_LEN * 4)
 
 enum message_position {
   MSG_POS_MIDDLE,

@@ -20,7 +20,7 @@ DEPS := $(sort $(OBJS:.o=.d) $(patsubst %.c,$(BUILDDIR)/%.d,$(SCR_SRCS)) $(patsu
 all: $(TARGET) $(WEB_FILES) $(SCR_TARGET) $(XSCR_TARGET) $(VLOCK_TARGET)
 
 $(TARGET): $(OBJS) $(RC_OBJS)
-	$(CC) $(OBJS) $(RC_OBJS) $(LDFLAGS) -o $@
+	$(CC) $(OBJS) $(RC_OBJS) $(LDFLAGS) $(TERM_LDFLAGS) -o $@
 
 $(SCR_TARGET): $(SCR_OBJS)
 	$(CC) $(SCR_OBJS) $(LDFLAGS) $(SCR_LDFLAGS) -o $@

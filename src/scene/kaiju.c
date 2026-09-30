@@ -35,8 +35,7 @@ static void randomize_kaiju_mask(struct entity *e, ascii_rows tmpl) {
 void spawn_kaiju(struct scene *sc, int w, int h) {
   if (!sc->aquatic.kaiju) return;
   int dir = rng_int(2);
-  double speed = rng_double(2.0) + 0.25;
-  if (dir) speed = -speed;
+  double speed = mirror_speed(dir, rng_double(2.0) + 0.25);
 
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = &kaiju[dir];
@@ -128,19 +127,16 @@ static void handle_castle_collision(struct scene *sc) {
 static void update_active_laser(struct scene *sc, struct entity *laser) {
   struct entity *target = entity_find_by_id(&sc->entities, laser->splat_z);
   const struct entity *kaiju_ent = entity_find_first(&sc->entities, ENT_KAIJU);
-
   int eye_row;
   int eye_col;
   if (kaiju_ent != NULL && find_kaiju_eye(kaiju_ent, &eye_row, &eye_col)) {
     laser->splat_x = kaiju_ent->x + eye_col;
     laser->y = kaiju_ent->y + eye_row;
   }
-
   if (target == NULL) {
     laser->marked_dead = true;
     return;
   }
-
   double d = target->x - laser->splat_x;
   double dist = d < 0 ? -d : d;
   int new_len = laser->age_ticks + 5;
@@ -160,14 +156,12 @@ static void update_active_laser(struct scene *sc, struct entity *laser) {
 static void fire_laser_if_ready(struct scene *sc, int term_w) {
   const struct entity *kaiju_ent = entity_find_first(&sc->entities, ENT_KAIJU);
   if (kaiju_ent == NULL) return;
-
   int eye_row;
   int eye_col;
   if (!find_kaiju_eye(kaiju_ent, &eye_row, &eye_col)) return;
   double eye_x = kaiju_ent->x + eye_col;
   double eye_y = kaiju_ent->y + eye_row;
   double dir_sign = (kaiju_ent->vx >= 0) ? 1.0 : -1.0;
-
   for (int i = 0; i < sc->entities.count; i++) {
     struct entity *fish = &sc->entities.items[i];
     if (fish->marked_dead || fish->type != ENT_FISH) continue;

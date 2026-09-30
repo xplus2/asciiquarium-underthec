@@ -1,0 +1,199 @@
+.TH UNDERTHEC 1 "2026-09-30" "underthec 0.6.1" "User Commands"
+.SH NAME
+underthec
+.SH SYNOPSIS
+.B underthec
+[\fB\-c\fR [\fI1.0\fR|\fI1.1\fR]] [\fB\-s\fR] [\fB\-t\fR] [\fB\-p\fR \fIpace\fR]
+[\fB\-u\fR \fIN\fR] [\fB\-C\fR \fI1\fR|\fI2\fR|\fI4\fR|\fI7\fR|\fI8\fR|\fI8\-bold\fR|\fI16\fR]
+[\fB\-f\fR \fIN\fR] [\fB\-m\fR \fItext\fR|\fB\-\fR] [\fB\-M\fR \fIcolor\fR]
+[\fB\-P\fR \fIposition\fR] [\fB\-n\fR \fItext\fR] [\fB\-\-no\-castle\fR]
+[\fB\-a\fR \fIdefinition\fR] [\fIteletext options\fR]
+.br
+.B underthec
+{\fB\-h\fR|\fB\-v\fR}
+.SH DESCRIPTION
+Enjoy the mysteries of the C from the safety of a terminal!
+
+.B underthec
+Is a C-port of Asciiquarium v1.1.
+.SH OPTIONS
+.TP
+.BR \-a ", " \-\-aquatic\-life " \fIdefinition\fR"
+comma-separated, default: all on, fish=auto
+.RS
+.PP
+.BR fish=<N|auto> ", " ducks ", " dolphins ", " ship ", " swan ", " kaiju ", "
+.BR crab ", " shark ", " submarine ", " whale ", " jellyfish ", " monster ", "
+.BR bigfish ", " swordfish ", " seahorse ", " rowers ", " sailboat ", "
+.BR fishhook ", " turtle
+.RE
+.TP
+.BR \-c ", " \-\-classic " [\fI1.0\fR|\fI1.1\fR]"
+classic mode, no arg = 1.0. Not combinable with \fB\-a\fR.
+.TP
+.BR \-m ", " \-\-message " \fItext\fR"
+bg text/ascii art ('\-' for stdin)
+.TP
+.BR \-M ", " \-\-message\-color " \fIcolor\fR"
+\-m text color (default: blue)
+.RS
+.PP
+.BR red ", " green ", " blue ", " yellow ", " magenta ", " cyan ", " white ", " black
+.br
+capitalized first letter=bold
+.RE
+.TP
+.BR \-P ", " \-\-message\-position " \fIposition\fR"
+\-m placement
+.RS
+.PP
+.BR middle : " horizontally+vertically centered (default)"
+.br
+.BR center : " horizontally centered, vertical top"
+.br
+.BR marquee : " centered scrolling"
+.br
+.BR swim : " top row, scrolls right to left"
+.br
+.BR event : " like swim, but random"
+.RE
+.TP
+.BR \-p ", " \-\-pace " \fIpace\fR"
+speed multiplier, 0.01\-10 (default: 1)
+.TP
+.BR \-u ", " \-\-uturn\-chance " \fIN\fR"
+fish turn per N ticks (default: 400, 0 = never)
+.TP
+.BR \-C ", " \-\-colors " \fInum\fR|\fIname\fR"
+foreground colors (default: 16)
+.RS
+.PP
+1|2 also take a \-<color> suffix, e.g. 2\-green
+.br
+4: RGBW, 7: teletext, 8: also takes 8\-bold
+.RE
+.TP
+.BR \-f ", " \-\-fps " \fIN\fR"
+render frames per second, 1\-240 (default: 10)
+.TP
+.BR \-s ", " \-\-screensaver
+exit on any keypress
+.TP
+.BR \-t ", " \-\-transparent
+transparent background (default: opaque black)
+.TP
+.BR \-n ", " \-\-castle\-name " \fItext\fR"
+text on the castle, max 11 chars
+.TP
+.B \-\-no\-castle
+disable the castle
+.TP
+.BR \-\-teletext " \fIt42\fR|\fIts\fR"
+binary teletext stream to stdout instead of the terminal
+.RS
+.PP
+t42: raw 42\-byte packets, ts: MPEG\-TS with teletext PES
+.RE
+.TP
+.BR \-\-teletext\-mode " \fImode\fR"
+"text": 39 columns, exact ASCII via X/26
+.br
+"mosaic": 2x3 blocks, 78 columns (default: text)
+.TP
+.BR \-\-mcast " \fIIP\fR:\fIPORT\fR"
+send MPEG\-TS teletext to a multicast group, [GROUP]:PORT for IPv6
+.TP
+.BR \-\-ttl " \fIN\fR"
+multicast TTL/hops, 1\-255 (default: 1)
+.TP
+.BR \-\-iface " \fIif\fR"
+multicast interface: local address (IPv4) or name (IPv6)
+.TP
+.BR \-\-teletext\-caption " \fIt\fR"
+page caption (default: UNDERTHEC)
+.TP
+.BR \-h ", " \-\-help
+show help
+.TP
+.BR \-v ", " \-\-version
+show version
+.SH KEYS
+.PP
+.B q
+quit,
+.B r
+redraw,
+.B p/[space]
+pause,
+.B t
+toggle transparency,
+.B f
+feed,
+.B s
+settings,
+.B h
+help
+.SH ENVIRONMENT
+Each mirrors a command-line option.
+.PP
+.B UNDERTHEC_FISH=auto|number
+like \-a's fish=
+.PP
+.B UNDERTHEC_AQUATIC_LIFE=<def>
+like \-a, except for fish=
+.PP
+.B UNDERTHEC_CLASSIC=1.0|1.1
+like \-c
+.PP
+.B UNDERTHEC_MESSAGE=<text>
+like \-m
+.PP
+.B UNDERTHEC_MESSAGE_COLOR=<color>
+like \-M
+.PP
+.B UNDERTHEC_MESSAGE_POSITION=<pos>
+like \-P
+.PP
+.B UNDERTHEC_PACE=<pace>
+like \-p
+.PP
+.B UNDERTHEC_FPS=<N>
+like \-f
+.PP
+.B UNDERTHEC_SCREENSAVER=0|1
+like \-s
+.PP
+.B UNDERTHEC_UTURN_CHANCE=<N>
+like \-u
+.PP
+.B UNDERTHEC_COLORS=<1|1\-*|2|2\-*|7|16>
+like \-C
+.PP
+.B UNDERTHEC_TRANSPARENT=0|1
+like \-t
+.PP
+.B UNDERTHEC_TELETEXT=t42|ts
+like \-\-teletext
+.PP
+.B UNDERTHEC_TELETEXT_MODE=text|mosaic
+like \-\-teletext\-mode
+.PP
+.B UNDERTHEC_MCAST=<GROUP:PORT>
+like \-\-mcast
+.PP
+.B UNDERTHEC_MCAST_TTL=<N>
+like \-\-ttl
+.PP
+.B UNDERTHEC_MCAST_IFACE=<if>
+like \-\-iface
+.PP
+.B UNDERTHEC_TELETEXT_CAPTION=<text>
+like \-\-teletext\-caption
+.PP
+.B UNDERTHEC_CASTLE_NAME=<text>
+like \-\-castle\-name
+.PP
+.B UNDERTHEC_NO_CASTLE=0|1
+like \-\-no\-castle
+.SH LICENSE
+GPL\-2.0\-or\-later.

@@ -16,6 +16,9 @@ void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v,
 void opts_set_errbuf(char *errbuf, size_t errbuf_len, const char *const *parts, size_t count);
 char *opts_strdup(const char *s);
 
+bool opts_parse_bool(const char *val, bool *out, char *errbuf, size_t errbuf_len);
+/* strtol, full string, inclusive bounds. no errbuf */
+bool opts_parse_int_range(const char *val, int lo, int hi, int *out);
 /* auto = -1 */
 bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbuf_len);
 /* reset creature flags. fish= only on allow_fish */
@@ -30,6 +33,7 @@ bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_le
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len);
 /* out_cap incl NUL, printable ASCII (0x20-0x7E) */
 bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);
+/* out_cap incl NUL, UTF8, CASTLE_NAME_LEN max cols */
 bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);
 
 /* splits buf in place, drops trailing empty rows. caller frees rows */

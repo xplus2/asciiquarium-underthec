@@ -92,8 +92,8 @@ void entity_reap(struct entity_list *list, entity_death_fn fn, void *ctx) {
   for (int read = 0; read < original_count; read++) {
     if (list->items[read].marked_dead) {
       struct entity snapshot = list->items[read];
-      entity_clear_owned(&list->items[read]);
       if (fn != NULL) fn(&snapshot, ctx);
+      entity_clear_owned(&list->items[read]);
       continue;
     }
     if (write != read) list->items[write] = list->items[read];

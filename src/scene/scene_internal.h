@@ -38,6 +38,9 @@
 #define MAIN_REGION_TOP_ROW 9
 #define Z_MESSAGE_SURFACE 1
 
+/* dir from rng_int(2): 0 = positive, nonzero = mirror */
+static inline double mirror_speed(int dir, double magnitude) { return dir ? -magnitude : magnitude; }
+
 /* effects.c */
 void spawn_splat(struct scene *sc, double tx, double ty, int tz);
 struct entity *spawn_bubble_at(struct scene *sc, double x, double y, int z);
@@ -78,6 +81,7 @@ void fishhook_tick(struct scene *sc, int term_h);
 /* feed.c */
 void feed_trigger(struct scene *sc, int w, int h, int col);
 void feed_tick(struct scene *sc, int w, int h);
+void feed_shutdown(void);
 
 /* turtle.c */
 void spawn_turtle(struct scene *sc, int w, int h);

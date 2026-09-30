@@ -47,11 +47,7 @@ struct tt_net {
 };
 
 static bool parse_port(const char *s, int *out) {
-  char *end = NULL;
-  long n = strtol(s, &end, 10);
-  if (s[0] == '\0' || *end != '\0' || n < 1 || n > 65535) return false;
-  *out = (int)n;
-  return true;
+  return opts_parse_int_range(s, 1, 65535, out);
 }
 
 static bool parse_spec(const char *spec, struct sockaddr_storage *ss, socklen_t *len, char *errbuf, size_t errbuf_len) {

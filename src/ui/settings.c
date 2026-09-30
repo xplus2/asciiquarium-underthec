@@ -175,8 +175,7 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
     }
     case FIELD_SPECIES:
     case FIELD_NONE:
-    default:
-      break;
+    default: break;
   }
 }
 
@@ -194,12 +193,12 @@ static void toggle_checkbox(struct settings_ui *ui, int term_w, int term_h) {
 void settings_ui_handle_key(struct settings_ui *ui, int key, int term_w, int term_h) {
   if (!ui->open) return;
   switch (key) {
-    case TERM_KEY_UP:    move_up_down(ui, -1);          break;
-    case TERM_KEY_DOWN:  move_up_down(ui, 1);           break;
-    case TERM_KEY_LEFT:  move_left_right(ui, -1);       break;
-    case TERM_KEY_RIGHT: move_left_right(ui, 1);        break;
-    case '+':            adjust(ui, 1, term_w, term_h);  break;
-    case '-':            adjust(ui, -1, term_w, term_h); break;
+    case TERM_KEY_UP:    move_up_down(ui, -1);           break;
+    case TERM_KEY_DOWN:  move_up_down(ui, 1);            break;
+    case TERM_KEY_LEFT:  move_left_right(ui, -1);        break;
+    case TERM_KEY_RIGHT: move_left_right(ui, 1);         break;
+    case '+':            adjust(ui, 1, term_w, term_h);    break;
+    case '-':            adjust(ui, -1, term_w, term_h);   break;
     case ' ':            toggle_checkbox(ui, term_w, term_h); break;
     default: break;
   }
@@ -245,64 +244,66 @@ static void draw_row_text(struct canvas *c, int x0, int y, const char *s, int hl
   }
 }
 
+struct adj_field {
+  enum field_kind kind;
+  const char *label;
+  int label_w;
+  int value_w;
+};
+
+static const struct adj_field TOP_ROWS[3][2] = {
+  {{FIELD_COLORS, "colors", 7, 17}, {FIELD_NONE, NULL, 0, 0}},
+  {{FIELD_FPS, "fps", 7, 3}, {FIELD_PACE, "pace", 6, 4}},
+  {{FIELD_UTURN, "uturn", 7, 3}, {FIELD_FISH, "fish", 6, 4}},
+};
+
+static void format_adj_value(const struct settings_ui *ui, enum field_kind kind, int value_w, char *out, size_t out_cap) {
+  size_t p = 0;
+  switch (kind) {
+    case FIELD_FPS: opts_append_int_bounded(out, out_cap - 1, &p, *ui->fps, value_w); break;
+    case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 1); break;
+    case FIELD_UTURN: opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->uturn_chance, value_w); break;
+    case FIELD_FISH: opts_append_int_bounded(out, out_cap - 1, &p, current_fish_value(ui->scene), value_w); break;
+    case FIELD_COLORS: {
+      char lbl[15];
+      colors_mode_label(*ui->colors_mode, lbl, sizeof lbl);
+      opts_append_bounded_w(out, out_cap - 1, &p, lbl, value_w);
+      break;
+    }
+    case FIELD_SPECIES:
+    case FIELD_CASTLE:
+    case FIELD_NONE:
+    default: break;
+  }
+  out[p] = '\0';
+}
+
+static void draw_adjustable_row(const struct settings_ui *ui, struct canvas *c, int lr, const struct adj_field row[2]) {
+  char line[CONTENT_W + 1];
+  size_t p = 0;
+  bool sel = ui->sel_row == lr;
+  int hl_off = -1, hl_len = 0;
+  for (int col = 0; col < 2; col++) {
+    if (row[col].kind == FIELD_NONE) break;
+    if (col == 1) opts_append_bounded(line, sizeof line - 1, &p, "  ");
+    opts_append_bounded_w(line, sizeof line - 1, &p, row[col].label, row[col].label_w);
+    opts_append_bounded(line, sizeof line - 1, &p, "-");
+    size_t value_start = p;
+    char valbuf[20];
+    format_adj_value(ui, row[col].kind, row[col].value_w, valbuf, sizeof valbuf);
+    opts_append_bounded(line, sizeof line - 1, &p, valbuf);
+    if (sel && ui->sel_col == col) { hl_off = (int)value_start; hl_len = (int)(p - value_start); }
+    opts_append_bounded(line, sizeof line - 1, &p, "+");
+  }
+  line[p] = '\0';
+  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(lr), line, hl_off, hl_len);
+}
+
 void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   if (!ui->open) return;
-
   fill_rect(c, 0, 0, BOX_W, BOX_H, BOX_ATTR);
   draw_row_text(c, MARGIN, MARGIN + 0, "Settings", -1, 0);
-
-  char line[CONTENT_W + 1];
-
-  char colors_label[15];
-  colors_mode_label(*ui->colors_mode, colors_label, sizeof colors_label);
-  {
-    size_t p = 0;
-    opts_append_bounded_w(line, sizeof line - 1, &p, "colors", 7);
-    opts_append_bounded(line, sizeof line - 1, &p, "-");
-    opts_append_bounded_w(line, sizeof line - 1, &p, colors_label, 17);
-    opts_append_bounded(line, sizeof line - 1, &p, "+");
-    line[p] = '\0';
-  }
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(0), line, ui->sel_row == 0 ? MINUS0_X + 1 : -1, ui->sel_row == 0 ? 17 : 0);
-
-  bool row1_sel = ui->sel_row == 1;
-  {
-    size_t p = 0;
-    opts_append_bounded_w(line, sizeof line - 1, &p, "fps", 7);
-    opts_append_bounded(line, sizeof line - 1, &p, "-");
-    opts_append_int_bounded(line, sizeof line - 1, &p, *ui->fps, 3);
-    opts_append_bounded(line, sizeof line - 1, &p, "+  ");
-    opts_append_bounded_w(line, sizeof line - 1, &p, "pace", 6);
-    opts_append_bounded(line, sizeof line - 1, &p, "-");
-    opts_append_float_bounded(line, sizeof line - 1, &p, *ui->pace, 4, 1);
-    opts_append_bounded(line, sizeof line - 1, &p, "+");
-    line[p] = '\0';
-  }
-  int row1_off, row1_len;
-  if (row1_sel && ui->sel_col == 0) { row1_off = MINUS0_X + 1; row1_len = 3; }
-  else if (row1_sel && ui->sel_col == 1) { row1_off = MINUS1_X + 1; row1_len = 4; }
-  else { row1_off = -1; row1_len = 0; }
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(1), line, row1_off, row1_len);
-
-  bool row2_sel = ui->sel_row == 2;
-  {
-    size_t p = 0;
-    opts_append_bounded_w(line, sizeof line - 1, &p, "uturn", 7);
-    opts_append_bounded(line, sizeof line - 1, &p, "-");
-    opts_append_int_bounded(line, sizeof line - 1, &p, ui->scene->uturn_chance, 3);
-    opts_append_bounded(line, sizeof line - 1, &p, "+  ");
-    opts_append_bounded_w(line, sizeof line - 1, &p, "fish", 6);
-    opts_append_bounded(line, sizeof line - 1, &p, "-");
-    opts_append_int_bounded(line, sizeof line - 1, &p, current_fish_value(ui->scene), 4);
-    opts_append_bounded(line, sizeof line - 1, &p, "+");
-    line[p] = '\0';
-  }
-  int row2_off, row2_len;
-  if (row2_sel && ui->sel_col == 0) { row2_off = MINUS0_X + 1; row2_len = 3; }
-  else if (row2_sel && ui->sel_col == 1) { row2_off = MINUS1_X + 1; row2_len = 4; }
-  else { row2_off = -1; row2_len = 0; }
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(2), line, row2_off, row2_len);
-
+  for (int lr = 0; lr < 3; lr++) draw_adjustable_row(ui, c, lr, TOP_ROWS[lr]);
   for (int lr = 3; lr < GRID_ROWS; lr++) {
     int y = MARGIN + draw_row_for_logical(lr);
     for (int col = 0; col < 2; col++) {

@@ -74,6 +74,23 @@ static void fonts_free(void) {
   }
 }
 
+static HBRUSH bg_brushes[9][2];
+
+static HBRUSH bg_brush(enum color col, bool bold) {
+  int b = bold ? 1 : 0;
+  if (bg_brushes[col][b] == NULL) bg_brushes[col][b] = CreateSolidBrush(palette[col][b]);
+  return bg_brushes[col][b];
+}
+
+static void bg_brushes_free(void) {
+  for (int col = 0; col < 9; col++) {
+    for (int b = 0; b < 2; b++) {
+      if (bg_brushes[col][b] != NULL) DeleteObject(bg_brushes[col][b]);
+      bg_brushes[col][b] = NULL;
+    }
+  }
+}
+
 static void backbuffer_free(void) {
   if (scr.mem_dc == NULL) return;
   SelectObject(scr.mem_dc, scr.old_bmp);
@@ -155,9 +172,7 @@ static void draw_canvas(void) {
       RECT r = {scr.off_x + col * scr.cell_w, scr.off_y + row * scr.cell_h, 0, 0};
       r.right = r.left + scr.cell_w;
       r.bottom = r.top + scr.cell_h;
-      HBRUSH br = CreateSolidBrush(palette[cell->bg][cell->bg_bold ? 1 : 0]);
-      FillRect(scr.mem_dc, &r, br);
-      DeleteObject(br);
+      FillRect(scr.mem_dc, &r, bg_brush(cell->bg, cell->bg_bold));
     }
   }
   for (int row = 0; row < c->height; row++) draw_row(row);
@@ -262,7 +277,7 @@ static int run(HINSTANCE inst, HWND parent) {
   config_init(&cfg);
   if (scr_config_load(&cfg, scr.err, sizeof scr.err) && config_check(&cfg, scr.err, sizeof scr.err)) {
     config_start(&cfg, &scr.app, now_seconds());
-    /* castle doesn't fit the preview */
+    /* castle doesn't fit preview */
     if (!scr.fullscreen) scene_set_castle(&scr.app.scene, false);
     scr.started = true;
   }
@@ -292,7 +307,10 @@ static int run(HINSTANCE inst, HWND parent) {
     if (scr.font_px < 6) scr.font_px = 6;
     wnd = CreateWindowExW(0, wc.lpszClassName, TOOL_DISPLAY_NAME_W, WS_CHILD, 0, 0, r.right, r.bottom, parent, NULL, inst, NULL);
   }
-  if (wnd == NULL) return 1;
+  if (wnd == NULL) {
+    if (scr.started) app_free(&scr.app);
+    return 1;
+  }
   ShowWindow(wnd, SW_SHOW);
   SetTimer(wnd, TIMER_ID, (UINT)(1000 / fps), NULL);
 
@@ -303,6 +321,7 @@ static int run(HINSTANCE inst, HWND parent) {
   }
   backbuffer_free();
   fonts_free();
+  bg_brushes_free();
   if (scr.started) app_free(&scr.app);
   return 0;
 }

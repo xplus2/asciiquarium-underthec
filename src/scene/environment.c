@@ -21,8 +21,12 @@ void add_environment(struct scene *sc, int w, int h) {
     int repeat = w / unit_len + 2;
 
     char *tiled = xmalloc((size_t)unit_len * (size_t)repeat + 1);
-    tiled[0] = '\0';
-    for (int r = 0; r < repeat; r++) strcat(tiled, unit);
+    size_t pos = 0;
+    for (int r = 0; r < repeat; r++) {
+      memcpy(tiled + pos, unit, (size_t)unit_len);
+      pos += (size_t)unit_len;
+    }
+    tiled[pos] = '\0';
     struct entity *e = entity_spawn(&sc->entities);
     e->type = ENT_WATERLINE;
     e->x = 0;
@@ -41,11 +45,22 @@ static void map_identity_row(const char *in, char *out, void *ctx) {
   strcpy(out, in);
 }
 
-static void bake_castle_name_shape(char *row, const char *name) {
-  size_t len = strlen(name);
-  if (len > CASTLE_NAME_LEN) len = CASTLE_NAME_LEN;
-  size_t pad = (CASTLE_NAME_LEN - len) / 2;
-  memcpy(row + CASTLE_NAME_COL + pad, name, len);
+static char *bake_castle_name_shape(const char *row, const char *name) {
+  int name_cols = entity_utf8_display_width(name);
+  if (name_cols > CASTLE_NAME_LEN) name_cols = CASTLE_NAME_LEN;
+  int name_bytes = entity_utf8_byte_offset(name, name_cols);
+  int pad = (CASTLE_NAME_LEN - name_cols) / 2;
+
+  size_t prefix_len = (size_t)(CASTLE_NAME_COL + pad);
+  size_t suffix_col = (size_t)(CASTLE_NAME_COL + pad + name_cols);
+  size_t row_len = strlen(row);
+  size_t suffix_len = suffix_col < row_len ? row_len - suffix_col : 0;
+  char *out = xmalloc(prefix_len + (size_t)name_bytes + suffix_len + 1);
+  memcpy(out, row, prefix_len);
+  memcpy(out + prefix_len, name, (size_t)name_bytes);
+  memcpy(out + prefix_len + (size_t)name_bytes, row + suffix_col, suffix_len);
+  out[prefix_len + (size_t)name_bytes + suffix_len] = '\0';
+  return out;
 }
 
 static char **build_castle_mask(const char *name) {
@@ -63,10 +78,10 @@ static char **build_castle_mask(const char *name) {
     out[i] = xmalloc(width + 1);
     memset(out[i], ' ', width);
     out[i][width] = '\0';
-    size_t len = strlen(name);
-    if (len > CASTLE_NAME_LEN) len = CASTLE_NAME_LEN;
-    size_t pad = (CASTLE_NAME_LEN - len) / 2;
-    memset(out[i] + CASTLE_NAME_COL + pad, 'w', len);
+    int name_cols = entity_utf8_display_width(name);
+    if (name_cols > CASTLE_NAME_LEN) name_cols = CASTLE_NAME_LEN;
+    int pad = (CASTLE_NAME_LEN - name_cols) / 2;
+    memset(out[i] + CASTLE_NAME_COL + pad, 'w', (size_t)name_cols);
   }
   out[rows] = NULL;
   return out;
@@ -85,7 +100,9 @@ void add_castle(struct scene *sc, int w, int h) {
     return;
   }
   char **shape_rows = entity_build_transformed_rows(castle_image, map_identity_row, NULL);
-  bake_castle_name_shape(shape_rows[CASTLE_NAME_ROW], sc->castle_name);
+  char *baked = bake_castle_name_shape(shape_rows[CASTLE_NAME_ROW], sc->castle_name);
+  free(shape_rows[CASTLE_NAME_ROW]);
+  shape_rows[CASTLE_NAME_ROW] = baked;
   char ***frame_list = xmalloc(sizeof(*frame_list));
   frame_list[0] = shape_rows;
   entity_set_owned_shape_frames(e, frame_list, 1, 0.0);
@@ -113,8 +130,11 @@ void add_castle_building(struct scene *sc, int w, int h) {
     int revealed_from_row = rows - 1 - step;
     struct castle_reveal_ctx ctx = {revealed_from_row, 0};
     frame_list[step] = entity_build_transformed_rows(castle_image, map_castle_reveal, &ctx);
-    if (sc->castle_name != NULL && CASTLE_NAME_ROW >= revealed_from_row)
-      bake_castle_name_shape(frame_list[step][CASTLE_NAME_ROW], sc->castle_name);
+    if (sc->castle_name != NULL && CASTLE_NAME_ROW >= revealed_from_row) {
+      char *baked = bake_castle_name_shape(frame_list[step][CASTLE_NAME_ROW], sc->castle_name);
+      free(frame_list[step][CASTLE_NAME_ROW]);
+      frame_list[step][CASTLE_NAME_ROW] = baked;
+    }
   }
 
   struct entity *e = entity_spawn(&sc->entities);
@@ -252,7 +272,7 @@ void add_seaweed(struct scene *sc, int w, int h) {
   e->default_attr = color_from_name("green");
   e->seaweed_orig_height = height;
   e->seaweed_top_left = true;
-  e->seaweed_grow_timer = rng_double(180.0) + 90.0;
+  e->seaweed_grow_timer = rng_range(90.0, 270.0);
   e->seaweed_full_collapse_in = rng_int(2) + 2;
 
   char ***frame_list = xmalloc(2 * sizeof(*frame_list));
@@ -325,7 +345,7 @@ static void seaweed_split(struct scene *sc, struct entity *e, int term_w, int te
   base->seaweed_grown = 0;
   base->seaweed_capped = false;
   base->seaweed_top_left = ((grown % 2) == 0) ? top_left : !top_left;
-  base->seaweed_grow_timer = rng_double(180.0) + 90.0;
+  base->seaweed_grow_timer = rng_range(90.0, 270.0);
 }
 
 void seaweed_tick(struct scene *sc, int term_w, int term_h) {

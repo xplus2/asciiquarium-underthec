@@ -9,6 +9,14 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
+if (NOT EMSCRIPTEN AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT UNDERTHEC_IPO_OK LANGUAGES C)
+    if (UNDERTHEC_IPO_OK)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif ()
+endif ()
+
 file(READ ${CMAKE_SOURCE_DIR}/src/version.h UNDERTHEC_VERSION_H)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS src/version.h)
 string(REGEX MATCH "TOOL_VERSION \"([0-9]+)\\.([0-9]+)\\.([0-9]+)\"" _ "${UNDERTHEC_VERSION_H}")
@@ -78,13 +86,17 @@ endif ()
 add_executable(underthec ${UNDERTHEC_SOURCES})
 target_include_directories(underthec PRIVATE src)
 
+if (WIN32 AND NOT EMSCRIPTEN)
+    target_link_libraries(underthec PRIVATE shell32)
+endif ()
+
 if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(underthec PRIVATE -Wall -Wextra)
 endif ()
 
 if (EMSCRIPTEN)
     if (UNDERTHEC_STATIC)
-        message(STATUS "UNDERTHEC_STATIC has no effect on Emscripten")
+        message(STATUS "UNDERTHEC_STATIC has no effect on emscripten")
     endif ()
     set_target_properties(underthec PROPERTIES SUFFIX ".js")
     target_link_options(underthec PRIVATE
@@ -92,7 +104,7 @@ if (EMSCRIPTEN)
             -sEXPORT_NAME=underthec
             -sENVIRONMENT=web
             -sALLOW_MEMORY_GROWTH=1
-            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open
+            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open
             -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall
     )
     add_custom_command(TARGET underthec POST_BUILD
@@ -148,19 +160,19 @@ if (NOT WIN32 AND NOT EMSCRIPTEN)
                 target_include_directories(underthec_xscr PRIVATE ${X11_Xft_INCLUDE_PATH} ${FREETYPE_INCLUDE_DIRS})
                 target_link_libraries(underthec_xscr PRIVATE ${X11_Xft_LIB} ${FREETYPE_LIBRARIES})
             else ()
-                message(STATUS "Xft found but freetype2 development headers are missing, building without Xft")
+                message(STATUS "Xft found but freetype2 dev headers are missing, building without xft")
             endif ()
         endif ()
         if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
             target_compile_options(underthec_xscr PRIVATE -Wall -Wextra)
         endif ()
         if (UNDERTHEC_STATIC)
-            message(STATUS "UNDERTHEC_STATIC has no effect on the xscreensaver build (X11/Xft aren't available static)")
+            message(STATUS "UNDERTHEC_STATIC has no effect on the xscreensaver build (X11/Xft are not static)")
         endif ()
         install(PROGRAMS $<TARGET_FILE:underthec_xscr> DESTINATION ${UNDERTHEC_XSCREENSAVER_BINDIR} RENAME underthec)
         install(FILES src/target/scr_x11/underthec.xml DESTINATION ${UNDERTHEC_XSCREENSAVER_CONFIGDIR})
     else ()
-        message(STATUS "X11 development headers not found, skipping the xscreensaver target")
+        message(STATUS "X11 dev headers not found, skipping xscreensaver")
     endif ()
 endif ()
 

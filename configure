@@ -81,6 +81,7 @@ else
 	if [ "$windows" = "1" ]; then
 		srcs="$srcs src/target/terminal/term_windows.c"
 		rc="src/target/windows/underthec.rc"
+		term_ldflags="-lshell32"
 		scr_srcs="$core_srcs src/config.c src/target/scr_windows/scr_main.c src/target/scr_windows/scr_cfg.c"
 		if [ -n "$host" ]; then windres="${host}-windres"; else windres=windres; fi
 	else
@@ -142,12 +143,17 @@ if [ "$debug" = "1" ]; then
 	cflags="$cflags -g -O0"
 else
 	cflags="$cflags -O2"
-	if [ "$emcc" = "1" ]; then ldflags="$ldflags -O2"; else ldflags="$ldflags -s"; fi
+	if [ "$emcc" = "1" ]; then
+		ldflags="$ldflags -O2"
+	else
+		cflags="$cflags -flto=auto"
+		ldflags="$ldflags -s -flto=auto"
+	fi
 fi
 
 if [ "$emcc" = "1" ]; then
 	ldflags="$ldflags -sMODULARIZE=1 -sEXPORT_NAME=underthec -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1"
-	ldflags="$ldflags -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open"
+	ldflags="$ldflags -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open"
 	ldflags="$ldflags -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall"
 elif [ "$static" = "1" ]; then
 	case "$(uname -s 2>/dev/null)" in
@@ -167,6 +173,9 @@ fi
 	echo "SRCS = $srcs"
 	if [ -n "$rc" ]; then
 		echo "RC = $rc"
+	fi
+	if [ -n "$term_ldflags" ]; then
+		echo "TERM_LDFLAGS = $term_ldflags"
 	fi
 	if [ "$emcc" = "1" ]; then
 		echo 'TARGET = $(BUILDDIR)/underthec.js'

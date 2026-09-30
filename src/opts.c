@@ -85,18 +85,36 @@ char *opts_strdup(const char *s) {
   return p;
 }
 
+bool opts_parse_bool(const char *val, bool *out, char *errbuf, size_t errbuf_len) {
+  if (strcmp(val, "0") == 0) {
+    *out = false;
+    return true;
+  }
+  if (strcmp(val, "1") == 0) {
+    *out = true;
+    return true;
+  }
+  opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid value '", val, "', expected 0 or 1"}, 3);
+  return false;
+}
+
+bool opts_parse_int_range(const char *val, int lo, int hi, int *out) {
+  char *end = NULL;
+  long n = strtol(val, &end, 10);
+  if (val[0] == '\0' || *end != '\0' || n < lo || n > hi) return false;
+  *out = (int)n;
+  return true;
+}
+
 bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   if (strcmp(val, "auto") == 0) {
     *out = -1;
     return true;
   }
-  char *endptr = NULL;
-  long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || n < 0 || n > 100000) {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fish count '", val, "'"}, 3);
+  if (!opts_parse_int_range(val, 0, 999, out)) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fish count '", val, "', expected 0-999 or auto"}, 3);
     return false;
   }
-  *out = (int)n;
   return true;
 }
 
@@ -158,24 +176,18 @@ bool opts_parse_message_position(const char *val, enum message_position *out, ch
 }
 
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len) {
-  char *endptr = NULL;
-  long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || n < 0 || n > 1000000) {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid uturn chance '", val, "'"}, 3);
+  if (!opts_parse_int_range(val, 0, 999, out)) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid uturn chance '", val, "', expected 0-999"}, 3);
     return false;
   }
-  *out = (int)n;
   return true;
 }
 
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) {
-  char *endptr = NULL;
-  long n = strtol(val, &endptr, 10);
-  if (val[0] == '\0' || *endptr != '\0' || n < 1 || n > 240) {
+  if (!opts_parse_int_range(val, 1, 240, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fps '", val, "', expected 1-240"}, 3);
     return false;
   }
-  *out = (int)n;
   return true;
 }
 
@@ -267,17 +279,62 @@ bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, cha
   return true;
 }
 
+static int castle_name_utf8_decode(const char *s, size_t len, unsigned *cp_out) {
+  unsigned char b0 = (unsigned char)s[0];
+  if (b0 < 0x80) {
+    *cp_out = b0;
+    return 1;
+  }
+  int n;
+  unsigned cp;
+  if ((b0 & 0xE0) == 0xC0) {
+    if (b0 < 0xC2) return -1;
+    n = 2;
+    cp = b0 & 0x1F;
+  } else if ((b0 & 0xF0) == 0xE0) {
+    n = 3;
+    cp = b0 & 0x0F;
+  } else if ((b0 & 0xF8) == 0xF0) {
+    if (b0 > 0xF4) return -1;
+    n = 4;
+    cp = b0 & 0x07;
+  } else {
+    return -1;
+  }
+  if (len < (size_t)n) return -1;
+  for (int k = 1; k < n; k++) {
+    unsigned char c = (unsigned char)s[k];
+    if ((c & 0xC0) != 0x80) return -1;
+    cp = (cp << 6) | (unsigned)(c & 0x3F);
+  }
+  if (n == 3 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) return -1;
+  if (n == 4 && (cp < 0x10000 || cp > 0x10FFFF)) return -1;
+  *cp_out = cp;
+  return n;
+}
+
 bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len) {
   size_t len = strlen(val);
-  if (len >= out_cap) {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' too long, max 11 chars"}, 3);
-    return false;
-  }
-  for (size_t i = 0; i < len; i++) {
-    if ((unsigned char)val[i] < 0x20 || (unsigned char)val[i] > 0x7E) {
-      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' must be printable ASCII"}, 3);
+  for (size_t i = 0; i < len; ) {
+    unsigned cp;
+    int n = castle_name_utf8_decode(val + i, len - i, &cp);
+    if (n < 0) {
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' has invalid UTF-8 encoding"}, 3);
       return false;
     }
+    if (cp < 0x20 || cp == 0x7F || (cp >= 0x80 && cp <= 0x9F)) {
+      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' must be printable text"}, 3);
+      return false;
+    }
+    i += (size_t)n;
+  }
+  if (entity_utf8_display_width(val) > CASTLE_NAME_LEN) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' too long, max 11 columns"}, 3);
+    return false;
+  }
+  if (len >= out_cap) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' too long"}, 3);
+    return false;
   }
   memcpy(out, val, len + 1);
   return true;

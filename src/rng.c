@@ -20,3 +20,7 @@ double rng_double(double n) {
   double frac = (double)(next() >> 11) / (double)(1ULL << 53);
   return frac * n;
 }
+
+double rng_range(double lo, double hi) {
+  return rng_double(hi - lo) + lo;
+}

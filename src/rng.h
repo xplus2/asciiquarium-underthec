@@ -6,5 +6,6 @@
 void rng_seed(uint64_t seed);
 int rng_int(int n);
 double rng_double(double n);
+double rng_range(double lo, double hi);
 
 #endif

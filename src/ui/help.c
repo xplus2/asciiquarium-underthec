@@ -26,6 +26,10 @@ void help_ui_toggle(struct help_ui *ui) { ui->open = !ui->open; }
 
 void help_ui_close(struct help_ui *ui) { ui->open = false; }
 
+bool help_ui_click(const struct help_ui *ui, int x, int y) {
+  return ui->open && x >= 0 && x < BOX_W && y >= 0 && y < BOX_H;
+}
+
 static void fill_rect(struct canvas *c, int x0, int y0, int w, int h, struct attr a) {
   for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) canvas_put(c, x0 + x, y0 + y, " ", 1, a, 1);
 }

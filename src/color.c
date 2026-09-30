@@ -30,13 +30,16 @@ bool color_supported(void) {
 }
 
 struct attr color_from_mask_letter(char c) {
-  static const char letters[] = "cCrRyYbBgGmMwWkK";
-  static const enum color cols[8] = {COL_CYAN, COL_RED, COL_YELLOW, COL_BLUE, COL_GREEN, COL_MAGENTA, COL_WHITE, COL_BLACK};
-  if (c == '\0') return (struct attr){.col = COL_DEFAULT, .bold = false};
-  const char *p = strchr(letters, c);
-  if (p == NULL) return (struct attr){.col = COL_DEFAULT, .bold = false};
-  int idx = (int)(p - letters);
-  return (struct attr){.col = cols[idx / 2], .bold = (idx % 2) == 1};
+  static struct attr table[256];
+  static bool table_ready = false;
+  if (!table_ready) {
+    static const char letters[] = "cCrRyYbBgGmMwWkK";
+    static const enum color cols[8] = {COL_CYAN, COL_RED, COL_YELLOW, COL_BLUE, COL_GREEN, COL_MAGENTA, COL_WHITE, COL_BLACK};
+    for (int i = 0; i < 256; i++) table[i] = (struct attr){.col = COL_DEFAULT, .bold = false};
+    for (int i = 0; letters[i] != '\0'; i++) table[(unsigned char)letters[i]] = (struct attr){.col = cols[i / 2], .bold = (i % 2) == 1};
+    table_ready = true;
+  }
+  return table[(unsigned char)c];
 }
 
 static const char *const color_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};

@@ -1,6 +1,7 @@
 #include "../../app.h"
 #include "../../config.h"
 #include "../../xalloc.h"
+#include "../../entity/priv.h"
 
 #include <stdint.h>
 
@@ -15,6 +16,7 @@ const uint32_t *web_frame(double now_ms);
 int web_width(void);
 int web_height(void);
 bool web_settings_open(void);
+bool web_help_open(void);
 
 static struct app app;
 static uint32_t *packed;
@@ -22,14 +24,6 @@ static size_t packed_cap;
 static char err[256];
 static bool cfg_ready;
 static struct config cfg;
-
-static uint32_t utf8_codepoint(const char *s) {
-  const unsigned char *u = (const unsigned char *)s;
-  if (u[0] < 0x80) return u[0];
-  if ((u[0] & 0xe0) == 0xc0) return ((uint32_t)(u[0] & 0x1f) << 6) | (u[1] & 0x3f);
-  if ((u[0] & 0xf0) == 0xe0) return ((uint32_t)(u[0] & 0x0f) << 12) | ((uint32_t)(u[1] & 0x3f) << 6) | (u[2] & 0x3f);
-  return ((uint32_t)(u[0] & 0x07) << 18) | ((uint32_t)(u[1] & 0x3f) << 12) | ((uint32_t)(u[2] & 0x3f) << 6) | (u[3] & 0x3f);
-}
 
 static void cfg_defaults(void) {
   if (cfg_ready) return;
@@ -44,7 +38,10 @@ const char *web_opt(const char *name, const char *value, const char *shown) {
 
 const char *web_init(double now_ms) {
   cfg_defaults();
-  if (!config_check(&cfg, err, sizeof err)) return err;
+  if (!config_check(&cfg, err, sizeof err)) {
+    config_free(&cfg);
+    return err;
+  }
   config_start(&cfg, &app, now_ms / 1000.0);
   config_free(&cfg);
   return NULL;
@@ -71,7 +68,7 @@ const uint32_t *web_frame(double now_ms) {
   size_t n = (size_t)app.canvas.width * (size_t)app.canvas.height;
   for (size_t i = 0; i < n; i++) {
     const struct cell *c = &app.canvas.cells[i];
-    uint32_t cp = c->cont ? 0 : utf8_codepoint(c->glyph);
+    uint32_t cp = c->cont ? 0 : (uint32_t)utf8_decode(c->glyph, utf8_seq_len((unsigned char)c->glyph[0]));
     packed[i] = cp << 10 | (c->bg_bold ? 1u : 0u) << 9 | (uint32_t)c->bg << 5 | (uint32_t)c->col << 1 | (c->bold ? 1u : 0u);
   }
   return packed;
@@ -82,3 +79,5 @@ int web_width(void) { return app.canvas.width; }
 int web_height(void) { return app.canvas.height; }
 
 bool web_settings_open(void) { return settings_ui_is_open(&app.settings); }
+
+bool web_help_open(void) { return help_ui_is_open(&app.help); }

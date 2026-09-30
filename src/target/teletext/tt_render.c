@@ -139,7 +139,11 @@ static uint8_t put_char(struct tt_page *p, const uint8_t allow[TT_ROWS][TT_COLS]
 
 static const char nat_priority[] = "\\|[]{}`~@";
 
-static void plan_overlays(const struct canvas *c, uint8_t allow[TT_ROWS][TT_COLS]) {
+static void decode_grid(const struct canvas *c, struct tcell grid[TT_ROWS][TT_COLS - 1]) {
+  for (int y = 0; y < TT_ROWS; y++) for (int x = 0; x < TT_COLS - 1; x++) grid[y][x] = text_cell(c, x, y);
+}
+
+static void plan_overlays(const struct tcell grid[TT_ROWS][TT_COLS - 1], uint8_t allow[TT_ROWS][TT_COLS]) {
   int used = 0;
   uint8_t row_used[TT_ROWS] = {0};
   memset(allow, 0, (size_t)TT_ROWS * TT_COLS);
@@ -149,7 +153,7 @@ static void plan_overlays(const struct canvas *c, uint8_t allow[TT_ROWS][TT_COLS
     uint8_t row_seen[TT_ROWS] = {0};
     for (int y = 0; y < TT_ROWS; y++) {
       for (int x = y == 0 ? TT_HDR_COL : 0; x < TT_COLS - 1; x++) {
-        struct tcell t = text_cell(c, x, y);
+        struct tcell t = grid[y][x];
         if (t.col == 0 || t.ch != (uint8_t)*k) continue;
         cells++;
         if (!row_used[y] && !row_seen[y]) {
@@ -161,7 +165,7 @@ static void plan_overlays(const struct canvas *c, uint8_t allow[TT_ROWS][TT_COLS
     if (cells == 0 || used + cells + rows > TT_MAX_TRIPLETS) continue;
     for (int y = 0; y < TT_ROWS; y++) {
       for (int x = y == 0 ? TT_HDR_COL : 0; x < TT_COLS - 1; x++) {
-        struct tcell t = text_cell(c, x, y);
+        struct tcell t = grid[y][x];
         if (t.col != 0 && t.ch == (uint8_t)*k) allow[y][x + 1] = 1;
       }
       if (row_seen[y]) row_used[y] = 1;
@@ -174,13 +178,13 @@ static int glyph_weight(uint8_t ch) {
   return popcount3(glyph_bands[ch - 0x20]);
 }
 
-static void render_text_row(const struct canvas *c, const uint8_t allow[TT_ROWS][TT_COLS], int y, int first, int *ov_row, struct tt_page *p) {
+static void render_text_row(const struct tcell grid[TT_ROWS][TT_COLS - 1], const uint8_t allow[TT_ROWS][TT_COLS], int y,
+                             int first, int *ov_row, struct tt_page *p) {
   uint8_t *out = p->row[y];
-  struct tcell cells[TT_COLS - 1];
+  const struct tcell *cells = grid[y];
   memset(out, MOSAIC_BLANK, TT_COLS);
-  for (int i = 0; i < TT_COLS - 1; i++) cells[i] = i < first ? (struct tcell){0, 0} : text_cell(c, i, y);
   for (int i = 0; i < TT_COLS - 1;) {
-    if (cells[i].col == 0) {
+    if (i < first || cells[i].col == 0) {
       i++;
       continue;
     }
@@ -220,11 +224,15 @@ int tt_canvas_w(enum tt_glyphs g) {
 void tt_render(const struct canvas *c, enum tt_glyphs g, struct tt_page *p, const char *caption) {
   int ov_row = -1;
   uint8_t allow[TT_ROWS][TT_COLS];
+  struct tcell grid[TT_ROWS][TT_COLS - 1];
   p->ov_count = 0;
-  if (g == TT_TEXT) plan_overlays(c, allow);
+  if (g == TT_TEXT) {
+    decode_grid(c, grid);
+    plan_overlays(grid, allow);
+  }
   for (int y = 0; y < TT_CANVAS_H; y++) {
     int first = y == 0 ? TT_HDR_COL : 0;
-    if (g == TT_TEXT) render_text_row(c, allow, y, first, &ov_row, p);
+    if (g == TT_TEXT) render_text_row(grid, allow, y, first, &ov_row, p);
     else render_row(c, y, first, p->row[y]);
   }
   overlay_title(p->row[0], caption);

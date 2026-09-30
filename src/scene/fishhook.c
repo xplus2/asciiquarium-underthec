@@ -44,7 +44,6 @@ static void shrink_fishhook_rope(const struct entity *e, int hook_h) {
 static void update_fishhook_shape(struct entity *e, int depth) {
   if (depth < 0) depth = 0;
   int hook_h = fishhook_body_height();
-
   if (e->owned_shape_rows == NULL) {
     int total = depth + hook_h;
     char **rows = xmalloc((size_t)(total + 1) * sizeof(*rows));
@@ -64,7 +63,6 @@ static void update_fishhook_shape(struct entity *e, int depth) {
     entity_shape_changed(e);
     return;
   }
-
   char **rows = e->owned_shape_rows[0];
   int total = 0;
   while (rows[total] != NULL) total++;
