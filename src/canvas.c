@@ -59,7 +59,7 @@ void canvas_clear(struct canvas *c) {
     c->touched = xrealloc(c->touched, (size_t)c->active_count * sizeof(*c->touched));
     c->touched_cap = c->active_count;
   }
-  memcpy(c->touched, c->active, (size_t)c->active_count * sizeof(*c->touched));
+  if (c->active_count > 0) memcpy(c->touched, c->active, (size_t)c->active_count * sizeof(*c->touched));
   c->touched_count = c->active_count;
   c->active_count = 0;
 }
