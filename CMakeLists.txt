@@ -197,6 +197,51 @@ if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
     install(TARGETS underthec_vlock LIBRARY DESTINATION ${UNDERTHEC_VLOCK_MODULEDIR})
 endif ()
 
+if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
+    option(UNDERTHEC_PLASMA_WALLPAPER "build the Plasma wallpaper plugin if Qt6 Quick is found" ON)
+    set(UNDERTHEC_PLASMA_PACKAGEDIR "share/plasma/wallpapers/org.underthec.wallpaper" CACHE PATH "install dir for the Plasma wallpaper package")
+    if (UNDERTHEC_PLASMA_WALLPAPER)
+        include(CheckLanguage)
+        check_language(CXX)
+        if (CMAKE_CXX_COMPILER)
+            enable_language(CXX)
+            find_package(Qt6 6.4 QUIET COMPONENTS Quick)
+        endif ()
+        if (Qt6_FOUND)
+            set(UNDERTHEC_QML_MODULEDIR "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_QML}" CACHE PATH "install dir for the QML modules (Qt import path)")
+            set(CMAKE_CXX_STANDARD 17)
+            set(CMAKE_CXX_STANDARD_REQUIRED ON)
+            add_library(plasma_wallpaper MODULE
+                    ${UNDERTHEC_CORE_SOURCES}
+                    src/config.c
+                    src/target/plasma/plasma_item.cpp
+                    src/target/plasma/plasma_plugin.cpp
+            )
+            target_include_directories(plasma_wallpaper PRIVATE src src/target/plasma)
+            target_link_libraries(plasma_wallpaper PRIVATE Qt6::Quick)
+            set_target_properties(plasma_wallpaper PROPERTIES
+                    OUTPUT_NAME underthec_qml
+                    AUTOMOC ON
+                    POSITION_INDEPENDENT_CODE ON
+                    INTERPROCEDURAL_OPTIMIZATION OFF
+                    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plasma_wallpaper/qml/org/underthec
+            )
+            if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+                target_compile_options(plasma_wallpaper PRIVATE -Wall -Wextra)
+            endif ()
+            add_custom_command(TARGET plasma_wallpaper POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/target/plasma/qmldir ${CMAKE_BINARY_DIR}/plasma_wallpaper/qml/org/underthec/qmldir
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/target/plasma/package ${CMAKE_BINARY_DIR}/plasma_wallpaper/package
+            )
+            install(TARGETS plasma_wallpaper LIBRARY DESTINATION ${UNDERTHEC_QML_MODULEDIR}/org/underthec)
+            install(FILES src/target/plasma/qmldir DESTINATION ${UNDERTHEC_QML_MODULEDIR}/org/underthec)
+            install(DIRECTORY src/target/plasma/package/ DESTINATION ${UNDERTHEC_PLASMA_PACKAGEDIR})
+        else ()
+            message(STATUS "Qt6 Quick 6.4+ dev files or C++ compiler not found, skipping plasma wallpaper")
+        endif ()
+    endif ()
+endif ()
+
 if (NOT EMSCRIPTEN)
     install(TARGETS underthec RUNTIME DESTINATION bin)
 endif ()

@@ -32,18 +32,19 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools libx11-dev libxft-dev
-      - run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=toolchain/musl-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools libx11-dev libxft-dev qt6-base-dev qt6-declarative-dev
+      - run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=toolchain/musl-toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DUNDERTHEC_PLASMA_WALLPAPER=OFF
       - run: cmake --build build -j
-      - name: build xscreensaver (native, not musl - X11 has no static archives)
+      - name: build xscreensaver and plasma wallpaper (native, not musl - X11 and Qt have no static archives)
         run: |
           cmake -S . -B build-xscr -DCMAKE_BUILD_TYPE=Release
-          cmake --build build-xscr -j --target underthec_xscr
+          cmake --build build-xscr -j --target underthec_xscr plasma_wallpaper
       - run: |
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir "$name"
           cp build/underthec build/underthec.so build-xscr/underthec_xscr src/target/scr_x11/underthec.xml LICENSE "$name"/
+          cp -r build-xscr/plasma_wallpaper "$name"/
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

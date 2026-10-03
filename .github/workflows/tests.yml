@@ -30,11 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - run: sudo apt-get update && sudo apt-get install -y libx11-dev libxft-dev
+      - run: sudo apt-get update && sudo apt-get install -y libx11-dev libxft-dev qt6-base-dev qt6-declarative-dev
       - run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUNDERTHEC_STATIC=OFF \
             -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DCMAKE_MODULE_LINKER_FLAGS="-fsanitize=address,undefined"
       - run: cmake --build build -j
       - name: smoke run under asan/ubsan
         env:

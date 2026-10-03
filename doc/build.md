@@ -17,6 +17,11 @@ cmake --build build-musl
 
 If `libx11` and `libxft` headers are installed, this also builds the X11 screensaver (non-static).
 
+If the Qt6 Quick development files (Qt 6.4 or newer, e.g. `qt6-base-dev` and `qt6-declarative-dev`) and a C++ compiler are installed,
+this also builds the Plasma wallpaper plugin (non-static, target `plasma_wallpaper`, output in `build/plasma_wallpaper/`).
+`-DUNDERTHEC_PLASMA_WALLPAPER=OFF` disables it. See [wallpaper.md](wallpaper.md) for installation.
+
+
 ### Windows
 Cross-compiling a static Windows build requires the `mingw-w64` cross toolchain.
 Windows builds also produce the screensaver `underthec.scr`.
@@ -42,7 +47,11 @@ make install
 ```
 
 `./configure --help` lists the available options (`--prefix`, `--host`
-for cross-compiling, `--no-static`, `--debug`, `--emcc`).
+for cross-compiling, `--no-static`, `--debug`, `--emcc`, `--no-plasma-wallpaper`).
+
+It builds the Plasma wallpaper plugin if `pkg-config` finds Qt6 Quick 6.4 or newer, a C++ compiler and Qt's `moc`
+(`--qml-moduledir` and `--plasma-packagedir` set the install locations, see [wallpaper.md](wallpaper.md)).
+
 Pass `--debug` for an unstripped `-g -O0` build.
 
 ## WebAssembly

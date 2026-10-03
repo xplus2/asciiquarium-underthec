@@ -10,6 +10,9 @@ host=
 xscr_bindir=
 xscr_configdir=
 vlock_moduledir=
+plasma=1
+qml_dir=
+plasma_pkgdir=
 
 for arg in "$@"; do
 	case "$arg" in
@@ -21,10 +24,14 @@ for arg in "$@"; do
 	--xscreensaver-bindir=*) xscr_bindir="${arg#--xscreensaver-bindir=}" ;;
 	--xscreensaver-configdir=*) xscr_configdir="${arg#--xscreensaver-configdir=}" ;;
 	--vlock-moduledir=*) vlock_moduledir="${arg#--vlock-moduledir=}" ;;
+	--no-plasma-wallpaper) plasma=0 ;;
+	--qml-moduledir=*) qml_dir="${arg#--qml-moduledir=}" ;;
+	--plasma-packagedir=*) plasma_pkgdir="${arg#--plasma-packagedir=}" ;;
 	--help)
 		echo "usage: ./configure [--prefix=DIR] [--host=TRIPLET] [--no-static] [--debug] [--emcc]"
 		echo "                   [--xscreensaver-bindir=DIR] [--xscreensaver-configdir=DIR]"
-		echo "                   [--vlock-moduledir=DIR]"
+		echo "                   [--vlock-moduledir=DIR] [--no-plasma-wallpaper]"
+		echo "                   [--qml-moduledir=DIR] [--plasma-packagedir=DIR]"
 		echo ""
 		echo "  --prefix=DIR    install prefix (default: /usr/local)"
 		echo "  --host=TRIPLET  cross-compiler prefix, e.g. x86_64-w64-mingw32"
@@ -34,6 +41,9 @@ for arg in "$@"; do
 		echo "  --xscreensaver-bindir=DIR    install dir (default: PREFIX/libexec/xscreensaver)"
 		echo "  --xscreensaver-configdir=DIR install dir (default: PREFIX/libexec/xscreensaver)"
 		echo "  --vlock-moduledir=DIR        install dir (default: /usr/lib/vlock/modules)"
+		echo "  --no-plasma-wallpaper        don't build Plasma wallpaper (needs Qt6 Quick 6.4+)"
+		echo "  --qml-moduledir=DIR          QML import dir (default: Qt's own)"
+		echo "  --plasma-packagedir=DIR      install dir (default: PREFIX/share/plasma/wallpapers/org.underthec.wallpaper)"
 		exit 0
 		;;
 	*)
@@ -46,6 +56,8 @@ done
 if [ -z "$xscr_bindir" ]; then xscr_bindir="$prefix/libexec/xscreensaver"; fi
 if [ -z "$xscr_configdir" ]; then xscr_configdir="$prefix/libexec/xscreensaver"; fi
 if [ -z "$vlock_moduledir" ]; then vlock_moduledir="/usr/lib/vlock/modules"; fi
+
+if [ -z "$plasma_pkgdir" ]; then plasma_pkgdir="$prefix/share/plasma/wallpapers/org.underthec.wallpaper"; fi
 
 ver_str=$(sed -n 's/^#define TOOL_VERSION "\(.*\)"$/\1/p' src/version.h)
 ver_parts=$(for p in MAJOR MINOR PATCH; do sed -n "s/^#define TOOL_VERSION_$p \([0-9]*\)$/\1/p" src/version.h; done | paste -sd. -)
@@ -132,6 +144,38 @@ if [ "$emcc" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ]; then
 	fi
 fi
 
+have_qt=0
+cxx=${CXX:-c++}
+qt_cflags=
+qt_libs=
+qt_moc=
+
+if [ "$plasma" = "1" ] && [ "$emcc" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" != "Darwin" ]; then
+	if command -v pkg-config >/dev/null 2>&1 && pkg-config --atleast-version=6.4 Qt6Quick 2>/dev/null && command -v "$cxx" >/dev/null 2>&1; then
+		qt_libexec=$(pkg-config --variable=libexecdir Qt6Core 2>/dev/null)
+		for cand in "$qt_libexec/moc" "$(command -v moc-qt6 2>/dev/null)" "$(command -v moc6 2>/dev/null)"; do
+			if [ -n "$cand" ] && [ -x "$cand" ]; then
+				qt_moc="$cand"
+				break
+			fi
+		done
+		if [ -n "$qt_moc" ]; then
+			have_qt=1
+			qt_cflags=$(pkg-config --cflags Qt6Quick)
+			qt_libs=$(pkg-config --libs Qt6Quick)
+			if [ -z "$qml_dir" ]; then
+				for q in qtpaths6 qmake6; do
+					if command -v "$q" >/dev/null 2>&1; then
+						if [ "$q" = "qtpaths6" ]; then qml_dir=$("$q" --query QT_INSTALL_QML 2>/dev/null); else qml_dir=$("$q" -query QT_INSTALL_QML 2>/dev/null); fi
+						[ -n "$qml_dir" ] && break
+					fi
+				done
+			fi
+			if [ -z "$qml_dir" ]; then qml_dir="$(pkg-config --variable=libdir Qt6Core)/qt6/qml"; fi
+		fi
+	fi
+fi
+
 cflags="-std=c11 -Wall -Wextra -Isrc"
 if [ "$have_x11" = "1" ]; then
 	cflags="$cflags $x11_cflags $xft_cflags"
@@ -200,9 +244,23 @@ fi
 		echo "VLOCK_SRCS = $vlock_srcs"
 		echo "VLOCK_MODULEDIR = $vlock_moduledir"
 	fi
+	if [ "$have_qt" = "1" ]; then
+		echo 'PLASMA_TARGET = $(BUILDDIR)/plasma_wallpaper/qml/org/underthec/libunderthec_qml.so'
+		echo "PLASMA_C_SRCS = $core_srcs src/config.c"
+		echo "PLASMA_CXX_SRCS = src/target/plasma/plasma_item.cpp src/target/plasma/plasma_plugin.cpp"
+		echo "CXX = $cxx"
+		echo "MOC = $qt_moc"
+		echo "PLASMA_INCS = -Isrc -Isrc/target/plasma $qt_cflags"
+		qt_sys=$(echo "$qt_cflags" | sed 's/-I/-isystem /g')
+		echo "PLASMA_CXXFLAGS = -std=c++17 -Wall -Wextra -Isrc -Isrc/target/plasma $qt_sys $([ "$debug" = "1" ] && echo "-g -O0" || echo "-O2")"
+		echo "PLASMA_LDFLAGS = $qt_libs"
+		echo "PLASMA_QMLDIR = $qml_dir"
+		echo "PLASMA_PACKAGEDIR = $plasma_pkgdir"
+	fi
 } > config.mk
 
 echo "configured: CC=$cc static=$static debug=$debug emcc=$emcc screensaver=$([ -n "$scr_srcs" ] && echo 1 || echo 0) prefix=$prefix"
 echo "xscreensaver: x11=$have_x11 xft=$have_xft$([ "$have_x11" = "1" ] && echo " bindir=$xscr_bindir")"
 echo "vlock: enabled=$([ -n "$vlock_srcs" ] && echo 1 || echo 0)$([ -n "$vlock_srcs" ] && echo " moduledir=$vlock_moduledir")"
+echo "plasma wallpaper: qt6=$have_qt$([ "$have_qt" = "1" ] && echo " qmldir=$qml_dir packagedir=$plasma_pkgdir")"
 echo "run 'make' to build."

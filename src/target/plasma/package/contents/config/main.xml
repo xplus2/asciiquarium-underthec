@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="Classic" type="Int">
+      <label>Classic mode: 0=off, 1=1.0, 2=1.1</label>
+      <default>0</default>
+      <min>0</min>
+      <max>2</max>
+    </entry>
+    <entry name="FishAuto" type="Bool">
+      <label>Fish count by screen size</label>
+      <default>true</default>
+    </entry>
+    <entry name="Fish" type="Int">
+      <label>Fish count</label>
+      <default>20</default>
+      <min>0</min>
+      <max>999</max>
+    </entry>
+    <entry name="Creatures" type="StringList">
+      <label>Enabled creatures</label>
+      <default>bigfish,crab,dolphins,ducks,fishhook,jellyfish,kaiju,monster,rowers,sailboat,seahorse,shark,ship,submarine,swan,swordfish,turtle,whale</default>
+    </entry>
+    <entry name="Message" type="String">
+      <label>Message</label>
+      <default></default>
+    </entry>
+    <entry name="MessageColor" type="String">
+      <label>Message color</label>
+      <default></default>
+    </entry>
+    <entry name="MessagePosition" type="String">
+      <label>Message position</label>
+      <default>middle</default>
+    </entry>
+    <entry name="CastleEnabled" type="Bool">
+      <label>Castle</label>
+      <default>true</default>
+    </entry>
+    <entry name="CastleName" type="String">
+      <label>Castle name</label>
+      <default></default>
+    </entry>
+    <entry name="Pace" type="Double">
+      <label>Animation speed</label>
+      <default>1.0</default>
+      <min>0.01</min>
+      <max>10.0</max>
+    </entry>
+    <entry name="UturnChance" type="Int">
+      <label>U-turn chance</label>
+      <default>400</default>
+      <min>0</min>
+      <max>999</max>
+    </entry>
+    <entry name="Fps" type="Int">
+      <label>Frames per second</label>
+      <default>10</default>
+      <min>1</min>
+      <max>240</max>
+    </entry>
+    <entry name="FontSize" type="Int">
+      <label>Font size in pixels, 0 = automatic, otherwise 7 or more</label>
+      <default>0</default>
+      <min>0</min>
+      <max>200</max>
+    </entry>
+    <entry name="Colors" type="String">
+      <label>Color mode</label>
+      <default>16</default>
+    </entry>
+  </group>
+</kcfg>

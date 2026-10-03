@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Description": "Animated ASCII aquarium",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "org.underthec.wallpaper",
+        "License": "GPL-2.0",
+        "Name": "Under The C",
+        "Version": "0.6.1",
+        "Website": "https://github.com/xplus2/underthec"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell"
+}

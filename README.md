@@ -12,12 +12,13 @@ Release platforms:
   - Terminal: amd64, arm64, armel, armhf, i386, riscv64
   - XScreensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
   - vlock plugin: amd64, arm64, armel, armhf, i386, riscv64 (see [doc/screensaver.md](doc/screensaver.md))
+  - Plasma wallpaper and lock screen: amd64, arm64 (see [doc/wallpaper.md](doc/wallpaper.md))
 * macOS
   - Terminal: arm64
 * Windows
   - Terminal: amd64, arm64
   - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
-* WebAssembly (see [doc/wasm.md](doc.wasm.md))
+* WebAssembly (see [doc/wasm.md](doc/wasm.md))
 * EBU Teletext: text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
 
 ... or build it yourself on others.
@@ -28,8 +29,10 @@ It's a walk in the waterpark, but if you prefer pre-built releases by GitHub wor
 
 ### Dependencies
 
-Not really. 
-`libx11`+`libxft` for the X11 screensaver, if you're still on X11.
+Not really.
+
+* `libx11`+`libxft` for the X11 screensaver, if you're still on X11.
+* `qt6-base-dev`+`qt6-declarative-dev` (Qt 6.4+) for the Plasma wallpaper.
 
 From time to time, it is recommended to feed the fish.
 

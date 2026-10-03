@@ -1,4 +1,5 @@
 # Screensaver
+> For an animated KDE Plasma desktop and lock screen background, see [wallpaper.md](wallpaper.md).
 
 ## X11 screensaver
 > Note: This is an XScreensaver, not to be confused with what Wayland compositors do on current distros.

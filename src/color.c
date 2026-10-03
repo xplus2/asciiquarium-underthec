@@ -133,6 +133,7 @@ void color_reduce(int colors_mode, enum color *col, bool *bold) {
       *bold = false;
       break;
     case 8:
+      if (*col == COL_BLACK && *bold) *col = COL_WHITE;
       *bold = false;
       break;
     case 108:
