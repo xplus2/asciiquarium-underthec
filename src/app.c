@@ -77,7 +77,7 @@ void app_frame(struct app *a, double now) {
   }
   canvas_clear(&a->canvas);
   scene_draw(&a->scene, &a->canvas, a->tick_accum);
-  settings_ui_draw(&a->settings, &a->canvas);
-  help_ui_draw(&a->help, &a->canvas);
   canvas_reduce_colors(&a->canvas, a->colors_mode);
+  help_ui_draw(&a->help, &a->canvas);
+  settings_ui_draw(&a->settings, &a->canvas);
 }
