@@ -268,7 +268,7 @@ void add_seaweed(struct scene *sc, int w, int h) {
   e->type = ENT_SEAWEED;
   e->x = x;
   e->y = y;
-  e->z = Z_SEAWEED;
+  e->z = rng_int(Z_FLORA_RANGE) + Z_FISH_MIN;
   e->default_attr = color_from_name("green");
   e->seaweed_orig_height = height;
   e->seaweed_top_left = true;
@@ -296,10 +296,10 @@ static char **seaweed_shrink_rows(char **rows, int total_h, int grown) {
   return out;
 }
 
-static void seaweed_spawn_debris(struct scene *sc, double base_x, double base_y, bool row_left) {
+static void seaweed_spawn_debris(struct scene *sc, double base_x, double base_y, int z, bool row_left) {
   struct entity *d = entity_spawn(&sc->entities);
   d->type = ENT_SEAWEED_DEBRIS;
-  d->z = Z_SEAWEED;
+  d->z = z;
   d->default_attr = color_from_name("yellow");
   double side_shift = rng_int(2) == 0 ? -1.0 : 1.0;
   d->x = base_x + (row_left ? 0.0 : 1.0) + side_shift;
@@ -317,12 +317,13 @@ static void seaweed_split(struct scene *sc, struct entity *e, int term_w, int te
   double base_x = e->x;
   double base_y = e->y;
   int base_id = e->id;
+  int base_z = e->z;
   bool collapse = e->seaweed_full_collapse;
   int shed_rows = collapse ? total : grown;
 
   for (int i = 0; i < shed_rows; i++) {
     bool row_left = ((i % 2) == 0) ? top_left : !top_left;
-    seaweed_spawn_debris(sc, base_x, base_y + i, row_left);
+    seaweed_spawn_debris(sc, base_x, base_y + i, base_z, row_left);
   }
 
   struct entity *base = entity_find_by_id(&sc->entities, base_id);

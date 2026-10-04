@@ -7,7 +7,8 @@
 #define Z_TEETH 3
 #define Z_FISH_MIN 3
 #define Z_FISH_RANGE 17
-#define Z_SEAWEED 21
+#define Z_FLORA_RANGE (Z_SEAWEED_MAX - Z_FISH_MIN + 1)
+#define Z_SEAWEED_MAX 21
 #define Z_CASTLE_BUBBLE 20
 #define Z_CASTLE_DOOR 22
 #define Z_CASTLE 23
@@ -23,7 +24,6 @@
 #define Z_SWAN 3
 #define Z_FISHHOOK 7
 #define Z_HOOKED 5
-#define Z_CRAB 21
 #define Z_JELLYFISH 4
 #define Z_SEAHORSE 4
 #define Z_ROWERS 3

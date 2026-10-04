@@ -350,7 +350,7 @@ static void spawn_crab(struct scene *sc, int w, int h) {
   int height = entity_height(e);
   e->y = h - height;
   e->x = dir ? (double)(w - 2) : (double)(1 - width);
-  finish_creature_spawn(e, ENT_CRAB, Z_CRAB, speed, 0, DEATH_RANDOM_OBJECT, color_from_name(colors[rng_int(4)]));
+  finish_creature_spawn(e, ENT_CRAB, rng_int(Z_FLORA_RANGE) + Z_FISH_MIN, speed, 0, DEATH_RANDOM_OBJECT, color_from_name(colors[rng_int(4)]));
 }
 
 void spawn_jellyfish(struct scene *sc, int w, int h) {
