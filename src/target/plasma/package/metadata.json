@@ -7,7 +7,7 @@
         "License": "GPL-2.0",
         "Name": "Under The C",
         "Version": "0.6.1",
-        "Website": "https://github.com/xplus2/underthec"
+        "Website": "https://github.com/xplus2/asciiquarium-underthec"
     },
     "X-KDE-ParentApp": "org.kde.plasmashell"
 }
