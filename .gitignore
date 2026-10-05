@@ -5,8 +5,6 @@
 *.o
 src/*.o
 *.d
-*.EFI
-/esp/
 
 # result binaries
 /underthec
@@ -23,6 +21,20 @@ src/*.o
 # dist
 /CMakeFiles
 /obj-x86_64-linux-gnu
+
+# EFI
+*.EFI
+/esp/
+/OVMF_VARS_4M.fd
+
+
+# Android
+/src/target/androidtv/build/
+/src/target/androidtv/.gradle/
+/src/target/androidtv/.cxx/
+/src/target/androidtv/local.properties
+*.jks
+keystore.b64
 
 # IDE
 /.idea

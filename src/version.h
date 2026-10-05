@@ -10,9 +10,9 @@
 #define TOOL_DISPLAY_NAME_W TOOL_WIDEN(TOOL_DISPLAY_NAME)
 
 /* keep in sync */
-#define TOOL_VERSION "0.6.1"
+#define TOOL_VERSION "0.6.2"
 #define TOOL_VERSION_MAJOR 0
 #define TOOL_VERSION_MINOR 6
-#define TOOL_VERSION_PATCH 1
+#define TOOL_VERSION_PATCH 2
 
 #endif

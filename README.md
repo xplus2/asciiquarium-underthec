@@ -12,14 +12,17 @@ Release platforms:
   - Terminal: amd64, arm64, armel, armhf, i386, riscv64
   - XScreensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
   - vlock plugin: amd64, arm64, armel, armhf, i386, riscv64 (see [doc/screensaver.md](doc/screensaver.md))
-  - Plasma wallpaper and lock screen: amd64, arm64 (see [doc/wallpaper.md](doc/wallpaper.md))
+  - KDE Plasma wallpaper and lock screen: amd64, arm64 (see [doc/wallpaper.md](doc/wallpaper.md))
 * macOS
   - Terminal: arm64
 * Windows
   - Terminal: amd64, arm64
   - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
 * WebAssembly (see [doc/wasm.md](doc/wasm.md))
-* EBU Teletext: text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
+* EBU Teletext 
+  - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
+* Android TV
+  - App and Daydream screensaver: arm64-v8a, armeabi-v7a
 
 ... or build it yourself on others.
 
@@ -44,29 +47,29 @@ underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|4|7|8|8-bold|16] [-f
 underthec {-h|-v}
 ```
 
-| Short | Long                 | Parameter                     | Description                           |
-|-------|----------------------|-------------------------------|---------------------------------------|
-| `-a`  | `--aquatic-life`     | `<def>`                       | decide what's in (see below)          |
-| `-c`  | `--classic`          | `[1.0\|1.1]`                  | Asciiquarium 1.0 / 1.1 modes          |
-| `-m`  | `--message`          | `<text>`                      | background `text`. `-` for stdin      |
-| `-M`  | `--message-color`    | `<color>`                     | `-m`'s text color (see below)         |
-| `-P`  | `--message-position` | `<pos>`                       | `-m`'s placement (see below)          |
-| `-p`  | `--pace`             | `<pace>`                      | speed, 0.01-10 (default: 1)           |
-| `-u`  | `--uturn-chance`     | `<N>`                         | fish turn chance (default: 1 in 400)  |
-| `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|8-bold\|16>` | fg colors (default: 16)               |
-| `-f`  | `--fps`              | `<N>`                         | render fps, 1-240 (default: 10)       |
-| `-s`  | `--screensaver`      |                               | (terminal) exit on any keypress       |
-| `-t`  | `--transparent`      |                               | transparent background                |
-|       | `--teletext`         | `<t42\|ts>`                   | Teletext to stdout (see below)        |
-|       | `--teletext-mode`    | `<text\|mosaic>`              | teletext glyphs, default: text        |
-|       | `--mcast`            | `<GROUP:PORT>`                | MPEG-TS teletext multicast group      |
-|       | `--ttl`              | `<N>`                         | multicast TTL (default: 1)            |
-|       | `--iface`            | `<if>`                        | multicast interface                   |
-|       | `--teletext-caption` | `<text>`                      | teletext caption (default: UNDERTHEC) |
-| `-n`  | `--castle-name`      | `<text>`                      | text on the castle, max 11 chars      |
-|       | `--no-castle`        |                               | disable the castle                    |
-| `-h`  | `--help`             |                               | show usage                            |
-| `-v`  | `--version`          |                               | show version                          |
+| Short | Long                 | Parameter              | Description                           |
+|-------|----------------------|------------------------|---------------------------------------|
+| `-a`  | `--aquatic-life`     | `<def>`                | decide what's in (see below)          |
+| `-c`  | `--classic`          | `[1.0\|1.1]`           | Asciiquarium 1.0 / 1.1 modes          |
+| `-m`  | `--message`          | `<text>`               | background `text`. `-` for stdin      |
+| `-M`  | `--message-color`    | `<color>`              | `-m`'s text color (see below)         |
+| `-P`  | `--message-position` | `<pos>`                | `-m`'s placement (see below)          |
+| `-p`  | `--pace`             | `<pace>`               | speed, 0.01-10 (default: 1)           |
+| `-u`  | `--uturn-chance`     | `<N>`                  | fish turn chance (default: 1 in 400)  |
+| `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|16>`  | fg colors (default: 16)               |
+| `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 10)       |
+| `-s`  | `--screensaver`      |                        | (terminal) exit on any keypress       |
+| `-t`  | `--transparent`      |                        | transparent background                |
+|       | `--teletext`         | `<t42\|ts>`            | Teletext to stdout (see below)        |
+|       | `--teletext-mode`    | `<text\|mosaic>`       | teletext glyphs, default: text        |
+|       | `--mcast`            | `<GROUP:PORT>`         | MPEG-TS teletext multicast group      |
+|       | `--ttl`              | `<N>`                  | multicast TTL (default: 1)            |
+|       | `--iface`            | `<if>`                 | multicast interface                   |
+|       | `--teletext-caption` | `<text>`               | teletext caption (default: UNDERTHEC) |
+| `-n`  | `--castle-name`      | `<text>`               | text on the castle, max 11 chars      |
+|       | `--no-castle`        |                        | disable the castle                    |
+| `-h`  | `--help`             |                        | show usage                            |
+| `-v`  | `--version`          |                        | show version                          |
 
 ### Classic mode `-c`/`--classic`
 - `-c 1.0` (or bare `-c`): original 1.0 fish/monster look
@@ -81,23 +84,24 @@ Limit the foreground colors.
 * 4: RGBW (red, green, blue, white)
 * 7: same as for teletext
 * 8: 8 colors, no bold
-* 8-bold: 8 colors, bold
 * 16: ANSI (default)
 
-`1` and `2` can optionally be suffixed by `-<colorname>` to differ from white. Example: `-C 2-green`. 
+`1` and `2` can optionally be suffixed by `-<colorname>` to differ from white (like `-C 2-green`).
+`8` can be suffixed by `-bold` to use the 8 bold colors instead.
 
 ### Message color `-M`|`--message-color`
-> Valid text colors: `red`, `green`, `blue`, `yellow`, `magenta`, `cyan`, `white`, `black`.
-> Capitalized first letter: bold.
+Valid colors: `red`, `green`, `blue`, `yellow`, `magenta`, `cyan`, `white`, `black`.
+
+Capitalized first letter: bold.
 
 ### Message position `-P`|`--message-position`
-| Value     | Placement                                               |
-|-----------|---------------------------------------------------------|
-| `middle`  | horizontally+vertically centered (default)              |
-| `center`  | horizontally centered, vertical top                     |
-| `marquee` | vertically centered, scrolls right to left, repeats     |
-| `swim`    | top row, scrolls right to left, repeats                 |
-| `event`   | like `swim`, but takes turns with ducks/swans/ship/etc  |
+| Value     | Placement                                              |
+|-----------|--------------------------------------------------------|
+| `middle`  | horizontally+vertically centered (default)             |
+| `center`  | horizontally centered, vertical top                    |
+| `marquee` | vertically centered, scrolls right to left, repeats    |
+| `swim`    | top row, scrolls right to left, repeats                |
+| `event`   | like `swim`, but takes turns with ducks/swan/ship/etc  |
 
 ### Aquatic life `-a`/`--aquatic-life` 
 Define what's going on in your asciiquarium. It takes a comma-separated definition:
@@ -149,8 +153,11 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 | `q` | `^C`        | Quit                           |
 
 In the settings dialog, the arrow keys are used to select a setting, 
-`+`, `-` or `[space]` make changes. While the settings dialog is shown,
-`[space]` does not pause/resume.
+`+`, `-` or `[space]` make changes.
+
+Android TV:
+* `OK` feeds
+* `up` or holding `OK` opens the settings
 
 ## Credits
 

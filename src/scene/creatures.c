@@ -1,6 +1,7 @@
 #include "scene_internal.h"
 #include "color.h"
 #include "rng.h"
+#include "xalloc.h"
 
 #include "art/bigfish.h"
 #include "art/crab.h"
@@ -217,7 +218,14 @@ struct simple_creature_def {
   const struct sprite_pair *frames[2];
 };
 
-static void spawn_simple_creature(struct scene *sc, int w, const struct simple_creature_def *def) {
+static void map_placeholder_color(const char *in, char *out, void *ctx) {
+  char color = *(const char *)ctx;
+  size_t len = strlen(in);
+  for (size_t j = 0; j < len; j++) out[j] = (in[j] == '1') ? color : in[j];
+  out[len] = '\0';
+}
+
+static struct entity *spawn_simple_creature(struct scene *sc, int w, const struct simple_creature_def *def) {
   int dir = rng_int(2);
   double speed = mirror_speed(dir, def->speed);
   struct entity *e = entity_spawn(&sc->entities);
@@ -227,6 +235,7 @@ static void spawn_simple_creature(struct scene *sc, int w, const struct simple_c
   e->y = def->y;
   e->x = dir ? (double)(w - 2) : (double)(1 - entity_width(e));
   finish_creature_spawn(e, def->type, def->z, speed, 0, DEATH_RANDOM_OBJECT, color_from_name(def->color));
+  return e;
 }
 
 static void spawn_ship(struct scene *sc, int w, int h) {
@@ -237,11 +246,14 @@ static void spawn_ship(struct scene *sc, int w, int h) {
 
 static void spawn_sailboat(struct scene *sc, int w, int h) {
   (void)h;
+  static const char sail_letters[] = {'r', 'R', 'g', 'G', 'w', 'm', 'M', 'Y', 'B'};
   int dir = rng_int(2);
   double speed = mirror_speed(dir, 1.0);
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = &sailboat[dir];
   e->frame_count = 1;
+  char sail = sail_letters[rng_int((int)sizeof(sail_letters))];
+  e->owned_mask = entity_build_transformed_rows(sailboat[dir].mask, map_placeholder_color, &sail);
   e->y = (double)(1 + rng_int(3));
   e->x = dir ? (double)(w - 2) : (double)(1 - entity_width(e));
   finish_creature_spawn(e, ENT_SAILBOAT, Z_SAILBOAT, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("WHITE"));
@@ -304,8 +316,19 @@ static void spawn_swan(struct scene *sc, int w, int h) {
 
 static void spawn_rowers(struct scene *sc, int w, int h) {
   (void)h;
+  static const char boat_letters[] = {'r', 'R', 'g', 'G', 'm', 'M', 'y', 'Y', 'B'};
   static const struct simple_creature_def def = {ENT_ROWERS, Z_ROWERS, 1.0, 4, 5, 2.5, "WHITE", {rowers[0], rowers[1]}};
-  spawn_simple_creature(sc, w, &def);
+  struct entity *e = spawn_simple_creature(sc, w, &def);
+  char boat = boat_letters[rng_int((int)sizeof(boat_letters))];
+  const struct sprite_pair *src = e->frames;
+  char ***shapes = xmalloc(5 * sizeof(*shapes));
+  char ***masks = xmalloc(5 * sizeof(*masks));
+  for (int i = 0; i < 5; i++) {
+    shapes[i] = entity_build_transformed_rows(src[i].shape, map_placeholder_color, &boat);
+    masks[i] = entity_build_transformed_rows(src[i].mask, map_placeholder_color, &boat);
+  }
+  entity_set_owned_shape_frames(e, shapes, 5, def.frame_interval);
+  entity_set_owned_shape_frame_masks(e, masks);
 }
 
 static void spawn_dolphins(struct scene *sc, int w, int h) {
@@ -358,9 +381,17 @@ void spawn_jellyfish(struct scene *sc, int w, int h) {
   int dir = rng_int(2);
   double speed = mirror_speed(dir, rng_double(0.3) + 0.1);
   struct entity *e = entity_spawn(&sc->entities);
-  e->frames = jellyfish_frames;
-  e->frame_count = 2;
-  e->frame_interval = 6.0;
+  static const char body_letters[] = {'c', 'b', 'K'};
+  char body = body_letters[rng_int((int)sizeof(body_letters))];
+  const struct sprite_pair *src = rng_int(2) ? jellyfish_small_frames : jellyfish_frames;
+  char ***shapes = xmalloc(2 * sizeof(*shapes));
+  char ***masks = xmalloc(2 * sizeof(*masks));
+  for (int i = 0; i < 2; i++) {
+    shapes[i] = entity_build_transformed_rows(src[i].shape, map_placeholder_color, &body);
+    masks[i] = entity_build_transformed_rows(src[i].mask, map_placeholder_color, &body);
+  }
+  entity_set_owned_shape_frames(e, shapes, 2, 6.0);
+  entity_set_owned_shape_frame_masks(e, masks);
   int width = entity_width(e);
   int height = entity_height(e);
   e->y = random_swim_y(h, height);

@@ -38,6 +38,52 @@ With configure + make, `--host=*-mingw32` builds `build/underthec.scr`.
 The CMake build above should natively work on macOS.
 Apple's libSystem does not support fully static binaries.
 
+### Android TV
+
+#### NDK Part
+The native library needs the Android NDK (r27 and r29 tested). Android 5.0 (API 21) is the minimum.
+
+```sh
+# -DANDROID_ABI=armeabi-v7a for 32 bit
+cmake -B build-android \
+    -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+    -DANDROID_ABI=arm64-v8a \
+    -DANDROID_PLATFORM=android-21
+cmake --build build-android
+```
+Result is `build-android/libunderthec_android.so`.
+
+or
+```sh
+./configure --android-ndk=/path/to/ndk [--android-abi=arm64-v8a] [--android-api=21]
+make
+```
+Result is `build/libunderthec_android.so`.
+
+#### SDK Part
+Needs a JDK 17 or newer, the Android SDK (platform 34, build-tools 34.0.0, CMake 3.22.1) and an NDK.
+The native library is built from the top level `CMakeLists.txt`.
+
+Create `src/target/androidtv/local.properties` with `sdk.dir=` pointing to the SDK,
+and `cmake.dir=` pointing to a CMake install if the SDK has none.
+
+The APK is built by Gradle from `src/target/androidtv`, which runs this CMake build for both ABIs.
+It needs a JDK 17 or newer, SDK platform 34, build-tools 34.0.0 and CMake 3.22.1:
+
+```sh
+cd src/target/androidtv
+./gradlew assembleDebug -PUNDERTHEC_NDK=$NDK
+```
+
+`UNDERTHEC_NDK` (or `ANDROID_NDK_ROOT`) selects the NDK.
+The APK ends up in `build/outputs/apk/debug/underthec-VERSION-androidtv-debug.apk`.
+`assembleRelease` builds the release APK next to it. It is signed when these Gradle properties are set
+(for example in `~/.gradle/gradle.properties`), and unsigned otherwise:
+* `ANDROID_KEYSTORE_BASE64`: the keystore file, base64 encoded on one line.
+* `ANDROID_KEYSTORE_PASSWORD`
+* `ANDROID_KEY_ALIAS`
+* `ANDROID_KEY_PASSWORD`
+
 ## configure + make (legacy)
 
 ```sh
@@ -47,7 +93,10 @@ make install
 ```
 
 `./configure --help` lists the available options (`--prefix`, `--host`
-for cross-compiling, `--no-static`, `--debug`, `--emcc`, `--no-plasma-wallpaper`).
+for cross-compiling, `--no-static`, `--debug`, `--emcc`, `--no-plasma-wallpaper`, `--android-ndk`).
+
+`./configure --android-ndk=DIR [--android-abi=ABI] [--android-api=N]` cross-compiles only `build/libunderthec_android.so`.
+The APK needs the Gradle project, see the Android section above.
 
 It builds the Plasma wallpaper plugin if `pkg-config` finds Qt6 Quick 6.4 or newer, a C++ compiler and Qt's `moc`
 (`--qml-moduledir` and `--plasma-packagedir` set the install locations, see [wallpaper.md](wallpaper.md)).

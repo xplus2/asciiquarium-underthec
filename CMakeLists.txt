@@ -61,6 +61,18 @@ set(UNDERTHEC_CORE_SOURCES
 )
 set(UNDERTHEC_SOURCES ${UNDERTHEC_CORE_SOURCES})
 
+if (ANDROID)
+    add_library(underthec_android SHARED
+            ${UNDERTHEC_CORE_SOURCES}
+            src/config.c
+            src/target/androidtv/android_main.c
+    )
+    target_include_directories(underthec_android PRIVATE src)
+    target_link_libraries(underthec_android PRIVATE log)
+    target_compile_options(underthec_android PRIVATE -Wall -Wextra)
+    return()
+endif ()
+
 if (EMSCRIPTEN)
     list(APPEND UNDERTHEC_SOURCES src/config.c src/target/web/web_main.c)
 else ()

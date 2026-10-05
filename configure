@@ -13,6 +13,9 @@ vlock_moduledir=
 plasma=1
 qml_dir=
 plasma_pkgdir=
+android_ndk=
+android_abi=arm64-v8a
+android_api=21
 
 for arg in "$@"; do
 	case "$arg" in
@@ -27,11 +30,15 @@ for arg in "$@"; do
 	--no-plasma-wallpaper) plasma=0 ;;
 	--qml-moduledir=*) qml_dir="${arg#--qml-moduledir=}" ;;
 	--plasma-packagedir=*) plasma_pkgdir="${arg#--plasma-packagedir=}" ;;
+	--android-ndk=*) android_ndk="${arg#--android-ndk=}" ;;
+	--android-abi=*) android_abi="${arg#--android-abi=}" ;;
+	--android-api=*) android_api="${arg#--android-api=}" ;;
 	--help)
 		echo "usage: ./configure [--prefix=DIR] [--host=TRIPLET] [--no-static] [--debug] [--emcc]"
 		echo "                   [--xscreensaver-bindir=DIR] [--xscreensaver-configdir=DIR]"
 		echo "                   [--vlock-moduledir=DIR] [--no-plasma-wallpaper]"
 		echo "                   [--qml-moduledir=DIR] [--plasma-packagedir=DIR]"
+		echo "                   [--android-ndk=DIR] [--android-abi=ABI] [--android-api=N]"
 		echo ""
 		echo "  --prefix=DIR    install prefix (default: /usr/local)"
 		echo "  --host=TRIPLET  cross-compiler prefix, e.g. x86_64-w64-mingw32"
@@ -44,6 +51,9 @@ for arg in "$@"; do
 		echo "  --no-plasma-wallpaper        don't build Plasma wallpaper (needs Qt6 Quick 6.4+)"
 		echo "  --qml-moduledir=DIR          QML import dir (default: Qt's own)"
 		echo "  --plasma-packagedir=DIR      install dir (default: PREFIX/share/plasma/wallpapers/org.underthec.wallpaper)"
+		echo "  --android-ndk=DIR            Android NDK build of libunderthec_android.so (no APK)"
+		echo "  --android-abi=ABI            arm64-v8a (default), armeabi-v7a, x86_64, x86"
+		echo "  --android-api=N              minimum API level (default: 21)"
 		exit 0
 		;;
 	*)
@@ -70,7 +80,35 @@ if [ "$emcc" = "1" ] && [ -n "$host" ]; then
 	echo "configure: --emcc and --host are mutually exclusive" >&2
 	exit 1
 fi
-if [ "$emcc" = "1" ]; then
+android=0
+if [ -n "$android_ndk" ]; then
+	android=1
+	if [ "$emcc" = "1" ] || [ -n "$host" ]; then
+		echo "configure: --android-ndk excludes --emcc and --host" >&2
+		exit 1
+	fi
+	case "$android_abi" in
+	arm64-v8a) android_triple=aarch64-linux-android ;;
+	armeabi-v7a) android_triple=armv7a-linux-androideabi ;;
+	x86_64) android_triple=x86_64-linux-android ;;
+	x86) android_triple=i686-linux-android ;;
+	*)
+		echo "configure: unknown android abi '$android_abi'" >&2
+		exit 1
+		;;
+	esac
+	android_bin=$(ls -d "$android_ndk"/toolchains/llvm/prebuilt/*/bin 2>/dev/null | head -n 1)
+	if [ -z "$android_bin" ]; then
+		echo "configure: no llvm toolchain in $android_ndk" >&2
+		exit 1
+	fi
+	cc="$android_bin/${android_triple}${android_api}-clang"
+	if [ ! -x "$cc" ]; then
+		echo "configure: $cc not found (api $android_api)" >&2
+		exit 1
+	fi
+fi
+if [ "$emcc" = "1" ] || [ "$android" = "1" ]; then
 	static=0
 fi
 
@@ -78,6 +116,8 @@ srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/entity/utf8.c 
 
 if [ "$emcc" = "1" ]; then
 	srcs="$srcs src/config.c src/target/web/web_main.c"
+elif [ "$android" = "1" ]; then
+	srcs="$srcs src/config.c src/target/androidtv/android_main.c"
 else
 	core_srcs="$srcs"
 	srcs="$srcs src/main.c src/ui/args.c src/ui/cli_help.c src/target/terminal/term_common.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
@@ -113,7 +153,7 @@ have_xft=0
 xft_cflags=
 xft_libs=
 
-if [ "$emcc" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ]; then
+if [ "$emcc" != "1" ] && [ "$android" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ]; then
 	tmpc="${TMPDIR:-/tmp}/underthec-x11check-$$.c"
 	tmpo="${TMPDIR:-/tmp}/underthec-x11check-$$.out"
 	if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists x11 2>/dev/null; then
@@ -150,7 +190,7 @@ qt_cflags=
 qt_libs=
 qt_moc=
 
-if [ "$plasma" = "1" ] && [ "$emcc" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" != "Darwin" ]; then
+if [ "$plasma" = "1" ] && [ "$emcc" != "1" ] && [ "$android" != "1" ] && [ "$windows" != "1" ] && [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" != "Darwin" ]; then
 	if command -v pkg-config >/dev/null 2>&1 && pkg-config --atleast-version=6.4 Qt6Quick 2>/dev/null && command -v "$cxx" >/dev/null 2>&1; then
 		qt_libexec=$(pkg-config --variable=libexecdir Qt6Core 2>/dev/null)
 		for cand in "$qt_libexec/moc" "$(command -v moc-qt6 2>/dev/null)" "$(command -v moc6 2>/dev/null)"; do
@@ -177,6 +217,7 @@ if [ "$plasma" = "1" ] && [ "$emcc" != "1" ] && [ "$windows" != "1" ] && [ -z "$
 fi
 
 cflags="-std=c11 -Wall -Wextra -Isrc"
+if [ "$android" = "1" ]; then cflags="$cflags -fPIC"; fi
 if [ "$have_x11" = "1" ]; then
 	cflags="$cflags $x11_cflags $xft_cflags"
 	if [ "$have_xft" = "1" ]; then cflags="$cflags -DHAVE_XFT"; fi
@@ -189,6 +230,8 @@ else
 	cflags="$cflags -O2"
 	if [ "$emcc" = "1" ]; then
 		ldflags="$ldflags -O2"
+	elif [ "$android" = "1" ]; then
+		ldflags="$ldflags -s"
 	else
 		cflags="$cflags -flto=auto"
 		ldflags="$ldflags -s -flto=auto"
@@ -199,6 +242,8 @@ if [ "$emcc" = "1" ]; then
 	ldflags="$ldflags -sMODULARIZE=1 -sEXPORT_NAME=underthec -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1"
 	ldflags="$ldflags -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open"
 	ldflags="$ldflags -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall"
+elif [ "$android" = "1" ]; then
+	ldflags="$ldflags -shared -llog"
 elif [ "$static" = "1" ]; then
 	case "$(uname -s 2>/dev/null)" in
 	Darwin) : ;; # macOS does not support fully static libSystem binaries
@@ -224,6 +269,10 @@ fi
 	if [ "$emcc" = "1" ]; then
 		echo 'TARGET = $(BUILDDIR)/underthec.js'
 		echo 'WEB_FILES = $(BUILDDIR)/index.html $(BUILDDIR)/favicon.ico $(BUILDDIR)/apple-touch-icon.png'
+	fi
+	if [ "$android" = "1" ]; then
+		echo 'TARGET = $(BUILDDIR)/libunderthec_android.so'
+		echo "ANDROID = $android_abi"
 	fi
 	if [ -n "$scr_srcs" ]; then
 		echo 'SCR_TARGET = $(BUILDDIR)/underthec.scr'

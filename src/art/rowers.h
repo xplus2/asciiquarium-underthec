@@ -70,68 +70,72 @@ static const char *const rowers_image_1_4[] = {
 };
 
 static const char *const rowers_mask_0_0[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "  K  K  K  K",
+  "111W11W11W11W111",
+  "    W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_0_1[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "   K  K  K  K",
+  "111W11W11W11W111",
+  "   W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_0_2[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "    K  K  K  K",
+  "111W11W11W11W111",
+  "  W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_0_3[] = {
+  "WWWKWWKWWKWWK",
+  "1111111111111111",
   "",
-  "rrrrrrrrrrrrrrrr",
   NULL
 };
 
 static const char *const rowers_mask_0_4[] = {
+  "  KWWKWWKWWKWWW",
+  "1111111111111111",
   "",
-  "rrrrrrrrrrrrrrrr",
   NULL
 };
 
 static const char *const rowers_mask_1_0[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "    K  K  K  K",
+  "111W11W11W11W111",
+  "  W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_1_1[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "   K  K  K  K",
+  "111W11W11W11W111",
+  "   W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_1_2[] = {
-  "",
-  "rrr rr rr rr rrr",
-  "",
+  "  K  K  K  K",
+  "111W11W11W11W111",
+  "    W  W  W  W",
   NULL
 };
 
 static const char *const rowers_mask_1_3[] = {
+  "   KWWKWWKWWKWW",
+  "1111111111111111",
   "",
-  "rrrrrrrrrrrrrrrr",
   NULL
 };
 
 static const char *const rowers_mask_1_4[] = {
+  " WWWKWWKWWKWWK",
+  "1111111111111111",
   "",
-  "rrrrrrrrrrrrrrrr",
   NULL
 };
 

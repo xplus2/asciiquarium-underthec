@@ -1,0 +1,77 @@
+plugins {
+    id 'com.android.application' version '8.7.2'
+}
+
+def versionMatch = (file('../../version.h').text =~ /TOOL_VERSION "(\d+)\.(\d+)\.(\d+)"/)[0]
+def verMajor = versionMatch[1] as int
+def verMinor = versionMatch[2] as int
+def verPatch = versionMatch[3] as int
+
+def keystoreBase64 = findProperty('ANDROID_KEYSTORE_BASE64')
+def buildCode = verMajor * 10000 + verMinor * 100 + verPatch
+
+android {
+    namespace 'org.underthec'
+    compileSdk 34
+
+    def ndkRoot = findProperty('UNDERTHEC_NDK') ?: System.getenv('ANDROID_NDK_ROOT')
+    if (ndkRoot) {
+        ndkPath = ndkRoot
+        ndkVersion = new File(ndkRoot).name
+    }
+
+    defaultConfig {
+        applicationId 'org.underthec'
+        minSdk 21
+        targetSdk 34
+        versionCode buildCode
+        versionName "${verMajor}.${verMinor}.${verPatch}"
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file('../../../CMakeLists.txt')
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreBase64) {
+                def keystoreFile = layout.buildDirectory.file('release.jks').get().asFile
+                keystoreFile.parentFile.mkdirs()
+                keystoreFile.bytes = keystoreBase64.decodeBase64()
+                storeFile keystoreFile
+                storePassword findProperty('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias findProperty('ANDROID_KEY_ALIAS')
+                keyPassword findProperty('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (keystoreBase64) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        abortOnError true
+        warningsAsErrors true
+    }
+}
+
+base {
+    archivesName = "underthec-${verMajor}.${verMinor}.${verPatch}-androidtv"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << '-Xlint:all' << '-Werror'
+}

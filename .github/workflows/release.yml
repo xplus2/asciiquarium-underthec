@@ -177,8 +177,33 @@ jobs:
           name: web
           path: underthec-*-web.zip
 
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: install pinned SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-34" "build-tools;34.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
+      - name: build signed apk
+        working-directory: src/target/androidtv
+        env:
+          ORG_GRADLE_PROJECT_ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ORG_GRADLE_PROJECT_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          ./gradlew assembleRelease --no-daemon -PUNDERTHEC_NDK="$ANDROID_HOME/ndk/27.0.12077973"
+      - run: |
+          ver=${{ needs.version.outputs.version }}
+          cp src/target/androidtv/build/outputs/apk/release/underthec-${ver}-androidtv-release.apk underthec-${ver}-androidtv.apk
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android
+          path: underthec-*-androidtv.apk
+
   release:
-    needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, web]
+    needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, web, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -26,6 +26,15 @@ jobs:
           name: cppcheck-report
           path: cppcheck-report.txt
 
+  android-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: |
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-Werror
+      - run: cmake --build build -j
+
   sanitize:
     runs-on: ubuntu-latest
     steps:

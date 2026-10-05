@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Under The C</string>
+    <string name="settings_title">Under The C settings</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="automatic">Automatic</string>
+    <string name="default_value">(default)</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="classic">Classic mode</string>
+    <string name="classic_off">Off</string>
+    <string name="aquatic_life">Aquatic Life</string>
+    <string name="fish_auto">Fish: automatic count</string>
+    <string name="fish_count">Fish count</string>
+    <string name="creature">%1$s</string>
+    <string name="message_menu">Message</string>
+    <string name="message">Message</string>
+    <string name="message_color">Message color</string>
+    <string name="message_position">Message position</string>
+    <string name="castle">Show castle</string>
+    <string name="castle_name">Castle name</string>
+    <string name="pace">Pace</string>
+    <string name="uturn_chance">U-turn chance</string>
+    <string name="fps">Frames per second</string>
+    <string name="font_size">Font size (px)</string>
+    <string name="colors">Colors</string>
+</resources>
