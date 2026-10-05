@@ -1,5 +1,7 @@
 #include "plasma_item.h"
 
+#include <array>
+
 #include <QByteArray>
 #include <QDateTime>
 #include <QFontDatabase>
@@ -16,22 +18,21 @@ namespace {
 
 const int kMinFontPx = 7;
 
-/* [enum color][bold] */
-const unsigned char kPalette[9][2][3] = {
-    {{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}},
-    {{0x00, 0x00, 0x00}, {0x80, 0x80, 0x80}},
-    {{0xc0, 0x00, 0x00}, {0xff, 0x55, 0x55}},
-    {{0x00, 0xc0, 0x00}, {0x55, 0xff, 0x55}},
-    {{0xc0, 0xc0, 0x00}, {0xff, 0xff, 0x55}},
-    {{0x00, 0x00, 0xc0}, {0x55, 0x55, 0xff}},
-    {{0xc0, 0x00, 0xc0}, {0xff, 0x55, 0xff}},
-    {{0x00, 0xc0, 0xc0}, {0x55, 0xff, 0xff}},
-    {{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}},
+/* [enum color * 2 + bold] as 0xRRGGBB */
+const std::array<QRgb, 18> kPalette = {
+    0xc0c0c0, 0xffffff,
+    0x000000, 0x808080,
+    0xc00000, 0xff5555,
+    0x00c000, 0x55ff55,
+    0xc0c000, 0xffff55,
+    0x0000c0, 0x5555ff,
+    0xc000c0, 0xff55ff,
+    0x00c0c0, 0x55ffff,
+    0xc0c0c0, 0xffffff,
 };
 
 QColor colorOf(enum color col, bool bold) {
-  const unsigned char *rgb = kPalette[col][bold ? 1 : 0];
-  return QColor(rgb[0], rgb[1], rgb[2]);
+  return QColor(kPalette[static_cast<size_t>(col) * 2 + (bold ? 1 : 0)]);
 }
 
 double nowSeconds() {
@@ -111,9 +112,9 @@ void UnderTheC::layout() {
   boldFont_ = font_;
   boldFont_.setBold(true);
   QFontMetricsF fm(font_);
-  cellW_ = qMax(1, static_cast<int>(qCeil(fm.horizontalAdvance(QLatin1Char('M')))));
-  cellH_ = qMax(1, static_cast<int>(qCeil(fm.height())));
-  ascent_ = static_cast<int>(qRound(fm.ascent()));
+  cellW_ = qMax(1, qCeil(fm.horizontalAdvance(QLatin1Char('M'))));
+  cellH_ = qMax(1, qCeil(fm.height()));
+  ascent_ = qRound(fm.ascent());
   int cols = qMax(1, static_cast<int>(width()) / cellW_);
   int rows = qMax(1, static_cast<int>(height()) / cellH_);
   offX_ = (static_cast<int>(width()) - cols * cellW_) / 2;

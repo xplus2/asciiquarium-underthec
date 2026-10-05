@@ -64,3 +64,16 @@ Run vlock with an idle timeout and the plugin name: `vlock -t 10 underthec`
 ### Configuration
 Environment variables (see [README.md](../README.md) for a list) do the job and can also be set/exported
 in `~/.vlockrc`.
+
+
+## Android TV Daydream
+Some Android TV boxes don't provide a selection in their UI.
+So, when you are installing the `.apk` using sideloading anyway, like this:
+```
+adb connect yourtv
+adb install underthec-<version>-androidtv-release.apk
+```
+it's just one extra step:
+```
+adb shell settings put secure screensaver_components org.underthec/.UnderTheCDream
+```

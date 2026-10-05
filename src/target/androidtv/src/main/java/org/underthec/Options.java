@@ -97,7 +97,7 @@ final class Options {
     add(o, "no-castle", p.getString("no-castle", "0"));
     add(o, "pace", p.getString("pace", "1.00"));
     add(o, "uturn-chance", p.getString("uturn-chance", "400"));
-    add(o, "fps", p.getString("fps", "10"));
+    add(o, "fps", p.getString("fps", "24"));
     add(o, "colors", p.getString("colors", "16"));
     byte[][] out = new byte[o.size()][];
     for (int i = 0; i < out.length; i++) out[i] = o.get(i).getBytes(StandardCharsets.UTF_8);

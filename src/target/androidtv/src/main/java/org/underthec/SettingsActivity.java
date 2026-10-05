@@ -27,6 +27,14 @@ public final class SettingsActivity extends Activity {
   private static final int TEXT = 3;
   private static final int SUBMENU = 4;
 
+  private static final String KEY_FISH_AUTO = "fish-auto";
+  private static final String KEY_FONT_SIZE = "font-size";
+  private static final String KEY_CLASSIC = "classic";
+  private static final String KEY_NO_CASTLE = "no-castle";
+  private static final String KEY_CREATURE = "creature.";
+  private static final String KEY_CASTLE = "castle";
+  private static final String KEY_AQUATIC_LIFE = "aquatic-life";
+
   private static final int ALWAYS = 0;
   private static final int FREE_LIFE = 1;
   private static final int FISH_COUNT = 2;
@@ -146,12 +154,12 @@ public final class SettingsActivity extends Activity {
 
   private void buildRows() {
     List<Row> life = new ArrayList<>();
-    life.add(sw("fish-auto", getString(R.string.fish_auto), FREE_LIFE));
+    life.add(sw(KEY_FISH_AUTO, getString(R.string.fish_auto), FREE_LIFE));
     life.add(step("fish", getString(R.string.fish_count), 0, 999, 1, 20, 1, FISH_COUNT));
     for (String c : Options.CREATURES) {
-      life.add(sw("creature." + c, getString(R.string.creature, c), FREE_LIFE));
+      life.add(sw(KEY_CREATURE + c, getString(R.string.creature, c), FREE_LIFE));
     }
-    life.add(sw("castle", getString(R.string.castle), ALWAYS));
+    life.add(sw(KEY_CASTLE, getString(R.string.castle), ALWAYS));
     life.add(text("castle-name", getString(R.string.castle_name), false, CASTLE_ON));
 
     List<Row> msg = new ArrayList<>();
@@ -162,8 +170,7 @@ public final class SettingsActivity extends Activity {
     msg.add(choice("message-position", getString(R.string.message_position), Options.POSITIONS,
         Options.POSITIONS, "middle"));
 
-    List<Row> rows = rootRows;
-    rows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16"));
+    rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16"));
     String[] sizes = new String[24];
     String[] sizeLabels = new String[24];
     sizes[0] = "0";
@@ -172,54 +179,54 @@ public final class SettingsActivity extends Activity {
       sizes[i] = String.valueOf(4 + 2 * i);
       sizeLabels[i] = sizes[i];
     }
-    rows.add(choice("font-size", getString(R.string.font_size), sizes, sizeLabels, "0"));
-    rows.add(submenu(getString(R.string.aquatic_life), life));
-    rows.add(submenu(getString(R.string.message_menu), msg));
-    rows.add(step("pace", getString(R.string.pace), 1, 1000, 5, 100, 100, ALWAYS));
-    rows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, ALWAYS));
-    rows.add(step("fps", getString(R.string.fps), 1, 240, 1, 10, 1, ALWAYS));
-    rows.add(choice("classic", getString(R.string.classic), new String[] {"", "1.0", "1.1"},
+    rootRows.add(choice(KEY_FONT_SIZE, getString(R.string.font_size), sizes, sizeLabels, "0"));
+    rootRows.add(submenu(getString(R.string.aquatic_life), life));
+    rootRows.add(submenu(getString(R.string.message_menu), msg));
+    rootRows.add(step("pace", getString(R.string.pace), 1, 1000, 5, 100, 100, ALWAYS));
+    rootRows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, ALWAYS));
+    rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, 24, 1, ALWAYS));
+    rootRows.add(choice(KEY_CLASSIC, getString(R.string.classic), new String[] {"", "1.0", "1.1"},
         new String[] {getString(R.string.classic_off), "1.0", "1.1"}, ""));
   }
 
   private Options.Life life() {
-    return Options.Life.parse(prefs.getString("aquatic-life", Options.DEFAULT_LIFE));
+    return Options.Life.parse(prefs.getString(KEY_AQUATIC_LIFE, Options.DEFAULT_LIFE));
   }
 
   private boolean enabled(Row r) {
     switch (r.rule) {
       case FREE_LIFE:
-        return prefs.getString("classic", "").isEmpty();
+        return prefs.getString(KEY_CLASSIC, "").isEmpty();
       case FISH_COUNT:
-        return prefs.getString("classic", "").isEmpty() && !life().auto;
+        return prefs.getString(KEY_CLASSIC, "").isEmpty() && !life().auto;
       case CASTLE_ON:
-        return prefs.getString("no-castle", "0").equals("0");
+        return prefs.getString(KEY_NO_CASTLE, "0").equals("0");
       default:
         return true;
     }
   }
 
   private boolean getBool(Row r) {
-    if (r.key.equals("fish-auto")) return life().auto;
-    if (r.key.equals("castle")) return prefs.getString("no-castle", "0").equals("0");
-    return life().creatures.contains(r.key.substring("creature.".length()));
+    if (r.key.equals(KEY_FISH_AUTO)) return life().auto;
+    if (r.key.equals(KEY_CASTLE)) return prefs.getString(KEY_NO_CASTLE, "0").equals("0");
+    return life().creatures.contains(r.key.substring(KEY_CREATURE.length()));
   }
 
   private void setBool(Row r, boolean v) {
-    if (r.key.equals("castle")) {
-      prefs.edit().putString("no-castle", v ? "0" : "1").apply();
+    if (r.key.equals(KEY_CASTLE)) {
+      prefs.edit().putString(KEY_NO_CASTLE, v ? "0" : "1").apply();
       return;
     }
     Options.Life l = life();
-    if (r.key.equals("fish-auto")) {
+    if (r.key.equals(KEY_FISH_AUTO)) {
       l.auto = v;
       if (!v) l.fish = lastFish;
     } else {
-      String name = r.key.substring("creature.".length());
+      String name = r.key.substring(KEY_CREATURE.length());
       if (v) l.creatures.add(name);
       else l.creatures.remove(name);
     }
-    prefs.edit().putString("aquatic-life", l.toString()).apply();
+    prefs.edit().putString(KEY_AQUATIC_LIFE, l.toString()).apply();
   }
 
   private int getInt(Row r) {
@@ -240,7 +247,7 @@ public final class SettingsActivity extends Activity {
       l.auto = false;
       l.fish = n;
       lastFish = n;
-      prefs.edit().putString("aquatic-life", l.toString()).apply();
+      prefs.edit().putString(KEY_AQUATIC_LIFE, l.toString()).apply();
     } else if (r.scale == 100) {
       prefs.edit().putString(r.key, String.format(Locale.US, "%.2f", n / 100.0)).apply();
     } else {
@@ -249,8 +256,8 @@ public final class SettingsActivity extends Activity {
   }
 
   private int choiceIndex(Row r) {
-    if (r.key.equals("font-size")) {
-      int cur = prefs.getInt("font-size", 0);
+    if (r.key.equals(KEY_FONT_SIZE)) {
+      int cur = prefs.getInt(KEY_FONT_SIZE, 0);
       int best = 0;
       for (int i = 1; i < r.values.length; i++) {
         if (Math.abs(Integer.parseInt(r.values[i]) - cur) < Math.abs(Integer.parseInt(r.values[best]) - cur)) best = i;
@@ -265,7 +272,7 @@ public final class SettingsActivity extends Activity {
   }
 
   private void setChoice(Row r, int idx) {
-    if (r.key.equals("font-size")) prefs.edit().putInt("font-size", Integer.parseInt(r.values[idx])).apply();
+    if (r.key.equals(KEY_FONT_SIZE)) prefs.edit().putInt(KEY_FONT_SIZE, Integer.parseInt(r.values[idx])).apply();
     else prefs.edit().putString(r.key, r.values[idx]).apply();
     changed();
   }
@@ -273,23 +280,6 @@ public final class SettingsActivity extends Activity {
   private String stepText(Row r, int v) {
     if (r.scale == 100) return String.format(Locale.US, "%.2f", v / 100.0);
     return String.valueOf(v);
-  }
-
-  private String valueText(Row r) {
-    switch (r.type) {
-      case SWITCH:
-        return getString(getBool(r) ? R.string.on : R.string.off);
-      case STEP:
-        return stepText(r, getInt(r));
-      case CHOICE:
-        return r.labels[choiceIndex(r)];
-      case SUBMENU:
-        return ">";
-      default:
-        String t = prefs.getString(r.key, r.defText);
-        if (t == null || t.isEmpty()) return getString(R.string.default_value);
-        return t.replace('\n', ' ');
-    }
   }
 
   private void changed() {
@@ -441,6 +431,23 @@ public final class SettingsActivity extends Activity {
     @Override
     public boolean isEnabled(int position) {
       return enabled(rows.get(position));
+    }
+
+    private String valueText(Row r) {
+      switch (r.type) {
+        case SWITCH:
+          return getString(getBool(r) ? R.string.on : R.string.off);
+        case STEP:
+          return stepText(r, getInt(r));
+        case CHOICE:
+          return r.labels[choiceIndex(r)];
+        case SUBMENU:
+          return ">";
+        default:
+          String t = prefs.getString(r.key, r.defText);
+          if (t == null || t.isEmpty()) return getString(R.string.default_value);
+          return t.replace('\n', ' ');
+      }
     }
 
     @Override

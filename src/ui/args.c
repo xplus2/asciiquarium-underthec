@@ -133,7 +133,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   out->transparent = false;
   out->no_castle = false;
   out->pace = 1.0;
-  out->fps = 10;
+  out->fps = 24;
   out->uturn_chance = 400;
   out->colors_mode = 16;
   out->message_arg = NULL;

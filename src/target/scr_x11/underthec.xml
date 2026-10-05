@@ -56,7 +56,7 @@ Under The C - a C-port of Asciiquarium.
   </hgroup>
   <hgroup>
     <_label>Frames per second</_label>
-    <number id="fps" type="slider" arg="--fps %" low="1" high="144" default="10"/>
+    <number id="fps" type="slider" arg="--fps %" low="1" high="240" default="24"/>
   </hgroup>
   <hgroup>
     <select id="colors">

@@ -60,7 +60,7 @@
     </entry>
     <entry name="Fps" type="Int">
       <label>Frames per second</label>
-      <default>10</default>
+      <default>24</default>
       <min>1</min>
       <max>240</max>
     </entry>

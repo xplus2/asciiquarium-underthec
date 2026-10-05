@@ -1,6 +1,6 @@
 # Asciiquarium - Under The C
 
-Asciiquarium is an aquarium/C animation in ASCII art.
+Asciiquarium is an aquarium/sea animation in ASCII art.
 This is a C-port of [Asciiquarium v1.1](https://github.com/cmatsuoka/asciiquarium),
 see "Credits" below for the original authors.
 
@@ -18,11 +18,12 @@ Release platforms:
 * Windows
   - Terminal: amd64, arm64
   - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
-* WebAssembly (see [doc/wasm.md](doc/wasm.md))
+* WebAssembly [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC) (see [doc/wasm.md](doc/wasm.md))
 * EBU Teletext 
   - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
 * Android TV
-  - App and Daydream screensaver: arm64-v8a, armeabi-v7a
+  - App: arm64-v8a, armeabi-v7a
+  - Daydream screensaver: arm64-v8a, armeabi-v7a (see [doc/screensaver.md](doc/screensaver.md))
 
 ... or build it yourself on others.
 
@@ -34,8 +35,12 @@ It's a walk in the waterpark, but if you prefer pre-built releases by GitHub wor
 
 Not really.
 
-* `libx11`+`libxft` for the X11 screensaver, if you're still on X11.
+Some of the optional components have (platform) dependent needs:
+* `libx11` for the X11 screensaver, plus `libxft` for nicer fonts.
 * `qt6-base-dev`+`qt6-declarative-dev` (Qt 6.4+) for the Plasma wallpaper.
+* `mingw-w64` to build Windows stuff on Linux. 
+* Emscripten for the WebAssembly.
+* A JDK (17+) plus the Android SDK (34+) and NDK for Android TV.
 
 From time to time, it is recommended to feed the fish.
 
@@ -57,7 +62,7 @@ underthec {-h|-v}
 | `-p`  | `--pace`             | `<pace>`               | speed, 0.01-10 (default: 1)           |
 | `-u`  | `--uturn-chance`     | `<N>`                  | fish turn chance (default: 1 in 400)  |
 | `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|16>`  | fg colors (default: 16)               |
-| `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 10)       |
+| `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 24)       |
 | `-s`  | `--screensaver`      |                        | (terminal) exit on any keypress       |
 | `-t`  | `--transparent`      |                        | transparent background                |
 |       | `--teletext`         | `<t42\|ts>`            | Teletext to stdout (see below)        |
@@ -163,7 +168,7 @@ Android TV:
 
 * The original asciiquarium program and most of its design are by [Kirk Baucom](https://robobunny.com/projects/asciiquarium/html/)
 * A lot of the ASCII art is by [Joan Stark](https://web.archive.org/web/20091027174549/http://www.geocities.com/SoHo/7373/)
-* This is a direct port of [cmatsuoka/asciiquarium](https://github.com/cmatsuoka/asciiquarium)
+* This started as a direct port of [cmatsuoka/asciiquarium](https://github.com/cmatsuoka/asciiquarium)
 * Jellyfish is from [nothub/asciiquarium](https://github.com/nothub/asciiquarium) 
 
 ## License

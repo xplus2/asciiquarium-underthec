@@ -65,7 +65,7 @@ class UnderTheCInfo : public QObject {
   Q_PROPERTY(QStringList creatures READ creatures CONSTANT)
 
 public:
-  explicit UnderTheCInfo(QObject *parent = nullptr) : QObject(parent) {}
+  using QObject::QObject;
   QStringList creatures() const;
 };
 

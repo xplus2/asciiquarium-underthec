@@ -26,7 +26,7 @@ void print_help(const char *prog) {
     "  -C, --colors <num|name>    foreground colors (default: 16)\n"
     "                             1|2 also take a -<color> suffix, e.g. 2-green\n"
     "                             4: RGBW, 7: teletext, 8: also takes 8-bold\n"
-    "  -f, --fps <N>              render frames per second, 1-240 (default: 10)\n"
+    "  -f, --fps <N>              render frames per second, 1-240 (default: 24)\n"
     "  -s, --screensaver          exit on any keypress\n"
     "  -t, --transparent          transparent background (default: opaque black)\n"
     "      --teletext <t42|ts>    binary teletext stream to stdout instead of the terminal\n"

@@ -46,36 +46,32 @@ static const char *const jellyfish_mask_1[] = {
 static const char *const jellyfish_small_frame_0[] = {
   " .-.",
   "(___)",
-  " :\?;",
-  " ;\?:",
-  " :\?;",
+  " :;:",
+  " ;:;",
   NULL
 };
 
 static const char *const jellyfish_small_frame_1[] = {
   " .-.",
   "(___)",
-  " ;\?:",
-  " :\?;",
-  " ;\?:",
+  " ;:;",
+  " :;:",
   NULL
 };
 
 static const char *const jellyfish_small_mask_0[] = {
   " 111",
   "11111",
-  " m M",
-  " M m",
-  " m M",
+  " mMm",
+  " MmM",
   NULL
 };
 
 static const char *const jellyfish_small_mask_1[] = {
   " 111",
   "11111",
-  " M m",
-  " m M",
-  " M m",
+  " MmM",
+  " mMm",
   NULL
 };
 

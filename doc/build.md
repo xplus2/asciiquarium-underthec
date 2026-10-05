@@ -53,13 +53,6 @@ cmake --build build-android
 ```
 Result is `build-android/libunderthec_android.so`.
 
-or
-```sh
-./configure --android-ndk=/path/to/ndk [--android-abi=arm64-v8a] [--android-api=21]
-make
-```
-Result is `build/libunderthec_android.so`.
-
 #### SDK Part
 Needs a JDK 17 or newer, the Android SDK (platform 34, build-tools 34.0.0, CMake 3.22.1) and an NDK.
 The native library is built from the top level `CMakeLists.txt`.
