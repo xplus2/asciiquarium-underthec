@@ -7,7 +7,7 @@ static const char *const turtle_image_0[] = {
   "    ___   _",
   "   /# #\\ /.)",
   " ~(#_#_#Y;'",
-  "  ()---()'",
+  "  ()-=-()'",
   NULL
 };
 
@@ -23,7 +23,7 @@ static const char *const turtle_image_1[] = {
   " _\?\?\?___",
   "(.\\\?/# #\\",
   " ';Y#_#_#)~",
-  "  '()---()",
+  "  '()-=-()",
   NULL
 };
 

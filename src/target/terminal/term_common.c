@@ -92,6 +92,7 @@ static bool cells_equal(const struct cell *a, const struct cell *b) {
 
 void term_present(const struct canvas *c) {
   bool mono = !term_has_color();
+  bool full = !prev_valid || prev.width != c->width || prev.height != c->height;
   if (!prev_valid || prev.width != c->width || prev.height != c->height) {
     canvas_resize(&prev, c->width, c->height);
     memset(prev.cells, 0, (size_t)prev.width * (size_t)prev.height * sizeof(*prev.cells));
@@ -105,10 +106,10 @@ void term_present(const struct canvas *c) {
     row_bounds_cap = c->height;
   }
   for (int y = 0; y < c->height; y++) {
-    row_min[y] = c->width;
-    row_max[y] = -1;
+    row_min[y] = full ? 0 : c->width;
+    row_max[y] = full ? c->width - 1 : -1;
   }
-  for (int i = 0; i < c->touched_count; i++) {
+  for (int i = 0; !full && i < c->touched_count; i++) {
     int idx = c->touched[i];
     int y = idx / c->width;
     int x = idx % c->width;

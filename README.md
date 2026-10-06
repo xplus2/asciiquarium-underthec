@@ -13,17 +13,18 @@ Release platforms:
   - XScreensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
   - vlock plugin: amd64, arm64, armel, armhf, i386, riscv64 (see [doc/screensaver.md](doc/screensaver.md))
   - KDE Plasma wallpaper and lock screen: amd64, arm64 (see [doc/wallpaper.md](doc/wallpaper.md))
-* macOS
-  - Terminal: arm64
 * Windows
   - Terminal: amd64, arm64
   - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
-* WebAssembly [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC) (see [doc/wasm.md](doc/wasm.md))
-* EBU Teletext 
-  - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
+* macOS
+  - Terminal: arm64
+  - Screensaver: arm64 (see [doc/screensaver.md](doc/screensaver.md))
 * Android TV
   - App: arm64-v8a, armeabi-v7a
   - Daydream screensaver: arm64-v8a, armeabi-v7a (see [doc/screensaver.md](doc/screensaver.md))
+* WebAssembly [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC) (see [doc/wasm.md](doc/wasm.md))
+* EBU Teletext
+  - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
 
 ... or build it yourself on others.
 
@@ -35,12 +36,13 @@ It's a walk in the waterpark, but if you prefer pre-built releases by GitHub wor
 
 Not really.
 
-Some of the optional components have (platform) dependent needs:
+Some of the optional release targets have special (platform dependent) needs, mostly build-time only:
 * `libx11` for the X11 screensaver, plus `libxft` for nicer fonts.
 * `qt6-base-dev`+`qt6-declarative-dev` (Qt 6.4+) for the Plasma wallpaper.
-* `mingw-w64` to build Windows stuff on Linux. 
 * Emscripten for the WebAssembly.
 * A JDK (17+) plus the Android SDK (34+) and NDK for Android TV.
+* `mingw-w64` to build Windows stuff on Linux.
+* Xcode command line tools for the macOS screensaver.
 
 From time to time, it is recommended to feed the fish.
 

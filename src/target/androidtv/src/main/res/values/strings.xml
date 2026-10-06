@@ -6,6 +6,7 @@
     <string name="cancel">Cancel</string>
     <string name="automatic">Automatic</string>
     <string name="default_value">(default)</string>
+    <string name="bold_suffix">%1$s (bold)</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="classic">Classic mode</string>

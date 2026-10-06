@@ -254,6 +254,32 @@ if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
     endif ()
 endif ()
 
+if (APPLE AND NOT EMSCRIPTEN)
+    option(UNDERTHEC_MACOS_SAVER "build the macOS screensaver bundle" ON)
+    set(UNDERTHEC_MACOS_SAVERDIR "/Library/Screen Savers" CACHE PATH "install dir for the macOS screensaver bundle")
+    if (UNDERTHEC_MACOS_SAVER)
+        enable_language(OBJC)
+        configure_file(src/target/scr_macos/Info.plist.in ${CMAKE_BINARY_DIR}/macos_saver/Info.plist @ONLY)
+        add_library(macos_saver MODULE
+                ${UNDERTHEC_CORE_SOURCES}
+                src/config.c
+                src/target/scr_macos/saver_view.m
+                src/target/scr_macos/saver_cfg.m
+        )
+        target_include_directories(macos_saver PRIVATE src)
+        target_link_libraries(macos_saver PRIVATE "-framework Cocoa" "-framework ScreenSaver")
+        target_compile_options(macos_saver PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>)
+        set_target_properties(macos_saver PROPERTIES
+                BUNDLE TRUE
+                BUNDLE_EXTENSION saver
+                OUTPUT_NAME underthec
+                MACOSX_BUNDLE_INFO_PLIST ${CMAKE_BINARY_DIR}/macos_saver/Info.plist
+                INTERPROCEDURAL_OPTIMIZATION OFF
+        )
+        install(TARGETS macos_saver LIBRARY DESTINATION "${UNDERTHEC_MACOS_SAVERDIR}")
+    endif ()
+endif ()
+
 if (NOT EMSCRIPTEN)
     install(TARGETS underthec RUNTIME DESTINATION bin)
 endif ()

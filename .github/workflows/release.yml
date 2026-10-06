@@ -108,7 +108,7 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-macos-arm64
           mkdir "$name"
-          cp build/underthec LICENSE "$name"/
+          cp -R build/underthec build/underthec.saver LICENSE "$name"/
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -212,6 +212,26 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: checksum summary
+        run: |
+          for f in dist/*; do
+            base=$(basename "$f")
+            echo "# $base"
+            echo
+            echo "| filename | checksum |"
+            echo "|----|----|"
+            tmp=$(mktemp -d)
+            case "$base" in
+              *.tar.gz) tar -xzf "$f" -C "$tmp" ;;
+              *.zip) unzip -q "$f" -d "$tmp" ;;
+              *) cp "$f" "$tmp"/ ;;
+            esac
+            (cd "$tmp" && find . -type f ! -name LICENSE | sed 's|^\./||' | sort | while read -r p; do
+              printf '| %s | %s |\n' "${p#*/}" "$(sha256sum "$p" | cut -d' ' -f1)"
+            done)
+            echo
+            rm -rf "$tmp"
+          done >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: dist/*

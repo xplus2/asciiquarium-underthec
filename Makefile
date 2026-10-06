@@ -13,15 +13,18 @@ SCR_OBJS := $(patsubst %.c,$(BUILDDIR)/%.o,$(SCR_SRCS)) $(patsubst %.rc,$(BUILDD
 XSCR_OBJS := $(patsubst %.c,$(BUILDDIR)/%.o,$(XSCR_SRCS))
 # object dir, needs -fPIC
 VLOCK_OBJS := $(patsubst %.c,$(BUILDDIR)/vlock/%.o,$(VLOCK_SRCS))
+# own object dir, no lto
+SAVER_OBJS := $(patsubst %.c,$(BUILDDIR)/saver/%.o,$(filter %.c,$(SAVER_SRCS))) $(patsubst %.m,$(BUILDDIR)/saver/%.o,$(filter %.m,$(SAVER_SRCS)))
+SAVER_PLIST := $(BUILDDIR)/underthec.saver/Contents/Info.plist
 # own object dir, needs -fPIC, no lto
 PLASMA_OBJDIR := $(BUILDDIR)/plasma
 PLASMA_OBJS := $(patsubst %.c,$(PLASMA_OBJDIR)/%.o,$(PLASMA_C_SRCS)) $(patsubst %.cpp,$(PLASMA_OBJDIR)/%.o,$(PLASMA_CXX_SRCS)) $(PLASMA_OBJDIR)/moc_plasma_item.o
 PLASMA_FILES := $(BUILDDIR)/plasma_wallpaper/qml/org/underthec/qmldir $(BUILDDIR)/plasma_wallpaper/package/metadata.json
-DEPS := $(sort $(OBJS:.o=.d) $(patsubst %.c,$(BUILDDIR)/%.d,$(SCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/%.d,$(XSCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/vlock/%.d,$(VLOCK_SRCS)) $(PLASMA_OBJS:.o=.d))
+DEPS := $(sort $(OBJS:.o=.d) $(patsubst %.c,$(BUILDDIR)/%.d,$(SCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/%.d,$(XSCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/vlock/%.d,$(VLOCK_SRCS)) $(SAVER_OBJS:.o=.d) $(PLASMA_OBJS:.o=.d))
 
 .PHONY: all clean install
 
-all: $(TARGET) $(WEB_FILES) $(SCR_TARGET) $(XSCR_TARGET) $(VLOCK_TARGET) $(PLASMA_TARGET) $(if $(PLASMA_TARGET),$(PLASMA_FILES))
+all: $(TARGET) $(WEB_FILES) $(SCR_TARGET) $(XSCR_TARGET) $(VLOCK_TARGET) $(SAVER_TARGET) $(if $(SAVER_TARGET),$(SAVER_PLIST)) $(PLASMA_TARGET) $(if $(PLASMA_TARGET),$(PLASMA_FILES))
 
 $(TARGET): $(OBJS) $(RC_OBJS)
 	$(CC) $(OBJS) $(RC_OBJS) $(LDFLAGS) $(TERM_LDFLAGS) -o $@
@@ -35,6 +38,24 @@ $(XSCR_TARGET): $(XSCR_OBJS)
 
 $(VLOCK_TARGET): $(VLOCK_OBJS)
 	$(CC) -shared $(VLOCK_OBJS) $(filter-out -static,$(LDFLAGS)) -o $@
+
+ifdef SAVER_TARGET
+$(SAVER_TARGET): $(SAVER_OBJS)
+	@mkdir -p $(dir $@)
+	$(CC) -bundle $(SAVER_OBJS) $(filter-out -static -flto=auto,$(LDFLAGS)) -framework Cocoa -framework ScreenSaver -o $@
+
+$(SAVER_PLIST): src/target/scr_macos/Info.plist.in src/version.h
+	@mkdir -p $(dir $@)
+	sed 's/@UNDERTHEC_VERSION@/$(SAVER_VERSION)/' $< > $@
+
+$(BUILDDIR)/saver/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -flto=auto,$(CFLAGS)) -MMD -MP -c $< -o $@
+
+$(BUILDDIR)/saver/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(patsubst -std=c11,-std=gnu11,$(filter-out -flto=auto,$(CFLAGS))) -fobjc-arc -MMD -MP -c $< -o $@
+endif
 
 ifdef PLASMA_TARGET
 $(PLASMA_TARGET): $(PLASMA_OBJS)
@@ -113,6 +134,11 @@ install: $(TARGET)
 	@if [ -n "$(VLOCK_TARGET)" ]; then \
 		install -d $(DESTDIR)$(VLOCK_MODULEDIR); \
 		install -m 755 $(VLOCK_TARGET) $(DESTDIR)$(VLOCK_MODULEDIR)/underthec.so; \
+	fi
+	@if [ -n "$(SAVER_TARGET)" ]; then \
+		install -d "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/MacOS"; \
+		install -m 755 $(SAVER_TARGET) "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/MacOS/underthec"; \
+		install -m 644 $(SAVER_PLIST) "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/Info.plist"; \
 	fi
 	@if [ -n "$(PLASMA_TARGET)" ]; then \
 		install -d $(DESTDIR)$(PLASMA_QMLDIR)/org/underthec; \

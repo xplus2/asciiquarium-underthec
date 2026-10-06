@@ -36,6 +36,10 @@ static const char *const color_items[] = {
   "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
   "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
 };
+static const char *const color_labels[] = {
+  "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+  "Black (bold)", "Red (bold)", "Green (bold)", "Yellow (bold)", "Blue (bold)", "Magenta (bold)", "Cyan (bold)", "White (bold)",
+};
 /* enum message_position order */
 static const char *const position_items[] = {"middle", "center", "marquee", "swim", "event"};
 
@@ -303,7 +307,7 @@ static void message_font_set(HWND dlg, UINT dpi) {
 
 static void init_dialog(HWND dlg) {
   combo_fill(dlg, IDC_CLASSIC, classic_items, COUNT(classic_items));
-  combo_fill(dlg, IDC_MSG_COLOR, color_items, COUNT(color_items));
+  combo_fill(dlg, IDC_MSG_COLOR, color_labels, COUNT(color_labels));
   combo_fill(dlg, IDC_MSG_POS, position_items, COUNT(position_items));
   combo_fill(dlg, IDC_COLORS, colors_labels, COUNT(colors_labels));
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) item_set_text(dlg, IDC_FLAG0 + (int)i, scene_aquatic_flag_name(i));

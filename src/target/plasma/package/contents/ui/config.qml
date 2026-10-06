@@ -25,6 +25,9 @@ Kirigami.FormLayout {
     property string cfg_Colors
 
     readonly property var colorValues: ["", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white", "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"]
+    readonly property var colorLabels: [i18n("(default)"), "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+                                        i18n("Black (bold)"), i18n("Red (bold)"), i18n("Green (bold)"), i18n("Yellow (bold)"),
+                                        i18n("Blue (bold)"), i18n("Magenta (bold)"), i18n("Cyan (bold)"), i18n("White (bold)")]
     readonly property var positionValues: ["middle", "center", "marquee", "swim", "event"]
     readonly property var colorsValues: ["1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
                                          "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
@@ -109,7 +112,7 @@ Kirigami.FormLayout {
 
     QQC2.ComboBox {
         Kirigami.FormData.label: i18n("Message color:")
-        model: [i18n("(default)")].concat(root.colorValues.slice(1))
+        model: root.colorLabels
         currentIndex: root.colorValues.indexOf(root.cfg_MessageColor)
         onActivated: index => root.cfg_MessageColor = root.colorValues[index]
     }

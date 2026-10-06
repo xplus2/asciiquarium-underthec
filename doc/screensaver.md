@@ -4,7 +4,7 @@
 ## X11 screensaver
 > Note: This is an XScreensaver, not to be confused with what Wayland compositors do on current distros.
 
-### Building it
+### Build
 Building it requires X11 development headers (`libx11`) and optionally Xft (`libxft`) for anti-aliased text.
 The normal build (`cmake -B build && cmake --build build`) also tries to build the xscreensaver.
 You can override install paths like this:
@@ -15,7 +15,7 @@ cmake -B build \
     -DUNDERTHEC_XSCREENSAVER_CONFIGDIR=share/xscreensaver/config
 ```
 
-### Registering it
+### Registration
 To register it with the xscreensaver daemon, add it to the `programs:` resource, either per-user in `~/.xscreensaver`:
 
 ```
@@ -27,9 +27,31 @@ programs: \
 
 or system-wide in the `XScreenSaver` app-defaults file (distro-dependent, maybe `/etc/X11/app-defaults/XScreenSaver`).
 
+## vlock screen locker plugin
+> Linux (virtual) consoles only.
+
+### Build
+`cmake -B build && cmake --build build` also builds `underthec.so`, a vlock plugin module.
+You can override the installation path like this:
+`cmake -B build -DUNDERTHEC_VLOCK_MODULEDIR=/usr/lib/vlock/modules` or
+`./configure --vlock-moduledir=DIR`
+
+### Installation
+`cmake --install build` (or `make install`) copies `underthec.so` into
+the configured module directory. vlock must have been built with plugin support (enabled on most distros).
+
+### Usage
+Run vlock with an idle timeout and the plugin name: `vlock -t 10 underthec`
+
+### Configuration
+Environment variables (see [README.md](../README.md) for a list) do the job and can also be set/exported
+in `~/.vlockrc`.
+
+---
+
 ## Windows screensaver
 
-### Building it
+### Build
 
 The normal Windows build (from Linux) will also create the `.scr`, as long as `windres`
 (that usually already comes with mingw-w64) exists.
@@ -45,26 +67,7 @@ cmake --build build-win
 Right-click it and choose "Install", or copy it to `%windir%\System32`,
 then select it in the screensaver settings.
 
-## vlock screen locker plugin
-> Linux (virtual) consoles only.
-
-### Building it
-`cmake -B build && cmake --build build` also builds `underthec.so`, a vlock plugin module.
-You can override the installation path like this: 
-`cmake -B build -DUNDERTHEC_VLOCK_MODULEDIR=/usr/lib/vlock/modules` or 
-`./configure --vlock-moduledir=DIR`
-
-### Installation
-`cmake --install build` (or `make install`) copies `underthec.so` into
-the configured module directory. vlock must have been built with plugin support (enabled on most distros).
-
-### Usage
-Run vlock with an idle timeout and the plugin name: `vlock -t 10 underthec`
-
-### Configuration
-Environment variables (see [README.md](../README.md) for a list) do the job and can also be set/exported
-in `~/.vlockrc`.
-
+---
 
 ## Android TV Daydream
 Some Android TV boxes don't provide a selection in their UI.
@@ -77,3 +80,13 @@ it's just one extra step:
 ```
 adb shell settings put secure screensaver_components org.underthec/.UnderTheCDream
 ```
+
+## macOS screensaver
+
+### Installation
+Double-click `underthec.saver`, or copy it to `~/Library/Screen Savers` (single-user install) or `/Library/Screen Savers` (global).
+Then select "Under The C" in System Settings -> Screen Saver.
+
+> Downloaded bundles are quarantined. Clear that before first use:
+> `xattr -dr com.apple.quarantine underthec.saver` (and maybe verify the checksum before)
+

@@ -166,6 +166,7 @@ public final class SettingsActivity extends Activity {
     msg.add(text("message", getString(R.string.message), true, ALWAYS));
     String[] colorLabels = Options.MESSAGE_COLORS.clone();
     colorLabels[0] = getString(R.string.default_value);
+    for (int i = 9; i < colorLabels.length; i++) colorLabels[i] = getString(R.string.bold_suffix, colorLabels[i]);
     msg.add(choice("message-color", getString(R.string.message_color), Options.MESSAGE_COLORS, colorLabels, ""));
     msg.add(choice("message-position", getString(R.string.message_position), Options.POSITIONS,
         Options.POSITIONS, "middle"));

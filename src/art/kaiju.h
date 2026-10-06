@@ -13,7 +13,7 @@ static const char *const kaiju_image_0[] = {
   " / }\\/       \\  \\\\",
   "{ {_/  }      ww|w",
   " \\    /   }\\    }",
-  "  '~^\\vvvV}\?\\Vvvv}",
+  "  '~'^\\vwV}\?\\Vvvv}",
   NULL
 };
 
@@ -26,8 +26,8 @@ static const char *const kaiju_mask_0[] = {
   "  2 332     2 www",
   " 2 232       2  22",
   "2 222  2      yy2y",
-  " 2    2    22    2",
-  "  2222yyyy2 2yyyy2",
+  " 2    2   22    2",
+  "  22222yyy2 2yyyy2",
   NULL
 };
 
@@ -39,9 +39,9 @@ static const char *const kaiju_image_1[] = {
   "  wwww     \\/_",
   "  NNN ,     |/_ _",
   " //  /       \\/{ \\",
-  " w|ww       { \\_} }",
-  "  {    /{    \\   /",
-  " {vvvV/\?{Vvvv/^~'",
+  " w|ww      {  \\_} }",
+  "  {    /{   \\    /",
+  " {vvvV/\?{Vwv/^'~'",
   NULL
 };
 
@@ -53,9 +53,9 @@ static const char *const kaiju_mask_1[] = {
   "  wwww     233",
   "  www 2     233 2",
   " 22  2       232 2",
-  " y2yy       2  22 2",
-  "  2    22    2   2",
-  " 2yyyy2 2yyyy2222",
+  " y2yy      2  222 2",
+  "  2    22   2    2",
+  " 2yyyy2 2yyy22222",
   NULL
 };
 

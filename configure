@@ -13,6 +13,7 @@ vlock_moduledir=
 plasma=1
 qml_dir=
 plasma_pkgdir=
+saver_dir=
 android_ndk=
 android_abi=arm64-v8a
 android_api=21
@@ -30,6 +31,7 @@ for arg in "$@"; do
 	--no-plasma-wallpaper) plasma=0 ;;
 	--qml-moduledir=*) qml_dir="${arg#--qml-moduledir=}" ;;
 	--plasma-packagedir=*) plasma_pkgdir="${arg#--plasma-packagedir=}" ;;
+	--macos-saverdir=*) saver_dir="${arg#--macos-saverdir=}" ;;
 	--android-ndk=*) android_ndk="${arg#--android-ndk=}" ;;
 	--android-abi=*) android_abi="${arg#--android-abi=}" ;;
 	--android-api=*) android_api="${arg#--android-api=}" ;;
@@ -38,6 +40,7 @@ for arg in "$@"; do
 		echo "                   [--xscreensaver-bindir=DIR] [--xscreensaver-configdir=DIR]"
 		echo "                   [--vlock-moduledir=DIR] [--no-plasma-wallpaper]"
 		echo "                   [--qml-moduledir=DIR] [--plasma-packagedir=DIR]"
+		echo "                   [--macos-saverdir=DIR]"
 		echo "                   [--android-ndk=DIR] [--android-abi=ABI] [--android-api=N]"
 		echo ""
 		echo "  --prefix=DIR    install prefix (default: /usr/local)"
@@ -51,6 +54,7 @@ for arg in "$@"; do
 		echo "  --no-plasma-wallpaper        don't build Plasma wallpaper (needs Qt6 Quick 6.4+)"
 		echo "  --qml-moduledir=DIR          QML import dir (default: Qt's own)"
 		echo "  --plasma-packagedir=DIR      install dir (default: PREFIX/share/plasma/wallpapers/org.underthec.wallpaper)"
+		echo "  --macos-saverdir=DIR         macOS screensaver install dir (default: /Library/Screen Savers)"
 		echo "  --android-ndk=DIR            Android NDK build of libunderthec_android.so (no APK)"
 		echo "  --android-abi=ABI            arm64-v8a (default), armeabi-v7a, x86_64, x86"
 		echo "  --android-api=N              minimum API level (default: 21)"
@@ -66,6 +70,8 @@ done
 if [ -z "$xscr_bindir" ]; then xscr_bindir="$prefix/libexec/xscreensaver"; fi
 if [ -z "$xscr_configdir" ]; then xscr_configdir="$prefix/libexec/xscreensaver"; fi
 if [ -z "$vlock_moduledir" ]; then vlock_moduledir="/usr/lib/vlock/modules"; fi
+
+if [ -z "$saver_dir" ]; then saver_dir="/Library/Screen Savers"; fi
 
 if [ -z "$plasma_pkgdir" ]; then plasma_pkgdir="$prefix/share/plasma/wallpapers/org.underthec.wallpaper"; fi
 
@@ -142,6 +148,8 @@ else
 		if [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then is_macos=1; fi
 		if [ "$is_macos" != "1" ]; then
 			vlock_srcs="$core_srcs src/config.c src/target/terminal/term_posix.c src/target/vlock/vlock_module.c"
+		else
+			saver_srcs="$core_srcs src/config.c src/target/scr_macos/saver_view.m src/target/scr_macos/saver_cfg.m"
 		fi
 	fi
 fi
@@ -288,6 +296,12 @@ fi
 		echo "XSCR_BINDIR = $xscr_bindir"
 		echo "XSCR_CONFIGDIR = $xscr_configdir"
 	fi
+	if [ -n "$saver_srcs" ]; then
+		echo 'SAVER_TARGET = $(BUILDDIR)/underthec.saver/Contents/MacOS/underthec'
+		echo "SAVER_SRCS = $saver_srcs"
+		echo "SAVER_VERSION = $ver_str"
+		echo "SAVER_DIR = $saver_dir"
+	fi
 	if [ -n "$vlock_srcs" ]; then
 		echo 'VLOCK_TARGET = $(BUILDDIR)/underthec.so'
 		echo "VLOCK_SRCS = $vlock_srcs"
@@ -311,5 +325,6 @@ fi
 echo "configured: CC=$cc static=$static debug=$debug emcc=$emcc screensaver=$([ -n "$scr_srcs" ] && echo 1 || echo 0) prefix=$prefix"
 echo "xscreensaver: x11=$have_x11 xft=$have_xft$([ "$have_x11" = "1" ] && echo " bindir=$xscr_bindir")"
 echo "vlock: enabled=$([ -n "$vlock_srcs" ] && echo 1 || echo 0)$([ -n "$vlock_srcs" ] && echo " moduledir=$vlock_moduledir")"
+echo "macos screensaver: enabled=$([ -n "$saver_srcs" ] && echo 1 || echo 0)$([ -n "$saver_srcs" ] && echo " dir=$saver_dir")"
 echo "plasma wallpaper: qt6=$have_qt$([ "$have_qt" = "1" ] && echo " qmldir=$qml_dir packagedir=$plasma_pkgdir")"
 echo "run 'make' to build."

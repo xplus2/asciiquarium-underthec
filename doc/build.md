@@ -21,22 +21,29 @@ If the Qt6 Quick development files (Qt 6.4 or newer, e.g. `qt6-base-dev` and `qt
 this also builds the Plasma wallpaper plugin (non-static, target `plasma_wallpaper`, output in `build/plasma_wallpaper/`).
 `-DUNDERTHEC_PLASMA_WALLPAPER=OFF` disables it. See [wallpaper.md](wallpaper.md) for installation.
 
-
 ### Windows
-Cross-compiling a static Windows build requires the `mingw-w64` cross toolchain.
-Windows builds also produce the screensaver `underthec.scr`.
-It needs `windres` (comes with mingw-w64).
+This sections describes cross-compiling static Windows builds from Linux using the `mingw-w64` cross toolchain.
+They also produce the screensaver `underthec.scr` (needs `windres` that usually already comes with mingw-w64).
 
 ```sh
 cmake -B build-win -DCMAKE_TOOLCHAIN_FILE=toolchain/mingw-w64-toolchain.cmake
 cmake --build build-win
 ```
-
 With configure + make, `--host=*-mingw32` builds `build/underthec.scr`.
 
+> Building natively on Windows: Technically possible.
+
 ### macOS
-The CMake build above should natively work on macOS.
-Apple's libSystem does not support fully static binaries.
+Same as on Linux:
+```sh
+cmake -B build
+cmake --build build
+```
+
+One small difference: Apple's libSystem does not support fully static binaries.
+
+It also builds the screensaver bundle `underthec.saver` (Objective-C, needs Xcode command line tools).
+`-DUNDERTHEC_MACOS_SAVER=OFF` disables it. See [screensaver.md](screensaver.md) for installation.
 
 ### Android TV
 
@@ -77,38 +84,35 @@ The APK ends up in `build/outputs/apk/debug/underthec-VERSION-androidtv-debug.ap
 * `ANDROID_KEY_ALIAS`
 * `ANDROID_KEY_PASSWORD`
 
-## configure + make (legacy)
 
-```sh
-./configure
-make
-make install
-```
-
-`./configure --help` lists the available options (`--prefix`, `--host`
-for cross-compiling, `--no-static`, `--debug`, `--emcc`, `--no-plasma-wallpaper`, `--android-ndk`).
-
-`./configure --android-ndk=DIR [--android-abi=ABI] [--android-api=N]` cross-compiles only `build/libunderthec_android.so`.
-The APK needs the Gradle project, see the Android section above.
-
-It builds the Plasma wallpaper plugin if `pkg-config` finds Qt6 Quick 6.4 or newer, a C++ compiler and Qt's `moc`
-(`--qml-moduledir` and `--plasma-packagedir` set the install locations, see [wallpaper.md](wallpaper.md)).
-
-Pass `--debug` for an unstripped `-g -O0` build.
-
-## WebAssembly
-
-Requires Emscripten (`emcc`, `emcmake`). Output is `underthec.js`, `underthec.wasm`
+### WebAssembly
+Building the WebAssembly requires emscripten (`emcc`, `emcmake`) and the output will be `underthec.js`, `underthec.wasm`
 and `index.html` in the build directory.
 
 ```sh
 emcmake cmake -B build-web
 cmake --build build-web
 ```
-or
-```sh
-./configure --emcc
-make
-```
+or `./configure --emcc && make`
 
 Browsers don't load wasm from `file://`, so serve the directory over HTTP.
+
+---
+## configure + make alternative
+Nothing unexpected:
+```sh
+./configure
+make
+make install
+```
+
+`./configure --help` lists the available options.
+
+It builds the Plasma wallpaper plugin if `pkg-config` finds Qt6 Quick 6.4 or newer, a C++ compiler and Qt's `moc`
+(`--qml-moduledir` and `--plasma-packagedir` set the installation locations, see [wallpaper.md](wallpaper.md)).
+
+Pass `--debug` for an unstripped `-g -O0` build.
+
+### The Android exception
+While you can build the NDK part traditionally, like `./configure --android-ndk=DIR [--android-abi=ABI] [--android-api=N]` for `build/libunderthec_android.so`,
+the APK needs the Gradle project - which is a CMake thing.
