@@ -38,11 +38,9 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
   char eb[128];
   if (strcmp(name, "classic") == 0) {
     if (!opts_parse_classic(value, &cfg->classic_ver, eb, sizeof eb)) return fail(err, err_len, eb, shown);
-    cfg->classic_given = true;
   } else if (strcmp(name, "aquatic-life") == 0) {
     bool fish_set = false;
     if (!opts_parse_aquatic_life(value, &cfg->aquatic, true, &fish_set, eb, sizeof eb)) return fail(err, err_len, eb, shown);
-    cfg->aquatic_given = true;
   } else if (strcmp(name, "message") == 0) {
     free(cfg->message);
     cfg->message = opts_strdup(value);
@@ -76,18 +74,23 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
   return true;
 }
 
-bool config_check(const struct config *cfg, char *err, size_t err_len) {
-  if (cfg->classic_given && cfg->aquatic_given) {
-    opts_set_errbuf(err, err_len, (const char *[]){"classic and aquatic-life are mutually exclusive"}, 1);
-    return false;
-  }
+bool config_check(struct config *cfg, char *err, size_t err_len) {
+  (void)err;
+  (void)err_len;
+  if (cfg->classic_ver == 0) return true;
+  cfg->aquatic = scene_aquatic_classic();
+  cfg->fps = CLASSIC_FPS;
+  cfg->uturn_chance = 0;
+  free(cfg->message);
+  cfg->message = NULL;
+  free(cfg->castle_name);
+  cfg->castle_name = NULL;
   return true;
 }
 
 void config_start(const struct config *cfg, struct app *app, double now) {
-  struct aquatic_life aquatic = cfg->classic_ver == 2 ? scene_aquatic_classic11() : cfg->aquatic;
   rng_seed((uint64_t)time(NULL) ^ ((uint64_t)clock() << 32));
-  app_init(app, cfg->classic_ver == 1, aquatic, cfg->pace, cfg->fps, cfg->colors_mode, now);
+  app_init(app, cfg->classic_ver, cfg->aquatic, cfg->pace, cfg->fps, cfg->colors_mode, now);
   if (cfg->message_color != NULL) scene_set_message_color(&app->scene, color_from_name(cfg->message_color));
   scene_set_message_position(&app->scene, cfg->message_position);
   scene_set_uturn_chance(&app->scene, cfg->uturn_chance);

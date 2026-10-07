@@ -118,6 +118,7 @@ $(BUILDDIR)/favicon.ico: src/target/windows/underthec.ico
 
 clean:
 	rm -rf $(BUILDDIR) $(TARGET)
+	rm -rf src/target/androidtv/build src/target/androidtv/.cxx src/target/androidtv/.gradle
 
 install: $(TARGET)
 	@if [ -n "$(WEB_FILES)" ]; then echo "install: not supported for the web build" >&2; exit 1; fi

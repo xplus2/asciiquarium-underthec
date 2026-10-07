@@ -29,7 +29,7 @@ comma-separated, default: all on, fish=auto
 .RE
 .TP
 .BR \-c ", " \-\-classic " [\fI1.0\fR|\fI1.1\fR]"
-classic mode, no arg = 1.0. Not combinable with \fB\-a\fR.
+classic mode, no arg = 1.0. Not combinable with \fB\-a\fR, \fB\-f\fR, \fB\-u\fR, \fB\-m\fR, \fB\-M\fR, \fB\-P\fR, \fB\-n\fR.
 .TP
 .BR \-m ", " \-\-message " \fItext\fR"
 bg text/ascii art ('\-' for stdin)
@@ -128,7 +128,7 @@ pause,
 .B t
 toggle transparency,
 .B f
-feed,
+feed (not in classic mode),
 .B s
 settings,
 .B h
@@ -143,7 +143,7 @@ like \-a's fish=
 like \-a, except for fish=
 .PP
 .B UNDERTHEC_CLASSIC=1.0|1.1
-like \-c
+like \-c. Wins over conflicting variables.
 .PP
 .B UNDERTHEC_MESSAGE=<text>
 like \-m

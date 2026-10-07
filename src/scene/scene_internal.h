@@ -9,6 +9,8 @@
 #define Z_FISH_RANGE 17
 #define Z_FLORA_RANGE (Z_SEAWEED_MAX - Z_FISH_MIN + 1)
 #define Z_SEAWEED_MAX 21
+#define CLASSIC_SEAWEED_MIN_S 180.0
+#define CLASSIC_SEAWEED_MAX_S 480.0
 #define Z_CASTLE_BUBBLE 20
 #define Z_CASTLE_DOOR 22
 #define Z_CASTLE 23
@@ -57,6 +59,8 @@ int random_swim_y(int h, int sprite_height);
 
 /* environment.c */
 void add_environment(struct scene *sc, int w, int h);
+void resize_environment(struct scene *sc, int w);
+void resize_seaweed(struct scene *sc, int w, int h);
 void add_castle(struct scene *sc, int w, int h);
 void add_castle_building(struct scene *sc, int w, int h);
 void spawn_rubble(struct scene *sc, double castle_x, double castle_y, int castle_height);
@@ -64,8 +68,10 @@ void castle_door_tick(struct scene *sc);
 void add_seaweed(struct scene *sc, int w, int h);
 void add_all_seaweed(struct scene *sc, int w, int h);
 void seaweed_tick(struct scene *sc, int term_w, int term_h);
+int fish_target(const struct scene *sc, int w, int h);
 void add_all_fish(struct scene *sc, int w, int h);
 void add_message(struct scene *sc, int w, int h);
+void reposition_message(const struct scene *sc, struct entity *e, int w, int h);
 void spawn_message_event(struct scene *sc, int w, int h);
 void environment_tick(struct scene *sc);
 

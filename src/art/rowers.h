@@ -156,4 +156,157 @@ static const struct sprite_pair rowers[2][5] = {
   },
 };
 
+static const char *const rowers_short_image_0_0[] = {
+  "  q\?\?q    ",
+  "\\==\\==\\==/",
+  "    \\\?\?\\  ",
+  NULL
+};
+
+static const char *const rowers_short_image_0_1[] = {
+  "   o\?\?o   ",
+  "\\==|==|==/",
+  "   |\?\?|   ",
+  NULL
+};
+
+static const char *const rowers_short_image_0_2[] = {
+  "    p\?\?p  ",
+  "\\==/==/==/",
+  "  /\?\?/    ",
+  NULL
+};
+
+static const char *const rowers_short_image_0_3[] = {
+  "___o__o",
+  "\\========/",
+  NULL
+};
+
+static const char *const rowers_short_image_0_4[] = {
+  "  q__q___",
+  "\\========/",
+  NULL
+};
+
+static const char *const rowers_short_image_1_0[] = {
+  "    p\?\?p  ",
+  "\\==/==/==/",
+  "  /\?\?/    ",
+  NULL
+};
+
+static const char *const rowers_short_image_1_1[] = {
+  "   o\?\?o   ",
+  "\\==|==|==/",
+  "   |\?\?|   ",
+  NULL
+};
+
+static const char *const rowers_short_image_1_2[] = {
+  "  q\?\?q    ",
+  "\\==\\==\\==/",
+  "    \\\?\?\\  ",
+  NULL
+};
+
+static const char *const rowers_short_image_1_3[] = {
+  "   o__o___",
+  "\\========/",
+  NULL
+};
+
+static const char *const rowers_short_image_1_4[] = {
+  " ___p__p  ",
+  "\\========/",
+  NULL
+};
+
+static const char *const rowers_short_mask_0_0[] = {
+  "  K  K",
+  "111W11W111",
+  "    W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_0_1[] = {
+  "   K  K",
+  "111W11W111",
+  "   W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_0_2[] = {
+  "    K  K",
+  "111W11W111",
+  "  W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_0_3[] = {
+  "WWWKWWK",
+  "1111111111",
+  "",
+  NULL
+};
+
+static const char *const rowers_short_mask_0_4[] = {
+  "  KWWKWWW",
+  "1111111111",
+  "",
+  NULL
+};
+
+static const char *const rowers_short_mask_1_0[] = {
+  "    K  K",
+  "111W11W111",
+  "  W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_1_1[] = {
+  "   K  K",
+  "111W11W111",
+  "   W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_1_2[] = {
+  "  K  K",
+  "111W11W111",
+  "    W  W",
+  NULL
+};
+
+static const char *const rowers_short_mask_1_3[] = {
+  "   KWWKWWW",
+  "1111111111",
+  "",
+  NULL
+};
+
+static const char *const rowers_short_mask_1_4[] = {
+  " WWWKWWK",
+  "1111111111",
+  "",
+  NULL
+};
+
+static const struct sprite_pair rowers_short[2][5] = {
+  {
+    {rowers_short_image_0_0, rowers_short_mask_0_0},
+    {rowers_short_image_0_1, rowers_short_mask_0_1},
+    {rowers_short_image_0_2, rowers_short_mask_0_2},
+    {rowers_short_image_0_3, rowers_short_mask_0_3},
+    {rowers_short_image_0_4, rowers_short_mask_0_4},
+  },
+  {
+    {rowers_short_image_1_0, rowers_short_mask_1_0},
+    {rowers_short_image_1_1, rowers_short_mask_1_1},
+    {rowers_short_image_1_2, rowers_short_mask_1_2},
+    {rowers_short_image_1_3, rowers_short_mask_1_3},
+    {rowers_short_image_1_4, rowers_short_mask_1_4},
+  },
+};
+
 #endif

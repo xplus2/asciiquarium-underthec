@@ -74,7 +74,7 @@ Some Android TV boxes don't provide a selection in their UI.
 So, when you are installing the `.apk` using sideloading anyway, like this:
 ```
 adb connect yourtv
-adb install underthec-<version>-androidtv-release.apk
+adb install underthec-<version>-androidtv.apk
 ```
 it's just one extra step:
 ```

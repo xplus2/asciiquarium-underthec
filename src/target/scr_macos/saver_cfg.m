@@ -247,13 +247,20 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   [self updateEnabled];
 }
 
-/* -c and -a exclusive */
+/* classic fixes all but castle, pace and colors */
 - (void)updateEnabled {
   bool freeLife = _classic.indexOfSelectedItem == 0;
   _fishAuto.enabled = freeLife;
   _fish.enabled = freeLife && _fishAuto.state != NSControlStateValueOn;
   for (NSButton *box in _flags) box.enabled = freeLife;
-  _castleName.enabled = _castle.state == NSControlStateValueOn;
+  _message.editable = freeLife;
+  _message.selectable = freeLife;
+  _message.textColor = freeLife ? [NSColor textColor] : [NSColor disabledControlTextColor];
+  _msgColor.enabled = freeLife;
+  _msgPos.enabled = freeLife;
+  _uturn.enabled = freeLife;
+  _fps.enabled = freeLife;
+  _castleName.enabled = freeLife && _castle.state == NSControlStateValueOn;
 }
 
 - (void)toggled:(id)sender {

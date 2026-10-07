@@ -13,7 +13,7 @@ enum entity_type {
   ENT_SWORDFISH,           ENT_RUBBLE,   ENT_LASER,    ENT_DUCK,        ENT_DOLPHIN,
   ENT_SWAN,                ENT_FISHHOOK, ENT_CRAB,     ENT_KAIJU_TIMER, ENT_JELLYFISH,
   ENT_RANDOM_OBJECT_TIMER, ENT_FLAKE,    ENT_SEAHORSE, ENT_CASTLE_DOOR, ENT_SEAWEED_DEBRIS,
-  ENT_ROWERS,              ENT_SAILBOAT, ENT_TURTLE,   ENT_TURTLE_TIMER
+  ENT_ROWERS,              ENT_SAILBOAT, ENT_TURTLE,   ENT_TURTLE_TIMER, ENT_SWAN_BABY
 };
 
 enum death_action {
@@ -84,11 +84,17 @@ struct entity {
   bool seaweed_top_left;
   double seaweed_grow_timer;
   bool seaweed_capped;
+  bool seaweed_static;
   double seaweed_split_timer;
   bool seaweed_landed;
   int seaweed_full_collapse_in;
   bool seaweed_full_collapse;
   char ***owned_mask_frames;
+
+  bool following;
+  bool follow_fast;
+  int follow_id;
+  double follow_vx;
 };
 
 struct entity_list {

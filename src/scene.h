@@ -31,6 +31,8 @@ struct aquatic_life {
   bool turtle;
 };
 
+#define CLASSIC_FPS 10
+
 #define CASTLE_NAME_LEN 11
 #define CASTLE_NAME_MAX_BYTES (CASTLE_NAME_LEN * 4)
 
@@ -44,8 +46,10 @@ enum message_position {
 
 struct scene {
   struct entity_list entities;
-  bool classic_mode;
+  int classic_ver; /* 0=off, 1=1.0, 2=1.1 */
   struct aquatic_life aquatic;
+  struct aquatic_life aquatic_saved;
+  int uturn_saved;
   char **message_rows;
   struct sprite_pair message_frame;
   struct attr message_attr;
@@ -59,8 +63,8 @@ struct scene {
 
 /* all on, fish=auto */
 struct aquatic_life scene_aquatic_default(void);
-/* classic 1.1 lineup */
-struct aquatic_life scene_aquatic_classic11(void);
+/* classic lineup, fish=auto */
+struct aquatic_life scene_aquatic_classic(void);
 /* creature flags only, fish_count untouched */
 void scene_aquatic_fill(struct aquatic_life *a, bool on);
 /* false if name unknown */
@@ -68,9 +72,14 @@ bool scene_aquatic_set_flag(struct aquatic_life *a, const char *name);
 const char *scene_aquatic_flag_name(size_t i);
 bool *scene_aquatic_flag(struct aquatic_life *a, size_t i);
 
-void scene_init(struct scene *sc, bool classic_mode, struct aquatic_life aquatic);
+/* classic_ver != 0: fixed lineup, aquatic ignored */
+void scene_init(struct scene *sc, int classic_ver, struct aquatic_life aquatic);
+/* live switch, restores free settings on 0, resets scene */
+void scene_set_classic(struct scene *sc, int classic_ver, int w, int h);
 void scene_free(struct scene *sc);
 void scene_reset(struct scene *sc, int term_w, int term_h);
+/* live resize, classic: redraw */
+void scene_resize(struct scene *sc, int old_w, int old_h, int w, int h);
 void scene_tick(struct scene *sc, int term_w, int term_h);
 void scene_set_message(struct scene *sc, const char *const *rows, int row_count);
 void scene_set_message_color(struct scene *sc, struct attr attr);

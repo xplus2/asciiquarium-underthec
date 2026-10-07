@@ -10,7 +10,7 @@ void print_help(const char *prog) {
     "                             fish=<N|auto>,ducks,dolphins,ship,swan,kaiju,crab,shark,\n"
     "                             submarine,whale,jellyfish,monster,bigfish,swordfish,\n"
     "                             seahorse,rowers,sailboat,fishhook,turtle\n"
-    "  -c, --classic [1.0|1.1]    classic mode, no arg = 1.0\n"
+    "  -c, --classic [1.0|1.1]    classic mode, conflicts: -a -f -u -m -M -P -n\n"
     "  -m, --message <text>       bg text/ascii art ('-' for stdin)\n"
     "  -M, --message-color <c>    -m text color (default: blue)\n"
     "                             red,green,blue,yellow,magenta,cyan,white,black\n"

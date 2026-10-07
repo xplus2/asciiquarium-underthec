@@ -57,6 +57,32 @@ static void tick_rowers(struct entity *e) {
   e->x += e->vx * mult;
 }
 
+#define BABY_SLOW 0.85
+#define BABY_FAST 1.3
+#define BABY_LAG_MAX 7.0
+#define BABY_LAG_MIN 1.0
+
+static double baby_lag(struct entity *e, struct entity *p) {
+  return e->follow_vx > 0.0 ? p->x - (e->x + entity_width(e)) : e->x - (p->x + entity_width(p));
+}
+
+static void tick_swan_baby(struct entity_list *list, struct entity *e) {
+  struct entity *p = e->following ? entity_find_by_id(list, e->follow_id) : NULL;
+  if (p == NULL) {
+    e->following = false;
+    e->vx = e->follow_vx * BABY_SLOW;
+    e->x += e->vx;
+    return;
+  }
+  if (baby_lag(e, p) > BABY_LAG_MAX) e->follow_fast = true;
+  e->vx = e->follow_vx * (e->follow_fast ? BABY_FAST : BABY_SLOW);
+  e->x += e->vx;
+  if (e->follow_fast && baby_lag(e, p) <= BABY_LAG_MIN) {
+    e->follow_fast = false;
+    e->x = e->follow_vx > 0.0 ? p->x - BABY_LAG_MIN - entity_width(e) : p->x + entity_width(p) + BABY_LAG_MIN;
+  }
+}
+
 static void advance_frame(struct entity *e) {
   if (e->frame_count <= 1 || e->frame_interval <= 0.0) return;
   e->frame_timer += 1.0;
@@ -109,6 +135,8 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       case ENT_TURTLE:
       case ENT_CRAB:           e->x += e->vx;
                                e->y += e->vy;
+                               advance_frame(e);                break;
+      case ENT_SWAN_BABY:      tick_swan_baby(list, e);
                                advance_frame(e);                break;
       case ENT_SEAWEED:        tick_seaweed_growth(e);
                                advance_frame(e);                break;

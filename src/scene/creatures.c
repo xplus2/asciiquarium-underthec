@@ -4,6 +4,7 @@
 #include "xalloc.h"
 
 #include "art/bigfish.h"
+#include "art/classic.h"
 #include "art/crab.h"
 #include "art/dolphins.h"
 #include "art/ducks.h"
@@ -148,7 +149,7 @@ void fish_turn_tick(struct entity *e, int term_w, int uturn_one_in) {
 }
 
 void spawn_fish(struct scene *sc, int w, int h) {
-  bool use_new = !sc->classic_mode && rng_int(12) > 8;
+  bool use_new = sc->classic_ver != 1 && rng_int(12) > 8;
   if (use_new) spawn_fish_from_table(sc, fish_new, 8, w, h);
   else spawn_fish_from_table(sc, fish_old, 16, w, h);
 }
@@ -168,7 +169,7 @@ static void spawn_big_fish_variant(struct scene *sc, int w, int h, const struct 
 }
 
 static void spawn_big_fish(struct scene *sc, int w, int h) {
-  bool use_2 = !sc->classic_mode && rng_int(3) > 1;
+  bool use_2 = sc->classic_ver != 1 && rng_int(3) > 1;
   if (use_2) spawn_big_fish_variant(sc, w, h, bigfish2, 2.5);
   else spawn_big_fish_variant(sc, w, h, bigfish1, 3.0);
 }
@@ -180,14 +181,16 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   double speed = 2.0;
   int y = rng_int(h - 19) + 9;
   int ty = y + 6;
+  bool classic = sc->classic_ver != 0;
   if (dir) {
     speed = -2.0;
     x = w - 2;
-    tx = x + 6;
+    tx = x + (classic ? CLASSIC_SHARK_TEETH_COL_LEFT : 6);
   } else {
     x = -53;
-    tx = x + 32;
+    tx = x + (classic ? CLASSIC_SHARK_TEETH_COL_RIGHT : 32);
   }
+  if (classic) ty = y + CLASSIC_SHARK_TEETH_ROW;
 
   struct entity *teeth = entity_spawn(&sc->entities);
   teeth->type = ENT_TEETH;
@@ -202,7 +205,7 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   struct entity *e = entity_spawn(&sc->entities);
   e->x = x;
   e->y = y;
-  e->frames = &shark[dir];
+  e->frames = classic ? &classic_shark[dir] : &shark[dir];
   e->frame_count = 1;
   finish_creature_spawn(e, ENT_SHARK, Z_SHARK, speed, 0, DEATH_SHARK, color_from_name("CYAN"));
 }
@@ -278,7 +281,7 @@ static void spawn_monster_old(struct scene *sc, int w, int h) {
 }
 
 static void spawn_monster(struct scene *sc, int w, int h) {
-  if (!sc->classic_mode) spawn_monster_new(sc, w, h);
+  if (sc->classic_ver != 1) spawn_monster_new(sc, w, h);
   else spawn_monster_old(sc, w, h);
 }
 
@@ -311,13 +314,33 @@ static void spawn_ducks(struct scene *sc, int w, int h) {
 static void spawn_swan(struct scene *sc, int w, int h) {
   (void)h;
   static const struct simple_creature_def def = {ENT_SWAN, Z_SWAN, 1.0, 1, 1, 0.0, "WHITE", {&swan[0], &swan[1]}};
-  spawn_simple_creature(sc, w, &def);
+  struct entity *parent = spawn_simple_creature(sc, w, &def);
+  if (rng_int(5) != 0) return;
+  int parent_id = parent->id;
+  int parent_w = entity_width(parent);
+  int parent_bottom = (int)parent->y + entity_height(parent);
+  double px = parent->x;
+  double vx = parent->vx;
+  struct entity *baby = entity_spawn(&sc->entities);
+  baby->frames = &swan_baby[vx < 0.0];
+  baby->frame_count = 1;
+  int bw = entity_width(baby);
+  baby->x = vx > 0.0 ? px - 1 - bw : px + parent_w + 1;
+  baby->y = parent_bottom - entity_height(baby);
+  baby->following = true;
+  baby->follow_id = parent_id;
+  baby->follow_vx = vx;
+  finish_creature_spawn(baby, ENT_SWAN_BABY, Z_SWAN, vx, 0, DEATH_NONE, color_from_name("WHITE"));
 }
 
 static void spawn_rowers(struct scene *sc, int w, int h) {
   (void)h;
   static const char boat_letters[] = {'r', 'R', 'g', 'G', 'm', 'M', 'y', 'Y', 'B'};
-  static const struct simple_creature_def def = {ENT_ROWERS, Z_ROWERS, 1.0, 4, 5, 2.5, "WHITE", {rowers[0], rowers[1]}};
+  static const struct simple_creature_def defs[2] = {
+    {ENT_ROWERS, Z_ROWERS, 1.0, 4, 5, 2.5, "WHITE", {rowers[0], rowers[1]}},
+    {ENT_ROWERS, Z_ROWERS, 1.0, 4, 5, 2.5, "WHITE", {rowers_short[0], rowers_short[1]}},
+  };
+  const struct simple_creature_def def = defs[rng_int(2)];
   struct entity *e = spawn_simple_creature(sc, w, &def);
   char boat = boat_letters[rng_int((int)sizeof(boat_letters))];
   const struct sprite_pair *src = e->frames;
@@ -429,7 +452,7 @@ void spawn_random_object(struct scene *sc, int w, int h) {
   {spawn_fishhook, sc->aquatic.fishhook},   {spawn_crab, sc->aquatic.crab},
   {spawn_seahorse, sc->aquatic.seahorse},   {spawn_rowers, sc->aquatic.rowers},
   {spawn_sailboat, sc->aquatic.sailboat},
-  {spawn_message_event, sc->message_rows != NULL && sc->message_position == MSG_POS_EVENT},
+  {spawn_message_event, sc->message_rows != NULL && sc->classic_ver == 0 && sc->message_position == MSG_POS_EVENT},
   };
   const int count = (int)(sizeof(table) / sizeof(table[0]));
   spawn_fn enabled[count];

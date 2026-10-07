@@ -11,13 +11,14 @@
 #define BOX_W (CONTENT_W + 2 * MARGIN)
 #define BOX_H (CONTENT_H + 2 * MARGIN)
 
+static int box_h(const struct help_ui *ui) { return ui->scene->classic_ver == 0 ? BOX_H : BOX_H - 1; }
+
 static const struct attr BOX_ATTR = {.col = COL_WHITE, .bold = false, .bg = COL_BLACK, .bg_bold = true};
 static const struct attr TITLE_ATTR = {.col = COL_WHITE, .bold = true, .bg = COL_BLACK, .bg_bold = true};
 
-void help_ui_init(struct help_ui *ui, const int *fps, const double *pace) {
+void help_ui_init(struct help_ui *ui, const struct scene *scene) {
   ui->open = false;
-  ui->fps = fps;
-  ui->pace = pace;
+  ui->scene = scene;
 }
 
 bool help_ui_is_open(const struct help_ui *ui) { return ui->open; }
@@ -27,7 +28,7 @@ void help_ui_toggle(struct help_ui *ui) { ui->open = !ui->open; }
 void help_ui_close(struct help_ui *ui) { ui->open = false; }
 
 bool help_ui_click(const struct help_ui *ui, int x, int y) {
-  return ui->open && x >= 0 && x < BOX_W && y >= 0 && y < BOX_H;
+  return ui->open && x >= 0 && x < BOX_W && y >= 0 && y < box_h(ui);
 }
 
 static void fill_rect(struct canvas *c, int x0, int y0, int w, int h, struct attr a) {
@@ -44,7 +45,7 @@ static void draw_row_text(struct canvas *c, int x0, int y, const char *s, struct
 void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   if (!ui->open) return;
 
-  fill_rect(c, 0, 0, BOX_W, BOX_H, BOX_ATTR);
+  fill_rect(c, 0, 0, BOX_W, box_h(ui), BOX_ATTR);
 
   char line[CONTENT_W + 1];
   int y = MARGIN;
@@ -55,7 +56,7 @@ void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   draw_row_text(c, MARGIN, y++, line, TITLE_ATTR);
   y++;
   draw_row_text(c, MARGIN, y++, "keys:", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  f         feed", BOX_ATTR);
+  if (ui->scene->classic_ver == 0) draw_row_text(c, MARGIN, y++, "  f         feed", BOX_ATTR);
   draw_row_text(c, MARGIN, y++, "  h         help", BOX_ATTR);
   draw_row_text(c, MARGIN, y++, "  p [space] pause", BOX_ATTR);
   draw_row_text(c, MARGIN, y++, "  q Ctrl+c  quit", BOX_ATTR);

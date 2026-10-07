@@ -112,6 +112,8 @@ static bool apply_env(bool given, const char *env_name, const char *prog, opt_pa
 bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   bool c_given = false;
   bool a_given = false;
+  bool message_given = false;
+  bool message_color_given = false;
   bool t_given = false;
   bool s_given = false;
   bool p_given = false;
@@ -243,6 +245,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
     } else if (strcmp(a, "-m") == 0 || strcmp(a, "--message") == 0) {
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
       out->message_arg = argv[i + 1];
+      message_given = true;
       i += 2;
     } else if (strcmp(a, "-M") == 0 || strcmp(a, "--message-color") == 0) {
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
@@ -252,6 +255,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
         return false;
       }
       out->message_color_arg = argv[i + 1];
+      message_color_given = true;
       i += 2;
     } else if (strcmp(a, "-a") == 0 || strcmp(a, "--aquatic-life") == 0) {
       a_given = true;
@@ -273,8 +277,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
     }
   }
 
-  bool c_flag = c_given;
-  bool a_flag = a_given;
   if (!apply_env(t_given, "UNDERTHEC_TRANSPARENT", argv[0], w_bool, &out->transparent, exit_code)) return false;
   if (!apply_env(s_given, "UNDERTHEC_SCREENSAVER", argv[0], w_bool, &out->screensaver, exit_code)) return false;
   if (!apply_env(p_given, "UNDERTHEC_PACE", argv[0], w_pace, &out->pace, exit_code)) return false;
@@ -314,7 +316,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
         *exit_code = err_env_bad(argv[0], "UNDERTHEC_FISH", errbuf);
         return false;
       }
-      a_flag = true;
     }
   }
   if (!a_given) {
@@ -326,7 +327,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
         *exit_code = err_env_bad(argv[0], "UNDERTHEC_AQUATIC_LIFE", errbuf);
         return false;
       }
-      a_flag = true;
     }
   }
   if (!c_given) {
@@ -337,17 +337,32 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
         *exit_code = err_env_bad(argv[0], "UNDERTHEC_CLASSIC", errbuf);
         return false;
       }
-      c_flag = true;
     }
   }
 
-  if (c_flag && a_flag) {
-    write_parts(stderr, (const char *[]){argv[0], ": -c/--classic and -a/--aquatic-life are mutually exclusive\n"}, 2);
-    *exit_code = 2;
-    return false;
+  if (classic_ver != 0) {
+    const struct { bool given; const char *name; } conflicts[] = {
+      {a_given, "-a/--aquatic-life"},
+      {f_given, "-f/--fps"},
+      {u_given, "-u/--uturn-chance"},
+      {message_given, "-m/--message"},
+      {message_color_given, "-M/--message-color"},
+      {message_position_given, "-P/--message-position"},
+      {castle_name_given, "-n/--castle-name"},
+    };
+    for (size_t k = 0; k < sizeof(conflicts) / sizeof(conflicts[0]); k++) {
+      if (!conflicts[k].given) continue;
+      write_parts(stderr, (const char *[]){argv[0], ": classic mode and ", conflicts[k].name, " are mutually exclusive\n"}, 4);
+      *exit_code = 2;
+      return false;
+    }
+    out->aquatic = scene_aquatic_classic();
+    out->fps = CLASSIC_FPS;
+    out->uturn_chance = 0;
+    out->message_arg = NULL;
+    out->castle_name[0] = '\0';
   }
-  out->classic = (classic_ver == 1);
-  if (classic_ver == 2) out->aquatic = scene_aquatic_classic11();
+  out->classic_ver = classic_ver;
 
   out->teletext_requested = (teletext_arg != NULL);
   out->mcast_requested = (out->mcast_arg != NULL);

@@ -40,7 +40,7 @@ Some of the optional release targets have special (platform dependent) needs, mo
 * `libx11` for the X11 screensaver, plus `libxft` for nicer fonts.
 * `qt6-base-dev`+`qt6-declarative-dev` (Qt 6.4+) for the Plasma wallpaper.
 * Emscripten for the WebAssembly.
-* A JDK (17+) plus the Android SDK (34+) and NDK for Android TV.
+* A JDK (17+) plus the Android SDK (34+) and NDK (r27+) for Android TV.
 * `mingw-w64` to build Windows stuff on Linux.
 * Xcode command line tools for the macOS screensaver.
 
@@ -80,9 +80,13 @@ underthec {-h|-v}
 
 ### Classic mode `-c`/`--classic`
 - `-c 1.0` (or bare `-c`): original 1.0 fish/monster look
-- `-c 1.1`: upstream 1.1 fish/monster look, restricted to upstream's species
+- `-c 1.1`: upstream 1.1 fish/monster look
 
-Not combinable with `-a`.
+Both use the original lineup (ship, whale, monster, bigfish, shark) and the original shark and castle.
+Fixed at 10 fps. 
+
+Not combinable with `-a`, `-f`, `-u`, `-m`, `-M`, `-P`, `-n`.
+Environment variables and saved settings in conflict with classic mode are ignored.
 
 ### Foreground colors `-C`|`--colors`
 Limit the foreground colors.
@@ -114,9 +118,9 @@ Capitalized first letter: bold.
 Define what's going on in your asciiquarium. It takes a comma-separated definition:
 
 - `fish=<N|auto>`: number of fish (default: `auto`, sized to the terminal)
-- flags, present=on, omitted=off: `ducks`, `dolphins`, `ship`, `swan`, `kaiju`, `fishhook`,
-  `submarine`, `whale`, `shark`, `jellyfish`, `monster`, `bigfish`, `swordfish`, `crab`,
-  `seahorse`, `rowers`, `sailboat`, `turtle`
+- flags, present=on, omitted=off: `bigfish`, `crab`, `dolphins`, `ducks`, `fishhook`, `jellyfish`,
+  `kaiju`, `monster`, `rowers`, `sailboat`, `seahorse`, `shark`, `ship`, `submarine`, `swan`, `swordfish`, 
+  `turtle`, `whale`
 
 Default (no `-a`): every flag on, `fish=auto`. Example: `-a fish=10,jellyfish,dolphins`
 
@@ -151,7 +155,7 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 
 | Key | Alternative | Action                         |
 |-----|-------------|--------------------------------|
-| `f` |  SIGUSR1    | Feed: drop flakes for the fish |
+| `f` |  SIGUSR1    | Feed: drop flakes (not in classic mode) |
 | `h` |             | Help                           |
 | `p` | `[space]`   | Pause / resume                 |
 | `r` |             | Redraw                         |
@@ -163,7 +167,7 @@ In the settings dialog, the arrow keys are used to select a setting,
 `+`, `-` or `[space]` make changes.
 
 Android TV:
-* `OK` feeds
+* `OK` feeds (not in classic mode)
 * `up` or holding `OK` opens the settings
 
 ## Credits

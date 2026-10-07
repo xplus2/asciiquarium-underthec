@@ -66,6 +66,7 @@ static void seaweed_cap(struct entity *e) {
 }
 
 void tick_seaweed_growth(struct entity *e) {
+  if (e->seaweed_static) return;
   if (e->seaweed_capped) {
     if (e->seaweed_split_timer > 0.0) e->seaweed_split_timer -= 0.1;
     return;

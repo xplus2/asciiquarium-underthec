@@ -1,6 +1,7 @@
 <screensaver name="underthec" _label="Under The C">
   <_description>
 Under The C - a C-port of Asciiquarium.
+Classic modes ignore aquatic-life, message, castle name, U-turn chance and FPS.
   </_description>
   <hgroup>
     <select id="mode">

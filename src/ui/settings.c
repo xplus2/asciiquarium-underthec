@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 
-enum field_kind { FIELD_NONE, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
+enum field_kind { FIELD_NONE, FIELD_CLASSIC, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
 
 static bool is_checkbox_kind(enum field_kind k) { return k == FIELD_SPECIES || k == FIELD_CASTLE; }
 
@@ -18,7 +18,8 @@ struct grid_cell {
 
 #define SP(field) offsetof(struct aquatic_life, field)
 
-#define GRID_ROWS 13
+#define GRID_ROWS 14
+#define TOP_ROW_COUNT 3
 
 static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_COLORS, "colors", 0},                 {FIELD_NONE, NULL, 0}},
@@ -34,12 +35,13 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "turtle", SP(turtle)}},
 {{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_SPECIES, "whale", SP(whale)}},
 {{FIELD_CASTLE, "castle", 0},                 {FIELD_NONE, NULL, 0}},
+{{FIELD_CLASSIC, "classic", 0},               {FIELD_NONE, NULL, 0}},
 };
 
 #undef SP
 
 #define CONTENT_W 28
-#define CONTENT_H 15
+#define CONTENT_H 16
 #define MARGIN 1
 #define BOX_W (CONTENT_W + 2 * MARGIN)
 #define BOX_H (CONTENT_H + 2 * MARGIN)
@@ -55,7 +57,18 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #define CHECK_PREFIX 4
 
 static const struct attr BOX_ATTR = {.col = COL_WHITE, .bold = false, .bg = COL_BLACK, .bg_bold = true};
+static const struct attr DIS_ATTR = {.col = COL_BLACK, .bold = false, .bg = COL_BLACK, .bg_bold = true};
 static const struct attr HL_ATTR = {.col = COL_YELLOW, .bold = false, .bg = COL_BLUE, .bg_bold = false};
+
+static bool kind_disabled(const struct settings_ui *ui, enum field_kind k) {
+  if (ui->scene->classic_ver == 0) return false;
+  return k == FIELD_FPS || k == FIELD_UTURN || k == FIELD_FISH || k == FIELD_SPECIES;
+}
+
+static bool cell_selectable(const struct settings_ui *ui, int row, int col) {
+  enum field_kind k = grid[row][col].kind;
+  return k != FIELD_NONE && !kind_disabled(ui, k);
+}
 
 static int clampi(int v, int lo, int hi) {
   if (v < lo) return lo;
@@ -121,6 +134,7 @@ void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *color
   ui->scene = scene;
   ui->sel_row = 0;
   ui->sel_col = 0;
+  ui->saved_fps = *fps;
 }
 
 bool settings_ui_is_open(const struct settings_ui *ui) { return ui->open; }
@@ -138,21 +152,32 @@ void settings_ui_close(struct settings_ui *ui) { ui->open = false; }
 static void move_left_right(struct settings_ui *ui, int dcol) {
   int other = ui->sel_col + dcol;
   if (other < 0 || other > 1) return;
-  if (grid[ui->sel_row][other].kind == FIELD_NONE) return;
+  if (!cell_selectable(ui, ui->sel_row, other)) return;
   ui->sel_col = other;
 }
 
 static void move_up_down(struct settings_ui *ui, int drow) {
-  int row = clampi(ui->sel_row + drow, 0, GRID_ROWS - 1);
-  int col = ui->sel_col;
-  if (grid[row][col].kind == FIELD_NONE) col = 0;
-  ui->sel_row = row;
-  ui->sel_col = col;
+  for (int row = ui->sel_row + drow; row >= 0 && row < GRID_ROWS; row += drow) {
+    int col = ui->sel_col;
+    if (!cell_selectable(ui, row, col)) col = 1 - col;
+    if (!cell_selectable(ui, row, col)) continue;
+    ui->sel_row = row;
+    ui->sel_col = col;
+    return;
+  }
 }
 
 static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
   const struct grid_cell *cell = &grid[ui->sel_row][ui->sel_col];
+  if (kind_disabled(ui, cell->kind)) return;
   switch (cell->kind) {
+    case FIELD_CLASSIC: {
+      int ver = (ui->scene->classic_ver + dir + 3) % 3;
+      if (ui->scene->classic_ver == 0) ui->saved_fps = *ui->fps;
+      scene_set_classic(ui->scene, ver, term_w, term_h);
+      *ui->fps = ver == 0 ? ui->saved_fps : CLASSIC_FPS;
+      break;
+    }
     case FIELD_FPS:
       *ui->fps = clampi(*ui->fps + dir, 1, 240);
       break;
@@ -182,6 +207,7 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
 
 static void toggle_checkbox(struct settings_ui *ui, int term_w, int term_h) {
   const struct grid_cell *cell = &grid[ui->sel_row][ui->sel_col];
+  if (kind_disabled(ui, cell->kind)) return;
   if (cell->kind == FIELD_SPECIES) {
     bool *flag = species_field(&ui->scene->aquatic, cell->species_offset);
     *flag = !*flag;
@@ -218,13 +244,14 @@ bool settings_ui_click(struct settings_ui *ui, int x, int y, int term_w, int ter
     if (cx == MINUS0_X || cx == plus0_x) col = 0;
     else if (cx == MINUS1_X || cx == plus1_x) col = 1;
     else return true;
-    if (grid[lr][col].kind == FIELD_NONE) return true;
+    if (!cell_selectable(ui, lr, col)) return true;
     dir = (cx == plus0_x || cx == plus1_x) ? 1 : -1;
   } else {
     col = cx >= COL1_X ? 1 : 0;
     const struct grid_cell *cell = &grid[lr][col];
     int x0 = col == 0 ? COL0_X : COL1_X;
-    if (!is_checkbox_kind(cell->kind) || cx < x0 || cx >= x0 + CHECK_PREFIX + (int)strlen(cell->label)) return true;
+    if (!is_checkbox_kind(cell->kind) || kind_disabled(ui, cell->kind)) return true;
+    if (cx < x0 || cx >= x0 + CHECK_PREFIX + (int)strlen(cell->label)) return true;
   }
   ui->sel_row = lr;
   ui->sel_col = col;
@@ -245,6 +272,13 @@ static void draw_row_text(struct canvas *c, int x0, int y, const char *s, int hl
   }
 }
 
+static void draw_span(struct canvas *c, int x0, int y, const char *s, int start, int len, struct attr a) {
+  for (int i = start; i < start + len && s[i] != '\0'; i++) {
+    char g[2] = {s[i], '\0'};
+    canvas_put(c, x0 + i, y, g, 1, a, 1);
+  }
+}
+
 struct adj_field {
   enum field_kind kind;
   const char *label;
@@ -252,7 +286,9 @@ struct adj_field {
   int value_w;
 };
 
-static const struct adj_field TOP_ROWS[3][2] = {
+static const struct adj_field CLASSIC_ROW[2] = {{FIELD_CLASSIC, "classic", 7, 3}, {FIELD_NONE, NULL, 0, 0}};
+
+static const struct adj_field TOP_ROWS[TOP_ROW_COUNT][2] = {
   {{FIELD_COLORS, "colors", 7, 17}, {FIELD_NONE, NULL, 0, 0}},
   {{FIELD_FPS, "fps", 7, 3}, {FIELD_PACE, "pace", 6, 4}},
   {{FIELD_UTURN, "uturn", 7, 3}, {FIELD_FISH, "fish", 6, 4}},
@@ -261,6 +297,11 @@ static const struct adj_field TOP_ROWS[3][2] = {
 static void format_adj_value(const struct settings_ui *ui, enum field_kind kind, int value_w, char *out, size_t out_cap) {
   size_t p = 0;
   switch (kind) {
+    case FIELD_CLASSIC: {
+      static const char *const names[] = {"off", "1.0", "1.1"};
+      opts_append_bounded_w(out, out_cap - 1, &p, names[ui->scene->classic_ver], value_w);
+      break;
+    }
     case FIELD_FPS: opts_append_int_bounded(out, out_cap - 1, &p, *ui->fps, value_w); break;
     case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 1); break;
     case FIELD_UTURN: opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->uturn_chance, value_w); break;
@@ -285,9 +326,12 @@ static void draw_adjustable_row(const struct settings_ui *ui, struct canvas *c, 
   bool sel = ui->sel_row == lr;
   int hl_off = -1;
   int hl_len = 0;
+  int field_start[2] = {0, 0};
+  int field_end[2] = {0, 0};
   for (int col = 0; col < 2; col++) {
     if (row[col].kind == FIELD_NONE) break;
     if (col == 1) opts_append_bounded(line, sizeof line - 1, &p, "  ");
+    field_start[col] = (int)p;
     opts_append_bounded_w(line, sizeof line - 1, &p, row[col].label, row[col].label_w);
     opts_append_bounded(line, sizeof line - 1, &p, "-");
     size_t value_start = p;
@@ -296,17 +340,23 @@ static void draw_adjustable_row(const struct settings_ui *ui, struct canvas *c, 
     opts_append_bounded(line, sizeof line - 1, &p, valbuf);
     if (sel && ui->sel_col == col) { hl_off = (int)value_start; hl_len = (int)(p - value_start); }
     opts_append_bounded(line, sizeof line - 1, &p, "+");
+    field_end[col] = (int)p;
   }
   line[p] = '\0';
-  draw_row_text(c, MARGIN, MARGIN + draw_row_for_logical(lr), line, hl_off, hl_len);
+  int y = MARGIN + draw_row_for_logical(lr);
+  draw_row_text(c, MARGIN, y, line, hl_off, hl_len);
+  for (int col = 0; col < 2; col++)
+    if (row[col].kind != FIELD_NONE && kind_disabled(ui, row[col].kind))
+      draw_span(c, MARGIN, y, line, field_start[col], field_end[col] - field_start[col], DIS_ATTR);
 }
 
 void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   if (!ui->open) return;
   fill_rect(c, 0, 0, BOX_W, BOX_H, BOX_ATTR);
   draw_row_text(c, MARGIN, MARGIN + 0, "Settings", -1, 0);
-  for (int lr = 0; lr < 3; lr++) draw_adjustable_row(ui, c, lr, TOP_ROWS[lr]);
-  for (int lr = 3; lr < GRID_ROWS; lr++) {
+  for (int lr = 0; lr < TOP_ROW_COUNT; lr++) draw_adjustable_row(ui, c, lr, TOP_ROWS[lr]);
+  draw_adjustable_row(ui, c, GRID_ROWS - 1, CLASSIC_ROW);
+  for (int lr = TOP_ROW_COUNT; lr < GRID_ROWS - 1; lr++) {
     int y = MARGIN + draw_row_for_logical(lr);
     for (int col = 0; col < 2; col++) {
       const struct grid_cell *cell = &grid[lr][col];
@@ -323,6 +373,7 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
       }
       bool sel = ui->sel_row == lr && ui->sel_col == col;
       draw_row_text(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, sel ? 0 : -1, sel ? 3 : 0);
+      if (kind_disabled(ui, cell->kind)) draw_span(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, 0, (int)strlen(buf), DIS_ATTR);
     }
   }
 }

@@ -152,16 +152,22 @@ static int combo_sel(HWND dlg, int id) {
 
 static bool checked(HWND dlg, int id) { return IsDlgButtonChecked(dlg, id) == BST_CHECKED; }
 
-/* -c and -a exclusive */
-static void update_enabled(HWND dlg) {
-  bool free_life = combo_sel(dlg, IDC_CLASSIC) == 0;
-  EnableWindow(GetDlgItem(dlg, IDC_FISH_AUTO), free_life);
-  EnableWindow(GetDlgItem(dlg, IDC_FISH), free_life && !checked(dlg, IDC_FISH_AUTO));
-  for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) EnableWindow(GetDlgItem(dlg, IDC_FLAG0 + (int)i), free_life);
+static void castle_update_enabled(HWND dlg) {
+  bool free_mode = combo_sel(dlg, IDC_CLASSIC) == 0;
+  EnableWindow(GetDlgItem(dlg, IDC_CASTLE_NAME), free_mode && checked(dlg, IDC_CASTLE_ENABLED));
 }
 
-static void castle_update_enabled(HWND dlg) {
-  EnableWindow(GetDlgItem(dlg, IDC_CASTLE_NAME), checked(dlg, IDC_CASTLE_ENABLED));
+static void update_enabled(HWND dlg) {
+  bool free_mode = combo_sel(dlg, IDC_CLASSIC) == 0;
+  EnableWindow(GetDlgItem(dlg, IDC_FISH_AUTO), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_FISH), free_mode && !checked(dlg, IDC_FISH_AUTO));
+  for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) EnableWindow(GetDlgItem(dlg, IDC_FLAG0 + (int)i), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_MESSAGE), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_MSG_COLOR), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_MSG_POS), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_FPS), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_UTURN), free_mode);
+  castle_update_enabled(dlg);
 }
 
 /* LF to CRLF for edit control */

@@ -9,7 +9,7 @@
 #include "../target/teletext/teletext.h"
 
 struct cli_args {
-  bool classic;
+  int classic_ver; /* 0=off, 1=1.0, 2=1.1 */
   bool screensaver;
   bool transparent;
   bool no_castle;

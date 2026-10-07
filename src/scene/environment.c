@@ -4,39 +4,57 @@
 #include "xalloc.h"
 
 #include "art/castle.h"
+#include "art/classic.h"
 #include "art/misc.h"
 
 #include <stdlib.h>
 #include <string.h>
 
+static char *tile_waterline(const char *unit, int w) {
+  int unit_len = (int)strlen(unit);
+  int repeat = w / unit_len + 2;
+  char *tiled = xmalloc((size_t)unit_len * (size_t)repeat + 1);
+  size_t pos = 0;
+  for (int r = 0; r < repeat; r++) {
+    memcpy(tiled + pos, unit, (size_t)unit_len);
+    pos += (size_t)unit_len;
+  }
+  tiled[pos] = '\0';
+  return tiled;
+}
+
+static const ascii_rows waterline_segs[4] = {water_line_segment_0, water_line_segment_1, water_line_segment_2, water_line_segment_3};
+
 void add_environment(struct scene *sc, int w, int h) {
   (void)h;
-  static const ascii_rows segs[4] = {water_line_segment_0, water_line_segment_1, water_line_segment_2, water_line_segment_3};
   static const int depths[4] = {8, 6, 4, 2};
   static const double speeds[4] = {0.0, -0.05, -0.08, -0.12};
+  bool still = sc->classic_ver != 0;
 
   for (int i = 0; i < 4; i++) {
-    const char *unit = segs[i][0];
-    int unit_len = (int)strlen(unit);
-    int repeat = w / unit_len + 2;
-
-    char *tiled = xmalloc((size_t)unit_len * (size_t)repeat + 1);
-    size_t pos = 0;
-    for (int r = 0; r < repeat; r++) {
-      memcpy(tiled + pos, unit, (size_t)unit_len);
-      pos += (size_t)unit_len;
-    }
-    tiled[pos] = '\0';
+    const char *unit = waterline_segs[i][0];
     struct entity *e = entity_spawn(&sc->entities);
     e->type = ENT_WATERLINE;
     e->x = 0;
     e->y = i + 5;
     e->z = depths[i];
-    e->vx = speeds[i];
-    e->splat_z = unit_len;
+    e->vx = still ? 0.0 : speeds[i];
+    e->splat_z = (int)strlen(unit);
     e->physical = true;
     e->default_attr = color_from_name("cyan");
-    entity_set_owned_single_row(e, tiled, 0.0);
+    entity_set_owned_single_row(e, tile_waterline(unit, w), 0.0);
+  }
+}
+
+void resize_environment(struct scene *sc, int w) {
+  for (int i = 0; i < sc->entities.count; i++) {
+    struct entity *e = &sc->entities.items[i];
+    if (e->marked_dead || e->type != ENT_WATERLINE) continue;
+    int row = (int)(e->y - 5.0);
+    if (row < 0 || row > 3) continue;
+    entity_clear_owned(e);
+    entity_set_owned_single_row(e, tile_waterline(waterline_segs[row][0], w), 0.0);
+    entity_shape_changed(e);
   }
 }
 
@@ -94,6 +112,11 @@ void add_castle(struct scene *sc, int w, int h) {
   e->y = h - 13;
   e->z = Z_CASTLE;
   e->default_attr = color_from_name("BLACK");
+  if (sc->classic_ver != 0) {
+    e->frames = &classic_castle;
+    e->frame_count = 1;
+    return;
+  }
   if (sc->castle_name == NULL) {
     e->frames = &castle;
     e->frame_count = 1;
@@ -193,6 +216,7 @@ static void release_door_bubbles(struct scene *sc, double door_x, double door_y)
 }
 
 void castle_door_tick(struct scene *sc) {
+  if (sc->classic_ver != 0) return;
   const struct entity *castle_ent = entity_find_first(&sc->entities, ENT_CASTLE);
   bool castle_ready = castle_ent != NULL && sc->castle_hidden_by == 0 && castle_ent->frame_cur == castle_ent->frame_count - 1;
   struct entity *door = entity_find_first(&sc->entities, ENT_CASTLE_DOOR);
@@ -242,7 +266,7 @@ void add_seaweed(struct scene *sc, int w, int h) {
   rows1[height] = NULL;
 
   int x;
-  if (!sc->castle) {
+  if (!sc->castle || sc->classic_ver != 0) {
     x = rng_int(w - 2) + 1;
   } else {
     int castle_left = w - CASTLE_X_OFFSET;
@@ -270,6 +294,12 @@ void add_seaweed(struct scene *sc, int w, int h) {
   e->y = y;
   e->z = rng_int(Z_FLORA_RANGE) + Z_FISH_MIN;
   e->default_attr = color_from_name("green");
+  if (sc->classic_ver != 0) {
+    e->z = Z_SEAWEED_MAX;
+    e->seaweed_static = true;
+    e->die_after = rng_range(CLASSIC_SEAWEED_MIN_S, CLASSIC_SEAWEED_MAX_S);
+    e->death_action = DEATH_ADD_SEAWEED;
+  }
   e->seaweed_orig_height = height;
   e->seaweed_top_left = true;
   e->seaweed_grow_timer = rng_range(90.0, 270.0);
@@ -284,6 +314,29 @@ void add_seaweed(struct scene *sc, int w, int h) {
 void add_all_seaweed(struct scene *sc, int w, int h) {
   int count = w / 15;
   for (int i = 0; i < count; i++) add_seaweed(sc, w, h);
+}
+
+void resize_seaweed(struct scene *sc, int w, int h) {
+  int live = 0;
+  for (int i = 0; i < sc->entities.count; i++) {
+    struct entity *e = &sc->entities.items[i];
+    if (e->marked_dead || e->type != ENT_SEAWEED) continue;
+    if (e->x >= w - 1) {
+      e->marked_dead = true;
+      e->death_action = DEATH_NONE;
+      continue;
+    }
+    live++;
+  }
+  int target = w / 15;
+  for (int i = live; i < target; i++) add_seaweed(sc, w, h);
+  for (int i = 0; i < sc->entities.count && live > target; i++) {
+    struct entity *e = &sc->entities.items[i];
+    if (e->marked_dead || e->type != ENT_SEAWEED) continue;
+    e->marked_dead = true;
+    e->death_action = DEATH_NONE;
+    live--;
+  }
 }
 
 static char **seaweed_shrink_rows(char **rows, int total_h, int grown) {
@@ -357,12 +410,13 @@ void seaweed_tick(struct scene *sc, int term_w, int term_h) {
   }
 }
 
+int fish_target(const struct scene *sc, int w, int h) {
+  if (sc->aquatic.fish_count >= 0) return sc->aquatic.fish_count;
+  return (h - MAIN_REGION_TOP_ROW) * w / 350;
+}
+
 void add_all_fish(struct scene *sc, int w, int h) {
-  int count;
-  if (sc->aquatic.fish_count < 0) {
-    int screen_size = (h - 9) * w;
-    count = screen_size / 350;
-  } else count = sc->aquatic.fish_count;
+  int count = fish_target(sc, w, h);
   for (int i = 0; i < count; i++) spawn_fish(sc, w, h);
 }
 
@@ -400,6 +454,7 @@ static struct entity *spawn_message_entity(struct scene *sc, double x, double y)
 }
 
 void add_message(struct scene *sc, int w, int h) {
+  if (sc->classic_ver != 0) return;
   int rows = message_row_count(sc);
   if (rows == 0) return;
   int block_w = message_block_width(sc, rows);
@@ -427,6 +482,13 @@ void add_message(struct scene *sc, int w, int h) {
       spawn_message_entity(sc, (w - block_w) / 2, y_mid);
       break;
   }
+}
+
+void reposition_message(const struct scene *sc, struct entity *e, int w, int h) {
+  int rows = message_row_count(sc);
+  int block_w = message_block_width(sc, rows);
+  if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_CENTER) e->x = (w - block_w) / 2;
+  if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_MARQUEE) e->y = (h - rows) / 2;
 }
 
 void spawn_message_event(struct scene *sc, int w, int h) {

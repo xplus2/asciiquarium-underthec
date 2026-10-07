@@ -65,10 +65,9 @@ Needs a JDK 17 or newer, the Android SDK (platform 34, build-tools 34.0.0, CMake
 The native library is built from the top level `CMakeLists.txt`.
 
 Create `src/target/androidtv/local.properties` with `sdk.dir=` pointing to the SDK,
-and `cmake.dir=` pointing to a CMake install if the SDK has none.
+and `cmake.dir=` pointing to a CMake install (only if the SDK has none).
 
 The APK is built by Gradle from `src/target/androidtv`, which runs this CMake build for both ABIs.
-It needs a JDK 17 or newer, SDK platform 34, build-tools 34.0.0 and CMake 3.22.1:
 
 ```sh
 cd src/target/androidtv
@@ -78,12 +77,11 @@ cd src/target/androidtv
 `UNDERTHEC_NDK` (or `ANDROID_NDK_ROOT`) selects the NDK.
 The APK ends up in `build/outputs/apk/debug/underthec-VERSION-androidtv-debug.apk`.
 `assembleRelease` builds the release APK next to it. It is signed when these Gradle properties are set
-(for example in `~/.gradle/gradle.properties`), and unsigned otherwise:
-* `ANDROID_KEYSTORE_BASE64`: the keystore file, base64 encoded on one line.
+(e.g. in `~/.gradle/gradle.properties`), otherwise unsigned:
+* `ANDROID_KEYSTORE_BASE64`: the keystore file, base64, one line.
 * `ANDROID_KEYSTORE_PASSWORD`
 * `ANDROID_KEY_ALIAS`
 * `ANDROID_KEY_PASSWORD`
-
 
 ### WebAssembly
 Building the WebAssembly requires emscripten (`emcc`, `emcmake`) and the output will be `underthec.js`, `underthec.wasm`

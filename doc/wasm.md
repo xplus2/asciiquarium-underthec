@@ -1,7 +1,7 @@
 # WebAssembly
 
 Keys like `h` for help, `f` to feed or `s` for settings work. 
-Click or tap also drops some flakes.
+Click or tap also drops some flakes. Classic mode has no feeding.
 
 ## Query params
 Options can go in the URL query, by long or short name (long wins if both are set),
@@ -22,3 +22,4 @@ with the same values as on the command line:
 | `no-castle`        |       | `?no-castle`           |
 
 An invalid value shows the error instead of the aquarium.
+With `classic`, conflicting params (`a`, `m`, `M`, `P`, `u`, `f`, `n`) are ignored.

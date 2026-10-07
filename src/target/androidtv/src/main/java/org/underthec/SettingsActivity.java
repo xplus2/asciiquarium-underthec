@@ -36,7 +36,7 @@ public final class SettingsActivity extends Activity {
   private static final String KEY_AQUATIC_LIFE = "aquatic-life";
 
   private static final int ALWAYS = 0;
-  private static final int FREE_LIFE = 1;
+  private static final int NOT_CLASSIC = 1;
   private static final int FISH_COUNT = 2;
   private static final int CASTLE_ON = 3;
 
@@ -123,7 +123,7 @@ public final class SettingsActivity extends Activity {
     return r;
   }
 
-  private Row choice(String key, String title, String[] values, String[] labels, String def) {
+  private Row choice(String key, String title, String[] values, String[] labels, String def, int rule) {
     Row r = new Row();
     r.type = CHOICE;
     r.key = key;
@@ -131,6 +131,7 @@ public final class SettingsActivity extends Activity {
     r.values = values;
     r.labels = labels;
     r.defText = def;
+    r.rule = rule;
     return r;
   }
 
@@ -154,24 +155,24 @@ public final class SettingsActivity extends Activity {
 
   private void buildRows() {
     List<Row> life = new ArrayList<>();
-    life.add(sw(KEY_FISH_AUTO, getString(R.string.fish_auto), FREE_LIFE));
+    life.add(sw(KEY_FISH_AUTO, getString(R.string.fish_auto), NOT_CLASSIC));
     life.add(step("fish", getString(R.string.fish_count), 0, 999, 1, 20, 1, FISH_COUNT));
     for (String c : Options.CREATURES) {
-      life.add(sw(KEY_CREATURE + c, getString(R.string.creature, c), FREE_LIFE));
+      life.add(sw(KEY_CREATURE + c, getString(R.string.creature, c), NOT_CLASSIC));
     }
     life.add(sw(KEY_CASTLE, getString(R.string.castle), ALWAYS));
     life.add(text("castle-name", getString(R.string.castle_name), false, CASTLE_ON));
 
     List<Row> msg = new ArrayList<>();
-    msg.add(text("message", getString(R.string.message), true, ALWAYS));
+    msg.add(text("message", getString(R.string.message), true, NOT_CLASSIC));
     String[] colorLabels = Options.MESSAGE_COLORS.clone();
     colorLabels[0] = getString(R.string.default_value);
     for (int i = 9; i < colorLabels.length; i++) colorLabels[i] = getString(R.string.bold_suffix, colorLabels[i]);
-    msg.add(choice("message-color", getString(R.string.message_color), Options.MESSAGE_COLORS, colorLabels, ""));
+    msg.add(choice("message-color", getString(R.string.message_color), Options.MESSAGE_COLORS, colorLabels, "", NOT_CLASSIC));
     msg.add(choice("message-position", getString(R.string.message_position), Options.POSITIONS,
-        Options.POSITIONS, "middle"));
+        Options.POSITIONS, "middle", NOT_CLASSIC));
 
-    rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16"));
+    rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16", ALWAYS));
     String[] sizes = new String[24];
     String[] sizeLabels = new String[24];
     sizes[0] = "0";
@@ -180,14 +181,16 @@ public final class SettingsActivity extends Activity {
       sizes[i] = String.valueOf(4 + 2 * i);
       sizeLabels[i] = sizes[i];
     }
-    rootRows.add(choice(KEY_FONT_SIZE, getString(R.string.font_size), sizes, sizeLabels, "0"));
+    rootRows.add(choice(KEY_FONT_SIZE, getString(R.string.font_size), sizes, sizeLabels, "0", ALWAYS));
     rootRows.add(submenu(getString(R.string.aquatic_life), life));
-    rootRows.add(submenu(getString(R.string.message_menu), msg));
+    Row msgMenu = submenu(getString(R.string.message_menu), msg);
+    msgMenu.rule = NOT_CLASSIC;
+    rootRows.add(msgMenu);
     rootRows.add(step("pace", getString(R.string.pace), 1, 1000, 5, 100, 100, ALWAYS));
-    rootRows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, ALWAYS));
-    rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, 24, 1, ALWAYS));
+    rootRows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, NOT_CLASSIC));
+    rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, 24, 1, NOT_CLASSIC));
     rootRows.add(choice(KEY_CLASSIC, getString(R.string.classic), new String[] {"", "1.0", "1.1"},
-        new String[] {getString(R.string.classic_off), "1.0", "1.1"}, ""));
+        new String[] {getString(R.string.classic_off), "1.0", "1.1"}, "", ALWAYS));
   }
 
   private Options.Life life() {
@@ -196,12 +199,12 @@ public final class SettingsActivity extends Activity {
 
   private boolean enabled(Row r) {
     switch (r.rule) {
-      case FREE_LIFE:
+      case NOT_CLASSIC:
         return prefs.getString(KEY_CLASSIC, "").isEmpty();
       case FISH_COUNT:
         return prefs.getString(KEY_CLASSIC, "").isEmpty() && !life().auto;
       case CASTLE_ON:
-        return prefs.getString(KEY_NO_CASTLE, "0").equals("0");
+        return prefs.getString(KEY_CLASSIC, "").isEmpty() && prefs.getString(KEY_NO_CASTLE, "0").equals("0");
       default:
         return true;
     }

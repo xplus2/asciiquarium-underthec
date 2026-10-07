@@ -38,7 +38,7 @@ struct aquatic_life scene_aquatic_default(void) {
   return a;
 }
 
-struct aquatic_life scene_aquatic_classic11(void) {
+struct aquatic_life scene_aquatic_classic(void) {
   return (struct aquatic_life){
       .fish_count = -1,
       .ship = true,
@@ -76,7 +76,9 @@ static void on_death(const struct entity *dead, void *ctx) {
     sctx->sc->castle_hidden_by = 0;
   }
   switch (dead->death_action) {
-    case DEATH_ADD_FISH:            spawn_fish(sctx->sc, sctx->w, sctx->h);          break;
+    case DEATH_ADD_FISH:
+      if (scene_fish_display_count(sctx->sc) < fish_target(sctx->sc, sctx->w, sctx->h)) spawn_fish(sctx->sc, sctx->w, sctx->h);
+      break;
     case DEATH_ADD_SEAWEED:         add_seaweed(sctx->sc, sctx->w, sctx->h);         break;
     /* respawn after a while: this is how actual sequels to kaiju movies work */
     case DEATH_ADD_KAIJU:           spawn_kaiju(sctx->sc, sctx->w, sctx->h);         break;
@@ -91,10 +93,12 @@ static void on_death(const struct entity *dead, void *ctx) {
   }
 }
 
-void scene_init(struct scene *sc, bool classic_mode, struct aquatic_life aquatic) {
+void scene_init(struct scene *sc, int classic_ver, struct aquatic_life aquatic) {
   entity_list_init(&sc->entities);
-  sc->classic_mode = classic_mode;
-  sc->aquatic = aquatic;
+  sc->classic_ver = classic_ver;
+  sc->aquatic = classic_ver != 0 ? scene_aquatic_classic() : aquatic;
+  sc->aquatic_saved = aquatic;
+  sc->uturn_saved = 400;
   sc->castle = true;
   sc->castle_name = NULL;
   sc->message_rows = NULL;
@@ -102,8 +106,20 @@ void scene_init(struct scene *sc, bool classic_mode, struct aquatic_life aquatic
   sc->message_frame.mask = NULL;
   sc->message_attr = color_from_name("blue");
   sc->message_position = MSG_POS_MIDDLE;
-  sc->uturn_chance = 400;
+  sc->uturn_chance = classic_ver != 0 ? 0 : 400;
   sc->feed_alerted = true;
+}
+
+void scene_set_classic(struct scene *sc, int classic_ver, int w, int h) {
+  if (classic_ver == sc->classic_ver) return;
+  if (sc->classic_ver == 0) {
+    sc->aquatic_saved = sc->aquatic;
+    sc->uturn_saved = sc->uturn_chance;
+  }
+  sc->classic_ver = classic_ver;
+  sc->aquatic = classic_ver != 0 ? scene_aquatic_classic() : sc->aquatic_saved;
+  sc->uturn_chance = classic_ver != 0 ? 0 : sc->uturn_saved;
+  scene_reset(sc, w, h);
 }
 
 void scene_free(struct scene *sc) {
@@ -128,6 +144,75 @@ void scene_reset(struct scene *sc, int term_w, int term_h) {
   if (sc->aquatic.turtle) schedule_turtle_return(sc);
   spawn_random_object(sc, term_w, term_h);
   spawn_jellyfish(sc, term_w, term_h);
+}
+
+static bool resize_bottom_anchored(enum entity_type t) {
+  return t == ENT_SEAWEED || t == ENT_SEAWEED_DEBRIS || t == ENT_CRAB || t == ENT_CASTLE || t == ENT_CASTLE_DOOR || t == ENT_RUBBLE;
+}
+
+static bool resize_right_anchored(enum entity_type t) {
+  return t == ENT_CASTLE || t == ENT_CASTLE_DOOR || t == ENT_RUBBLE;
+}
+
+static bool resize_has_position(enum entity_type t) {
+  return t != ENT_WATERLINE && t != ENT_MESSAGE && t != ENT_KAIJU_TIMER && t != ENT_RANDOM_OBJECT_TIMER && t != ENT_TURTLE_TIMER;
+}
+
+static double resize_swim_y(struct entity *e, double y, int old_h, int h) {
+  int old_range = old_h - MAIN_REGION_TOP_ROW;
+  int range = h - MAIN_REGION_TOP_ROW;
+  if (y < MAIN_REGION_TOP_ROW || old_range <= 0 || range <= 0) return y;
+  double ny = MAIN_REGION_TOP_ROW + (y - MAIN_REGION_TOP_ROW) * range / old_range;
+  double max_y = h - entity_height(e);
+  if (ny > max_y) ny = max_y;
+  if (ny < MAIN_REGION_TOP_ROW) ny = MAIN_REGION_TOP_ROW;
+  return ny;
+}
+
+static void resize_move(struct entity *e, double dx, double dy) {
+  e->x += dx;
+  e->prev_x += dx;
+  e->y += dy;
+  e->prev_y += dy;
+}
+
+void scene_resize(struct scene *sc, int old_w, int old_h, int w, int h) {
+  if (sc->classic_ver != 0 || old_w < 0 || old_h < 0) {
+    scene_reset(sc, w, h);
+    return;
+  }
+  int dw = w - old_w;
+  int dh = h - old_h;
+  double shark_dy = 0.0;
+  for (int i = 0; i < sc->entities.count; i++) {
+    struct entity *e = &sc->entities.items[i];
+    if (e->marked_dead || !resize_has_position(e->type) || e->type == ENT_TEETH) continue;
+    double dx = resize_right_anchored(e->type) ? dw : 0.0;
+    double dy;
+    if (resize_bottom_anchored(e->type)) dy = dh;
+    else dy = resize_swim_y(e, e->y, old_h, h) - e->y;
+    if (e->type == ENT_SHARK) shark_dy = dy;
+    resize_move(e, dx, dy);
+    if (dw < 0 && e->x >= w && !resize_right_anchored(e->type)) {
+      e->marked_dead = true;
+      if (e->type == ENT_SEAWEED) e->death_action = DEATH_NONE;
+    }
+  }
+  for (int i = 0; i < sc->entities.count; i++) {
+    struct entity *e = &sc->entities.items[i];
+    if (e->marked_dead) continue;
+    if (e->type == ENT_TEETH) {
+      resize_move(e, 0.0, shark_dy);
+      if (dw < 0 && e->x >= w) e->marked_dead = true;
+    } else if (e->type == ENT_MESSAGE) {
+      reposition_message(sc, e, w, h);
+    }
+  }
+  resize_environment(sc, w);
+  resize_seaweed(sc, w, h);
+  struct scene_ctx ctx = {sc, w, h};
+  entity_reap(&sc->entities, on_death, &ctx);
+  for (int live = scene_fish_display_count(sc), target = fish_target(sc, w, h); live < target; live++) spawn_fish(sc, w, h);
 }
 
 void scene_tick(struct scene *sc, int term_w, int term_h) {
@@ -168,7 +253,7 @@ void scene_set_message(struct scene *sc, const char *const *rows, int row_count)
     sc->message_rows = NULL;
     sc->message_frame.shape = NULL;
   }
-  if (rows == NULL || row_count <= 0) return;
+  if (rows == NULL || row_count <= 0 || sc->classic_ver != 0) return;
   char **copy = xmalloc((size_t)(row_count + 1) * sizeof(*copy));
   for (int i = 0; i < row_count; i++) {
     size_t len = strlen(rows[i]);
@@ -186,6 +271,7 @@ void scene_set_message_color(struct scene *sc, struct attr attr) {
 }
 
 void scene_set_uturn_chance(struct scene *sc, int one_in) {
+  if (sc->classic_ver != 0) return;
   sc->uturn_chance = one_in;
 }
 
@@ -209,13 +295,14 @@ void scene_toggle_castle(struct scene *sc, int w, int h) {
 void scene_set_castle_name(struct scene *sc, const char *name) {
   free(sc->castle_name);
   sc->castle_name = NULL;
-  if (name == NULL || name[0] == '\0') return;
+  if (name == NULL || name[0] == '\0' || sc->classic_ver != 0) return;
   size_t len = strlen(name);
   sc->castle_name = xmalloc(len + 1);
   memcpy(sc->castle_name, name, len + 1);
 }
 
 void scene_feed(struct scene *sc, int w, int h, int col) {
+  if (sc->classic_ver != 0) return;
   feed_trigger(sc, w, h, col);
 }
 
@@ -229,6 +316,7 @@ int scene_fish_display_count(const struct scene *sc) {
 }
 
 void scene_set_fish_count(struct scene *sc, int w, int h, int count) {
+  if (sc->classic_ver != 0) return;
   if (count < 0) count = 0;
   if (count > 999) count = 999;
   sc->aquatic.fish_count = count;

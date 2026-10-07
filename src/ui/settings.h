@@ -14,6 +14,7 @@ struct settings_ui {
   struct scene *scene;
   int sel_row;
   int sel_col;
+  int saved_fps;
 };
 
 void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, struct scene *scene);

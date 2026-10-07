@@ -98,6 +98,7 @@ Kirigami.FormLayout {
 
     QQC2.ScrollView {
         Kirigami.FormData.label: i18n("Message:")
+        enabled: root.freeLife
         implicitWidth: messageMetrics.averageCharacterWidth * 40 + messageArea.leftPadding + messageArea.rightPadding
         implicitHeight: messageMetrics.lineSpacing * 4 + messageArea.topPadding + messageArea.bottomPadding
 
@@ -112,6 +113,7 @@ Kirigami.FormLayout {
 
     QQC2.ComboBox {
         Kirigami.FormData.label: i18n("Message color:")
+        enabled: root.freeLife
         model: root.colorLabels
         currentIndex: root.colorValues.indexOf(root.cfg_MessageColor)
         onActivated: index => root.cfg_MessageColor = root.colorValues[index]
@@ -119,6 +121,7 @@ Kirigami.FormLayout {
 
     QQC2.ComboBox {
         Kirigami.FormData.label: i18n("Message position:")
+        enabled: root.freeLife
         model: root.positionValues
         currentIndex: root.positionValues.indexOf(root.cfg_MessagePosition)
         onActivated: index => root.cfg_MessagePosition = root.positionValues[index]
@@ -133,7 +136,7 @@ Kirigami.FormLayout {
 
     QQC2.TextField {
         Kirigami.FormData.label: i18n("Castle name:")
-        enabled: root.cfg_CastleEnabled
+        enabled: root.freeLife && root.cfg_CastleEnabled
         text: root.cfg_CastleName
         onTextEdited: root.cfg_CastleName = text
     }
@@ -152,6 +155,7 @@ Kirigami.FormLayout {
 
     QQC2.SpinBox {
         Kirigami.FormData.label: i18n("U-turn chance:")
+        enabled: root.freeLife
         from: 0
         to: 999
         value: root.cfg_UturnChance
@@ -160,6 +164,7 @@ Kirigami.FormLayout {
 
     QQC2.SpinBox {
         Kirigami.FormData.label: i18n("Frames per second:")
+        enabled: root.freeLife
         from: 1
         to: 240
         value: root.cfg_Fps

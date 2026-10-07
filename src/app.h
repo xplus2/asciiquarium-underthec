@@ -9,6 +9,8 @@
 #include "ui/settings.h"
 
 /* dialogs point into struct, no copies after init */
+#define APP_MIN_ROWS 15
+
 struct app {
   struct scene scene;
   struct canvas canvas;
@@ -16,6 +18,8 @@ struct app {
   struct help_ui help;
   int w;
   int h;
+  int scene_w;
+  int scene_h;
   bool paused;
   double tick_accum;
   double pace;
@@ -25,7 +29,8 @@ struct app {
 };
 
 /* now=secs */
-void app_init(struct app *a, bool classic, struct aquatic_life aquatic, double pace, int fps, int colors_mode, double now);
+/* classic_ver != 0: fps fixed, lineup fixed */
+void app_init(struct app *a, int classic_ver, struct aquatic_life aquatic, double pace, int fps, int colors_mode, double now);
 void app_free(struct app *a);
 
 void app_resize(struct app *a, int w, int h);
