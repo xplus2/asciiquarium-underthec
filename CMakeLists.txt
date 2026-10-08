@@ -4,12 +4,15 @@ project(underthec C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
+if (UNDERTHEC_DOS)
+    set(CMAKE_C_EXTENSIONS ON)
+endif ()
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
-if (NOT EMSCRIPTEN AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+if (NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(CheckIPOSupported)
     check_ipo_supported(RESULT UNDERTHEC_IPO_OK LANGUAGES C)
     if (UNDERTHEC_IPO_OK)
@@ -80,23 +83,28 @@ else ()
             src/main.c
             src/ui/args.c
             src/ui/cli_help.c
-            src/target/terminal/term_common.c
             src/target/teletext/tt_render.c
             src/target/teletext/tt_t42.c
             src/target/teletext/tt_ts.c
             src/target/teletext/tt_net.c
     )
-    if (WIN32)
+    if (UNDERTHEC_DOS)
+        list(APPEND UNDERTHEC_SOURCES src/target/terminal/term_dos.c)
+    elseif (WIN32)
         enable_language(RC)
-        list(APPEND UNDERTHEC_SOURCES src/target/terminal/term_windows.c src/target/windows/underthec.rc)
+        list(APPEND UNDERTHEC_SOURCES src/target/terminal/term_common.c src/target/terminal/term_windows.c src/target/windows/underthec.rc)
         set_source_files_properties(src/target/windows/underthec.rc PROPERTIES OBJECT_DEPENDS ${CMAKE_SOURCE_DIR}/src/target/windows/underthec.ico)
     else ()
-        list(APPEND UNDERTHEC_SOURCES src/target/terminal/term_posix.c)
+        list(APPEND UNDERTHEC_SOURCES src/target/terminal/term_common.c src/target/terminal/term_posix.c)
     endif ()
 endif ()
 
 add_executable(underthec ${UNDERTHEC_SOURCES})
 target_include_directories(underthec PRIVATE src)
+
+if (UNDERTHEC_DOS)
+    set_target_properties(underthec PROPERTIES OUTPUT_NAME underthc)
+endif ()
 
 if (WIN32 AND NOT EMSCRIPTEN)
     target_link_libraries(underthec PRIVATE shell32)
@@ -125,7 +133,7 @@ if (EMSCRIPTEN)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/target/windows/underthec.ico $<TARGET_FILE_DIR:underthec>/favicon.ico
     )
 else ()
-    if (UNDERTHEC_STATIC AND NOT APPLE)
+    if (UNDERTHEC_STATIC AND NOT APPLE AND NOT UNDERTHEC_DOS)
         target_link_options(underthec PRIVATE -static)
     endif ()
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
@@ -154,7 +162,7 @@ if (WIN32 AND NOT EMSCRIPTEN)
     install(TARGETS underthec_scr RUNTIME DESTINATION bin)
 endif ()
 
-if (NOT WIN32 AND NOT EMSCRIPTEN)
+if (NOT WIN32 AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
     find_package(X11)
     if (X11_FOUND)
         add_executable(underthec_xscr
@@ -188,7 +196,7 @@ if (NOT WIN32 AND NOT EMSCRIPTEN)
     endif ()
 endif ()
 
-if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
+if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
     set(UNDERTHEC_VLOCK_MODULEDIR "/usr/lib/vlock/modules" CACHE PATH "install dir for the vlock plugin module")
     add_library(underthec_vlock MODULE
             ${UNDERTHEC_CORE_SOURCES}
@@ -209,7 +217,7 @@ if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
     install(TARGETS underthec_vlock LIBRARY DESTINATION ${UNDERTHEC_VLOCK_MODULEDIR})
 endif ()
 
-if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
+if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
     option(UNDERTHEC_PLASMA_WALLPAPER "build the Plasma wallpaper plugin if Qt6 Quick is found" ON)
     set(UNDERTHEC_PLASMA_PACKAGEDIR "share/plasma/wallpapers/org.underthec.wallpaper" CACHE PATH "install dir for the Plasma wallpaper package")
     if (UNDERTHEC_PLASMA_WALLPAPER)

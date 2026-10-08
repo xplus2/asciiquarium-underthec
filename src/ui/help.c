@@ -6,7 +6,11 @@
 #include <stddef.h>
 
 #define CONTENT_W 24
+#ifdef __DJGPP__
+#define CONTENT_H 11
+#else
 #define CONTENT_H 10
+#endif
 #define MARGIN 1
 #define BOX_W (CONTENT_W + 2 * MARGIN)
 #define BOX_H (CONTENT_H + 2 * MARGIN)
@@ -63,5 +67,8 @@ void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   draw_row_text(c, MARGIN, y++, "  r         redraw", BOX_ATTR);
   draw_row_text(c, MARGIN, y++, "  s         settings", BOX_ATTR);
   draw_row_text(c, MARGIN, y++, "  t         transparency", BOX_ATTR);
+#ifdef __DJGPP__
+  draw_row_text(c, MARGIN, y++, "  v         text mode", BOX_ATTR);
+#endif
   y++;
 }

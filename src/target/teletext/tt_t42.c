@@ -10,6 +10,11 @@
 #include <fcntl.h>
 #include <io.h>
 #include <windows.h>
+#elif defined(__DJGPP__)
+#include <dos.h>
+#include <fcntl.h>
+#include <io.h>
+#include <unistd.h>
 #else
 #include <time.h>
 #include <unistd.h>
@@ -95,6 +100,8 @@ void tt_sleep_ms(int ms) {
   if (ms <= 0) return;
 #ifdef _WIN32
   Sleep((DWORD)ms);
+#elif defined(__DJGPP__)
+  delay((unsigned)ms);
 #else
   struct timespec ts = {ms / 1000, (long)(ms % 1000) * 1000000L};
   nanosleep(&ts, NULL);
@@ -119,6 +126,8 @@ struct tt_stream {
 struct tt_stream *tt_stream_open(enum tt_mode mode, enum tt_glyphs glyphs, struct tt_net *net, int fps, const char *caption) {
 #ifdef _WIN32
   if (net == NULL && _setmode(_fileno(stdout), _O_BINARY) == -1) return NULL;
+#elif defined(__DJGPP__)
+  if (net == NULL && setmode(fileno(stdout), O_BINARY) == -1) return NULL;
 #endif
   struct tt_stream *s = xcalloc(1, sizeof(*s));
   s->mode = mode;

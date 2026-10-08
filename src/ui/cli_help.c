@@ -42,7 +42,11 @@ void print_help(const char *prog) {
     "  -h, --help                 this help\n"
     "  -v, --version              show version\n\n"
     "keys while running:\n"
-    "  q quit, r redraw, p/space pause, t toggle transparency, f feed, s settings, h help\n\n"
+    "  q quit, r redraw, p/space pause, t toggle transparency, f feed, s settings, h help\n"
+#ifdef __DJGPP__
+    "  v cycle text modes\n"
+#endif
+    "\n"
     "environment variables:\n"
     "  UNDERTHEC_FISH=auto|number          like -a's fish=\n"
     "  UNDERTHEC_AQUATIC_LIFE=<def>        like -a, except for fish=\n"

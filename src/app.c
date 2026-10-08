@@ -5,7 +5,7 @@
 static bool too_small(const struct app *a) { return a->h < APP_MIN_ROWS; }
 
 static void draw_too_small(struct canvas *c) {
-  static const char msg[] = "We’re gonna need a bigger ocean";
+  static const char msg[] = "We're gonna need a bigger ocean";
   int len = (int)sizeof(msg) - 1;
   if (len > c->width) len = c->width;
   int x0 = (c->width - len) / 2;

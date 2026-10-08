@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__DJGPP__)
 
 struct tt_net {
   int unused;

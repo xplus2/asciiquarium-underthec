@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -45,6 +46,7 @@ jobs:
           mkdir "$name"
           cp build/underthec build/underthec.so build-xscr/underthec_xscr src/target/scr_x11/underthec.xml LICENSE "$name"/
           cp -r build-xscr/plasma_wallpaper "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -91,6 +93,7 @@ jobs:
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir "$name"
           cp build/underthec build/underthec.so LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -109,6 +112,7 @@ jobs:
           name=underthec-${ver}-macos-arm64
           mkdir "$name"
           cp -R build/underthec build/underthec.saver LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs shasum -a 256 > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -128,6 +132,7 @@ jobs:
           name=underthec-${ver}-windows-amd64
           mkdir "$name"
           cp build/underthec.exe build/underthec.scr LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -152,11 +157,42 @@ jobs:
           name=underthec-${ver}-windows-arm64
           mkdir "$name"
           cp build/underthec.exe build/underthec.scr LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: windows-arm64
           path: underthec-*-windows-arm64.zip
+
+  dos:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: install djgpp cross toolchain
+        run: |
+          curl -sSLf -o djgpp.tar.bz2 "https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2"
+          echo "8464f17017d6ab1b2bb2df4ed82357b5bf692e6e2b7fee37e315638f3d505f00  djgpp.tar.bz2" | sha256sum -c -
+          sudo tar -xjf djgpp.tar.bz2 -C /opt
+          echo "/opt/djgpp/bin" >> "$GITHUB_PATH"
+      - name: fetch cwsdpmi
+        run: |
+          curl -sSLf -o csdpmi7b.zip "https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip"
+          echo "deacda0488e1cdd7c4a9f32fab45662b34c0ed6b2d7d4d13bc07041b62004a8c  csdpmi7b.zip" | sha256sum -c -
+          unzip -q csdpmi7b.zip -d csdpmi
+      - run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=toolchain/i586-pc-msdosdjgpp-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build -j
+      - run: |
+          ver=${{ needs.version.outputs.version }}
+          name=underthec-${ver}-dos
+          mkdir "$name"
+          cp build/underthc.exe csdpmi/bin/CWSDPMI.EXE csdpmi/bin/cwsdpmi.doc LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
+          zip -r "${name}.zip" "$name"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dos
+          path: underthec-*-dos.zip
 
   web:
     needs: version
@@ -171,6 +207,7 @@ jobs:
           name=underthec-${ver}-web
           mkdir "$name"
           cp build/index.html build/underthec.js build/underthec.wasm LICENSE "$name"/
+          (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -203,7 +240,7 @@ jobs:
           path: underthec-*-androidtv.apk
 
   release:
-    needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, web, android]
+    needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, dos, web, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -218,7 +255,7 @@ jobs:
             base=$(basename "$f")
             echo "# $base"
             echo
-            echo "| filename | checksum |"
+            echo "| filename | sha256 |"
             echo "|----|----|"
             tmp=$(mktemp -d)
             case "$base" in
@@ -226,12 +263,16 @@ jobs:
               *.zip) unzip -q "$f" -d "$tmp" ;;
               *) cp "$f" "$tmp"/ ;;
             esac
-            (cd "$tmp" && find . -type f ! -name LICENSE | sed 's|^\./||' | sort | while read -r p; do
+            (cd "$tmp" && find . -type f ! -name LICENSE ! -name SHA256SUMS | sed 's|^\./||' | sort | while read -r p; do
               printf '| %s | %s |\n' "${p#*/}" "$(sha256sum "$p" | cut -d' ' -f1)"
             done)
             echo
             rm -rf "$tmp"
           done >> "$GITHUB_STEP_SUMMARY"
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+      - name: SHA256SUMS of release artifacts
+        working-directory: dist
+        run: sha256sum *.apk *.tar.gz *.zip > SHA256SUMS
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: dist/*

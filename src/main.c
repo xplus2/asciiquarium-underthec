@@ -33,7 +33,8 @@ static void on_signal(int sig) {
   g_should_quit = 1;
 }
 
-#ifdef SIGUSR1
+#if defined(SIGUSR1) && !defined(__DJGPP__)
+#define HAVE_FEED_SIGNAL
 static void on_feed_signal(int sig) {
   (void)sig;
   g_feed_signal = 1;
@@ -46,6 +47,8 @@ static double now_seconds(void) {
   QueryPerformanceFrequency(&freq);
   QueryPerformanceCounter(&counter);
   return (double)counter.QuadPart / (double)freq.QuadPart;
+#elif defined(__DJGPP__)
+  return (double)uclock() / (double)UCLOCKS_PER_SEC;
 #else
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
@@ -138,7 +141,7 @@ int main(int argc, char **argv) {
   if (tt == NULL) term_set_transparent(transparent);
   signal(SIGINT, on_signal);
   signal(SIGTERM, on_signal);
-#ifdef SIGUSR1
+#ifdef HAVE_FEED_SIGNAL
   struct sigaction feed_sa;
   memset(&feed_sa, 0, sizeof(feed_sa));
   feed_sa.sa_handler = on_feed_signal;

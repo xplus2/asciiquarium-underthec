@@ -21,8 +21,11 @@ If the Qt6 Quick development files (Qt 6.4 or newer, e.g. `qt6-base-dev` and `qt
 this also builds the Plasma wallpaper plugin (non-static, target `plasma_wallpaper`, output in `build/plasma_wallpaper/`).
 `-DUNDERTHEC_PLASMA_WALLPAPER=OFF` disables it. See [wallpaper.md](wallpaper.md) for installation.
 
+The resulting `.so` shared library is the vlock plugin (usage: [screensaver.md](screensaver.md)).
+It's not needed for anything else.
+
 ### Windows
-This sections describes cross-compiling static Windows builds from Linux using the `mingw-w64` cross toolchain.
+This section describes cross-compiling static Windows builds from Linux using the `mingw-w64` cross toolchain.
 They also produce the screensaver `underthec.scr` (needs `windres` that usually already comes with mingw-w64).
 
 ```sh
@@ -95,6 +98,27 @@ or `./configure --emcc && make`
 
 Browsers don't load wasm from `file://`, so serve the directory over HTTP.
 
+### DOS
+DOS builds (MS-DOS, PC-DOS, DR-DOS, FreeDOS) are cross-compiling from Linux with DJGPP
+(`i586-pc-msdosdjgpp-gcc` in `PATH`). Output is `underthc.exe` (8.3 name).
+
+```sh
+cmake -B build-dos -DCMAKE_TOOLCHAIN_FILE=toolchain/i586-pc-msdosdjgpp-toolchain.cmake
+cmake --build build-dos
+```
+With configure + make: `./configure --host=i586-pc-msdosdjgpp && make`.
+
+Runtime needs:
+* DOS 3.3 or newer (3.0 - 3.2 should work, untested), a 386 or newer, VGA recommended.
+* `CWSDPMI.EXE` next to `underthc.exe` or in `PATH`, unless a DPMI host is already running (Windows DOS box, EMM386 with DPMI, ...).
+  DOSBox itself does not provide one.
+  The release zip bundles it unmodified from [djgpp](https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7s.zip).
+* An FPU, or DJGPP's `emu387` on 386SX/486SX.
+
+Text goes straight to video memory, colors are the 16 VGA colors, non-ASCII text (`-m`, `-n`) is mapped to CP437 (`?` if missing).
+Transparency (`t`) has no effect.
+The `v` key cycles the legendary text modes between 80x25, 80x43 (EGA+), 80x50 (VGA) and 40x25.
+
 ---
 ## configure + make alternative
 Nothing unexpected:
@@ -114,3 +138,4 @@ Pass `--debug` for an unstripped `-g -O0` build.
 ### The Android exception
 While you can build the NDK part traditionally, like `./configure --android-ndk=DIR [--android-abi=ABI] [--android-api=N]` for `build/libunderthec_android.so`,
 the APK needs the Gradle project - which is a CMake thing.
+

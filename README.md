@@ -22,6 +22,8 @@ Release platforms:
 * Android TV
   - App: arm64-v8a, armeabi-v7a
   - Daydream screensaver: arm64-v8a, armeabi-v7a (see [doc/screensaver.md](doc/screensaver.md))
+* DOS (MS-DOS, PC-DOS, DR-DOS, FreeDOS)
+  - Terminal: 386+
 * WebAssembly [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC) (see [doc/wasm.md](doc/wasm.md))
 * EBU Teletext
   - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
@@ -161,6 +163,7 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 | `r` |             | Redraw                         |
 | `s` |             | Open settings                  |
 | `t` |             | Toggle background transparency |
+| `v` |             | Cycle text modes (DOS only) |
 | `q` | `^C`        | Quit                           |
 
 In the settings dialog, the arrow keys are used to select a setting, 

@@ -44,7 +44,7 @@ for arg in "$@"; do
 		echo "                   [--android-ndk=DIR] [--android-abi=ABI] [--android-api=N]"
 		echo ""
 		echo "  --prefix=DIR    install prefix (default: /usr/local)"
-		echo "  --host=TRIPLET  cross-compiler prefix, e.g. x86_64-w64-mingw32"
+		echo "  --host=TRIPLET  cross-compiler prefix, e.g. x86_64-w64-mingw32, i586-pc-msdosdjgpp"
 		echo "  --no-static     do not pass -static to the linker"
 		echo "  --debug         build with -g -O0 and keep symbols (skip stripping)"
 		echo "  --emcc          WebAssembly build with Emscripten (build/underthec.js, .wasm, index.html)"
@@ -126,24 +126,29 @@ elif [ "$android" = "1" ]; then
 	srcs="$srcs src/config.c src/target/androidtv/android_main.c"
 else
 	core_srcs="$srcs"
-	srcs="$srcs src/main.c src/ui/args.c src/ui/cli_help.c src/target/terminal/term_common.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
+	srcs="$srcs src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
 	windows=0
+	dos=0
 	case "$host" in
 	*mingw*) windows=1 ;;
+	*djgpp*) dos=1 ;;
 	"")
 		case "$(uname -s 2>/dev/null)" in
 		*MINGW*|*MSYS*) windows=1 ;;
 		esac
 		;;
 	esac
-	if [ "$windows" = "1" ]; then
-		srcs="$srcs src/target/terminal/term_windows.c"
+	if [ "$dos" = "1" ]; then
+		srcs="$srcs src/target/terminal/term_dos.c"
+		target=underthc.exe
+	elif [ "$windows" = "1" ]; then
+		srcs="$srcs src/target/terminal/term_common.c src/target/terminal/term_windows.c"
 		rc="src/target/windows/underthec.rc"
 		term_ldflags="-lshell32"
 		scr_srcs="$core_srcs src/config.c src/target/scr_windows/scr_main.c src/target/scr_windows/scr_cfg.c"
 		if [ -n "$host" ]; then windres="${host}-windres"; else windres=windres; fi
 	else
-		srcs="$srcs src/target/terminal/term_posix.c"
+		srcs="$srcs src/target/terminal/term_common.c src/target/terminal/term_posix.c"
 		is_macos=0
 		if [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then is_macos=1; fi
 		if [ "$is_macos" != "1" ]; then
@@ -225,6 +230,7 @@ if [ "$plasma" = "1" ] && [ "$emcc" != "1" ] && [ "$android" != "1" ] && [ "$win
 fi
 
 cflags="-std=c11 -Wall -Wextra -Isrc"
+if [ "$dos" = "1" ]; then cflags="-std=gnu11 -Wall -Wextra -Isrc -march=i386"; fi
 if [ "$android" = "1" ]; then cflags="$cflags -fPIC"; fi
 if [ "$have_x11" = "1" ]; then
 	cflags="$cflags $x11_cflags $xft_cflags"
@@ -240,6 +246,8 @@ else
 		ldflags="$ldflags -O2"
 	elif [ "$android" = "1" ]; then
 		ldflags="$ldflags -s"
+	elif [ "$dos" = "1" ]; then
+		ldflags="$ldflags -s"
 	else
 		cflags="$cflags -flto=auto"
 		ldflags="$ldflags -s -flto=auto"
@@ -252,7 +260,7 @@ if [ "$emcc" = "1" ]; then
 	ldflags="$ldflags -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall"
 elif [ "$android" = "1" ]; then
 	ldflags="$ldflags -shared -llog"
-elif [ "$static" = "1" ]; then
+elif [ "$static" = "1" ] && [ "$dos" != "1" ]; then
 	case "$(uname -s 2>/dev/null)" in
 	Darwin) : ;; # macOS does not support fully static libSystem binaries
 	*) ldflags="$ldflags -static" ;;
@@ -268,6 +276,9 @@ fi
 	echo "LDFLAGS = $ldflags"
 	echo "PREFIX = $prefix"
 	echo "SRCS = $srcs"
+	if [ -n "$target" ]; then
+		echo "TARGET = $target"
+	fi
 	if [ -n "$rc" ]; then
 		echo "RC = $rc"
 	fi
