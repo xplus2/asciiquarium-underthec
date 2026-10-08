@@ -255,6 +255,8 @@ jobs:
             base=$(basename "$f")
             echo "# $base"
             echo
+            echo "sha256: $(sha256sum "$f" | cut -d' ' -f1)"
+            echo
             echo "| filename | sha256 |"
             echo "|----|----|"
             tmp=$(mktemp -d)
@@ -271,7 +273,7 @@ jobs:
           done >> "$GITHUB_STEP_SUMMARY"
       - name: SHA256SUMS of release artifacts
         working-directory: dist
-        run: sha256sum *.apk *.tar.gz *.zip > SHA256SUMS
+        run: sha256sum -- *.apk *.tar.gz *.zip > SHA256SUMS
       - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:

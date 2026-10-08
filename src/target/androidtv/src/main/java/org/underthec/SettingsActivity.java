@@ -281,11 +281,6 @@ public final class SettingsActivity extends Activity {
     changed();
   }
 
-  private String stepText(Row r, int v) {
-    if (r.scale == 100) return String.format(Locale.US, "%.2f", v / 100.0);
-    return String.valueOf(v);
-  }
-
   private void changed() {
     adapter.notifyDataSetChanged();
     validate();
@@ -435,6 +430,11 @@ public final class SettingsActivity extends Activity {
     @Override
     public boolean isEnabled(int position) {
       return enabled(rows.get(position));
+    }
+
+    private String stepText(Row r, int v) {
+      if (r.scale == 100) return String.format(Locale.US, "%.2f", v / 100.0);
+      return String.valueOf(v);
     }
 
     private String valueText(Row r) {
