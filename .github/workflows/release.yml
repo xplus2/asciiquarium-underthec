@@ -15,7 +15,7 @@ jobs:
     outputs:
       version: ${{ steps.get.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: get
         run: |
           ver=$(grep -oP '(?<=TOOL_VERSION ")[^"]+' src/version.h)
@@ -32,7 +32,7 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y musl-tools libx11-dev libxft-dev qt6-base-dev qt6-declarative-dev
       - run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=toolchain/musl-toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DUNDERTHEC_PLASMA_WALLPAPER=OFF
       - run: cmake --build build -j
@@ -48,7 +48,7 @@ jobs:
           cp -r build-xscr/plasma_wallpaper "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-${{ matrix.arch }}
           path: underthec-*-linux-${{ matrix.arch }}.tar.gz
@@ -76,7 +76,7 @@ jobs:
             toolchain: toolchain/riscv64-linux-musl-toolchain.cmake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install zig cross toolchain
         run: |
           curl -sSLf -o zig.tar.xz "https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz"
@@ -95,7 +95,7 @@ jobs:
           cp build/underthec build/underthec.so LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-${{ matrix.arch }}
           path: underthec-*-linux-${{ matrix.arch }}.tar.gz
@@ -104,7 +104,7 @@ jobs:
     needs: version
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build -j
       - run: |
@@ -114,7 +114,7 @@ jobs:
           cp -R build/underthec build/underthec.saver LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs shasum -a 256 > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-arm64
           path: underthec-*-macos-arm64.tar.gz
@@ -123,7 +123,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y mingw-w64
       - run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=toolchain/mingw-w64-toolchain.cmake -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build -j
@@ -134,7 +134,7 @@ jobs:
           cp build/underthec.exe build/underthec.scr LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-amd64
           path: underthec-*-windows-amd64.zip
@@ -143,7 +143,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install llvm-mingw toolchain
         run: |
           curl -sSLf -o llvm-mingw.tar.xz "https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz"
@@ -159,7 +159,7 @@ jobs:
           cp build/underthec.exe build/underthec.scr LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-arm64
           path: underthec-*-windows-arm64.zip
@@ -168,7 +168,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install djgpp cross toolchain
         run: |
           curl -sSLf -o djgpp.tar.bz2 "https://github.com/andrewwutw/build-djgpp/releases/download/v3.4/djgpp-linux64-gcc1220.tar.bz2"
@@ -189,7 +189,7 @@ jobs:
           cp build/underthc.exe csdpmi/bin/CWSDPMI.EXE csdpmi/bin/cwsdpmi.doc LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dos
           path: underthec-*-dos.zip
@@ -198,7 +198,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y emscripten
       - run: emcmake cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build -j
@@ -209,7 +209,7 @@ jobs:
           cp build/index.html build/underthec.js build/underthec.wasm LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web
           path: underthec-*-web.zip
@@ -218,7 +218,7 @@ jobs:
     needs: version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install pinned SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-34" "build-tools;34.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
       - name: build signed apk
@@ -234,7 +234,7 @@ jobs:
       - run: |
           ver=${{ needs.version.outputs.version }}
           cp src/target/androidtv/build/outputs/apk/release/underthec-${ver}-androidtv-release.apk underthec-${ver}-androidtv.apk
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android
           path: underthec-*-androidtv.apk
@@ -245,7 +245,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      # - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: dist
           merge-multiple: true

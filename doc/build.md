@@ -99,7 +99,7 @@ or `./configure --emcc && make`
 Browsers don't load wasm from `file://`, so serve the directory over HTTP.
 
 ### DOS
-DOS builds (MS-DOS, PC-DOS, DR-DOS, FreeDOS) are cross-compiling from Linux with DJGPP
+DOS builds (MS-DOS, PC-DOS, DR-DOS, FreeDOS) are cross-compiled from Linux with DJGPP
 (`i586-pc-msdosdjgpp-gcc` in `PATH`). Output is `underthc.exe` (8.3 name).
 
 ```sh
@@ -109,7 +109,7 @@ cmake --build build-dos
 With configure + make: `./configure --host=i586-pc-msdosdjgpp && make`.
 
 Runtime needs:
-* DOS 3.3 or newer (3.0 - 3.2 should work, untested), a 386 or newer, VGA recommended.
+* DOS 3.3 or newer (3.0-3.2 should work too), a 386 or newer, VGA recommended.
 * `CWSDPMI.EXE` next to `underthc.exe` or in `PATH`, unless a DPMI host is already running (Windows DOS box, EMM386 with DPMI, ...).
   DOSBox itself does not provide one.
   The release zip bundles it unmodified from [djgpp](https://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7s.zip).
