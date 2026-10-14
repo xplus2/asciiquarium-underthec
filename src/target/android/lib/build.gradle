@@ -1,0 +1,21 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'org.underthec.lib'
+
+    buildTypes {
+        debug {
+            ndk {
+                abiFilters 'x86_64'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file('../../../../CMakeLists.txt')
+        }
+    }
+}

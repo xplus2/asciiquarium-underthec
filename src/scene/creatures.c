@@ -179,9 +179,14 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   double x;
   double tx;
   double speed = 2.0;
-  int y = rng_int(h - 19) + 9;
-  int ty = y + 6;
   bool classic = sc->classic_ver != 0;
+  const struct sprite_pair *frames = classic ? &classic_shark[dir] : &shark[dir];
+  int rows = 0;
+  while (frames->shape[rows]) rows++;
+  int lowest = h - rows;
+  int y = MAIN_REGION_TOP_ROW + rng_int(lowest - MAIN_REGION_TOP_ROW + 1);
+  if (y > lowest) y = lowest < 0 ? 0 : lowest;
+  int ty = y + 6;
   if (dir) {
     speed = -2.0;
     x = w - 2;
@@ -205,7 +210,7 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   struct entity *e = entity_spawn(&sc->entities);
   e->x = x;
   e->y = y;
-  e->frames = classic ? &classic_shark[dir] : &shark[dir];
+  e->frames = frames;
   e->frame_count = 1;
   finish_creature_spawn(e, ENT_SHARK, Z_SHARK, speed, 0, DEATH_SHARK, color_from_name("CYAN"));
 }
@@ -465,6 +470,6 @@ void spawn_random_object(struct scene *sc, int w, int h) {
 void schedule_random_object_return(struct scene *sc) {
   struct entity *e = entity_spawn(&sc->entities);
   e->type = ENT_RANDOM_OBJECT_TIMER;
-  e->die_after = rng_double(12.0) + 3.0;
+  e->die_after = DIE_SECONDS(rng_double(12.0) + 3.0);
   e->death_action = DEATH_ADD_RANDOM_OBJECT;
 }

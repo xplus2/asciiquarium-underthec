@@ -374,6 +374,7 @@ static INT_PTR CALLBACK dlg_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
           struct config cfg;
           config_init(&cfg);
           controls_from_config(dlg, &cfg);
+          config_free(&cfg);
           return TRUE;
         }
         case IDOK:

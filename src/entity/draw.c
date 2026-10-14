@@ -130,7 +130,7 @@ void entity_draw_all(const struct entity_list *list, struct canvas *c, double al
           dx = col < e->hide_x0 ? band / 2 : band / 2 - band;
         }
         bool transparent = (e->sentinel != 0 && (char)ch == e->sentinel) || (e->trim_edges && ch == ' ' && (byte_idx < trim_start || byte_idx >= trim_end));
-        if (!in_band && !transparent) {
+        if (!in_band && !transparent && width > 0) {
           struct attr a = e->default_attr;
           if (mrow != NULL && col < mlen && mrow[col] != ' ') a = color_from_mask_letter(mrow[col]);
           canvas_put(c, base_x + col + dx, base_y + row, srow + byte_idx, seq_len, a, width);

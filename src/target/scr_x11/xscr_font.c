@@ -1,5 +1,6 @@
 #include "xscr_font.h"
 
+#include "../../entity/priv.h"
 #include "../../opts.h"
 #include "../../xalloc.h"
 
@@ -40,6 +41,7 @@ struct xscr_font {
 #else
   XFontSet fontset[2];
   XFontStruct *basic;
+  bool allocated[9][2];
 #endif
 };
 
@@ -167,7 +169,8 @@ static void palette_load(struct xscr_font *f) {
         .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
         .flags = DoRed | DoGreen | DoBlue,
     };
-    if (XAllocColor(f->dpy, f->cmap, &xc)) f->pixel[c][b] = xc.pixel;
+    f->allocated[c][b] = XAllocColor(f->dpy, f->cmap, &xc) != 0;
+    if (f->allocated[c][b]) f->pixel[c][b] = xc.pixel;
     else f->pixel[c][b] = b ? WhitePixel(f->dpy, DefaultScreen(f->dpy)) : BlackPixel(f->dpy, DefaultScreen(f->dpy));
   }
 }
@@ -175,8 +178,8 @@ static void palette_load(struct xscr_font *f) {
 static void palette_free(struct xscr_font *f) {
   unsigned long px[18];
   int n = 0;
-  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) px[n++] = f->pixel[c][b];
-  XFreeColors(f->dpy, f->cmap, px, n, 0);
+  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) if (f->allocated[c][b]) px[n++] = f->pixel[c][b];
+  if (n > 0) XFreeColors(f->dpy, f->cmap, px, n, 0);
 }
 
 void xscr_font_retarget(struct xscr_font *f, Drawable d) {
@@ -184,11 +187,27 @@ void xscr_font_retarget(struct xscr_font *f, Drawable d) {
   (void)d; /* core-font drawing takes drawable per call. nothing to rebind */
 }
 
+#define RUN_MAX_BYTES 512
+
+static int latin1_from_utf8(char *out, const char *utf8, int nbytes) {
+  int n = 0;
+  for (int i = 0; i < nbytes && n < RUN_MAX_BYTES;) {
+    int len = utf8_seq_len((unsigned char)utf8[i]);
+    if (i + len > nbytes) len = nbytes - i;
+    unsigned cp = utf8_decode(utf8 + i, len);
+    out[n++] = cp < 0x100 ? (char)cp : '?';
+    i += len;
+  }
+  return n;
+}
+
 void xscr_font_draw_run(struct xscr_font *f, Drawable d, GC gc, int x, int y, const char *utf8, int nbytes, int col, bool bold) {
   XSetForeground(f->dpy, gc, f->pixel[col][bold ? 1 : 0]);
   if (f->basic != NULL) {
     XSetFont(f->dpy, gc, f->basic->fid);
-    XDrawString(f->dpy, d, gc, x, y, utf8, nbytes);
+    char latin[RUN_MAX_BYTES];
+    int n = latin1_from_utf8(latin, utf8, nbytes);
+    XDrawString(f->dpy, d, gc, x, y, latin, n);
   } else {
     Xutf8DrawString(f->dpy, d, f->fontset[bold ? 1 : 0], gc, x, y, utf8, nbytes);
   }

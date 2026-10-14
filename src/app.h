@@ -8,8 +8,8 @@
 #include "scene.h"
 #include "ui/settings.h"
 
-/* dialogs point into struct, no copies after init */
 #define APP_MIN_ROWS 15
+#define APP_MIN_COLS 20
 
 struct app {
   struct scene scene;

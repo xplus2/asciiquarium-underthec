@@ -126,6 +126,8 @@ void fishhook_tick(struct scene *sc, int term_h) {
         candidate->physical = false;
         candidate->vx = 0;
         candidate->vy = -1;
+        candidate->feed_heading = false;
+        candidate->feed_wait = false;
         candidate->z = Z_HOOKED;
         break;
       }

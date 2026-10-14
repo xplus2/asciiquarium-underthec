@@ -51,7 +51,7 @@ void spawn_kaiju(struct scene *sc, int w, int h) {
 void schedule_kaiju_return(struct scene *sc) {
   struct entity *e = entity_spawn(&sc->entities);
   e->type = ENT_KAIJU_TIMER;
-  e->die_after = rng_double(555.0) +45.0;
+  e->die_after = DIE_SECONDS(rng_double(555.0) + 45.0);
   e->death_action = DEATH_ADD_KAIJU;
 }
 
@@ -94,6 +94,7 @@ static void update_laser_shape(struct entity *e, int length) {
     entity_shape_changed(e);
   }
   e->x = (e->vx < 0) ? e->splat_x - (length - 1) : e->splat_x;
+  e->has_prev = false;
 }
 
 static void spawn_laser(struct scene *sc, double eye_x, double eye_y, int z, int target_id, double dir_sign) {
@@ -129,7 +130,11 @@ static void update_active_laser(struct scene *sc, struct entity *laser) {
   const struct entity *kaiju_ent = entity_find_first(&sc->entities, ENT_KAIJU);
   int eye_row;
   int eye_col;
-  if (kaiju_ent != NULL && find_kaiju_eye(kaiju_ent, &eye_row, &eye_col)) {
+  if (kaiju_ent == NULL) {
+    laser->marked_dead = true;
+    return;
+  }
+  if (find_kaiju_eye(kaiju_ent, &eye_row, &eye_col)) {
     laser->splat_x = kaiju_ent->x + eye_col;
     laser->y = kaiju_ent->y + eye_row;
   }
@@ -186,25 +191,7 @@ static void handle_laser(struct scene *sc, int term_w) {
     fire_laser_if_ready(sc, term_w);
 }
 
-static void handle_castle_reveal(struct scene *sc) {
-  if (sc->castle_hidden_by == 0) return;
-
-  bool leaving = false;
-  for (int i = 0; i < sc->entities.count; i++) {
-    const struct entity *e = &sc->entities.items[i];
-    if (e->marked_dead && e->type == ENT_KAIJU && e->id == sc->castle_hidden_by) {
-      leaving = true;
-      break;
-    }
-  }
-  if (!leaving) return;
-  for (int i = 0; i < sc->entities.count; i++) {
-    if (sc->entities.items[i].type == ENT_RUBBLE) sc->entities.items[i].marked_dead = true;
-  }
-}
-
 void kaiju_tick(struct scene *sc, int term_w) {
   handle_castle_collision(sc);
   handle_laser(sc, term_w);
-  handle_castle_reveal(sc);
 }

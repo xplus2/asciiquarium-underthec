@@ -46,7 +46,7 @@ void spawn_turtle(struct scene *sc, int w, int h) {
 void schedule_turtle_return(struct scene *sc) {
   struct entity *e = entity_spawn(&sc->entities);
   e->type = ENT_TURTLE_TIMER;
-  e->die_after = rng_double(300.0) + 150.0;
+  e->die_after = DIE_SECONDS(rng_double(300.0) + 150.0);
   e->death_action = DEATH_ADD_TURTLE;
 }
 

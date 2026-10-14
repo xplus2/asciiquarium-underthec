@@ -9,12 +9,14 @@ static HANDLE h_in;
 static HANDLE h_out;
 static DWORD orig_in_mode;
 static DWORD orig_out_mode;
+static UINT orig_cp;
 static bool have_orig_modes = false;
 static bool vt_enabled = false;
 static bool is_active = false;
 static char stdout_buf[1 << 16];
 
 static void term_init_fail(void) {
+  if (orig_cp != 0) SetConsoleOutputCP(orig_cp);
   if (have_orig_modes && vt_enabled) SetConsoleMode(h_out, orig_out_mode);
   if (h_in != INVALID_HANDLE_VALUE) {
     CloseHandle(h_in);
@@ -23,6 +25,7 @@ static void term_init_fail(void) {
 }
 
 int term_init(void) {
+  orig_cp = GetConsoleOutputCP();
   SetConsoleOutputCP(CP_UTF8);
   h_in = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
   h_out = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -60,6 +63,7 @@ void term_shutdown(void) {
   is_active = false;
   fputs("\x1b[?25h\x1b[?1049l", stdout);
   fflush(stdout);
+  if (orig_cp != 0) SetConsoleOutputCP(orig_cp);
   if (have_orig_modes) {
     SetConsoleMode(h_in, orig_in_mode);
     SetConsoleMode(h_out, orig_out_mode);

@@ -80,6 +80,7 @@ static void tick_swan_baby(struct entity_list *list, struct entity *e) {
   if (e->follow_fast && baby_lag(e, p) <= BABY_LAG_MIN) {
     e->follow_fast = false;
     e->x = e->follow_vx > 0.0 ? p->x - BABY_LAG_MIN - entity_width(e) : p->x + entity_width(p) + BABY_LAG_MIN;
+    e->has_prev = false;
   }
 }
 
@@ -93,9 +94,11 @@ static void advance_frame(struct entity *e) {
   }
 }
 
-void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
+uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h) {
+  uint64_t present = 0;
   for (int i = 0; i < list->count; i++) {
     struct entity *e = &list->items[i];
+    present |= ENT_BIT(e->type);
     if (e->marked_dead) continue;
     e->prev_x = e->x;
     e->prev_y = e->y;
@@ -152,9 +155,9 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
         continue;
       }
     }
-    if (e->die_after >= 0.0) {
-      e->die_after -= 0.1;
-      if (e->die_after <= 0.0) {
+    if (e->die_after >= 0) {
+      e->die_after--;
+      if (e->die_after <= 0) {
         e->marked_dead = true;
         continue;
       }
@@ -172,4 +175,5 @@ void entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       }
     }
   }
+  return present;
 }

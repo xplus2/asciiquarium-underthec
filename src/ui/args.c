@@ -135,7 +135,7 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   out->transparent = false;
   out->no_castle = false;
   out->pace = 1.0;
-  out->fps = 24;
+  out->fps = DEFAULT_FPS;
   out->uturn_chance = 400;
   out->colors_mode = 16;
   out->message_arg = NULL;
@@ -277,11 +277,22 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
     }
   }
 
+  if (!c_given) {
+    const char *env_val = getenv("UNDERTHEC_CLASSIC");
+    if (env_val != NULL) {
+      char errbuf[128];
+      if (!opts_parse_classic(env_val, &classic_ver, errbuf, sizeof errbuf)) {
+        *exit_code = err_env_bad(argv[0], "UNDERTHEC_CLASSIC", errbuf);
+        return false;
+      }
+    }
+  }
+
   if (!apply_env(t_given, "UNDERTHEC_TRANSPARENT", argv[0], w_bool, &out->transparent, exit_code)) return false;
   if (!apply_env(s_given, "UNDERTHEC_SCREENSAVER", argv[0], w_bool, &out->screensaver, exit_code)) return false;
   if (!apply_env(p_given, "UNDERTHEC_PACE", argv[0], w_pace, &out->pace, exit_code)) return false;
-  if (!apply_env(f_given, "UNDERTHEC_FPS", argv[0], w_fps, &out->fps, exit_code)) return false;
-  if (!apply_env(u_given, "UNDERTHEC_UTURN_CHANCE", argv[0], w_uturn, &out->uturn_chance, exit_code)) return false;
+  if (!apply_env(f_given || classic_ver != 0, "UNDERTHEC_FPS", argv[0], w_fps, &out->fps, exit_code)) return false;
+  if (!apply_env(u_given || classic_ver != 0, "UNDERTHEC_UTURN_CHANCE", argv[0], w_uturn, &out->uturn_chance, exit_code)) return false;
   if (!apply_env(colors_given, "UNDERTHEC_COLORS", argv[0], w_colors, &out->colors_mode, exit_code)) return false;
   if (teletext_arg == NULL) teletext_arg = getenv("UNDERTHEC_TELETEXT");
   if (glyphs_arg == NULL) glyphs_arg = getenv("UNDERTHEC_TELETEXT_MODE");
@@ -290,12 +301,12 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
   if (!apply_env(ttl_given, "UNDERTHEC_MCAST_TTL", argv[0], w_ttl, &out->mcast_ttl, exit_code)) return false;
   if (!apply_env(teletext_caption_given, "UNDERTHEC_TELETEXT_CAPTION", argv[0], w_buf, &teletext_caption_arg, exit_code)) return false;
   if (!apply_env(no_castle_given, "UNDERTHEC_NO_CASTLE", argv[0], w_bool, &out->no_castle, exit_code)) return false;
-  if (!apply_env(castle_name_given, "UNDERTHEC_CASTLE_NAME", argv[0], w_buf, &castle_name_arg, exit_code)) return false;
-  if (out->message_arg == NULL) {
+  if (!apply_env(castle_name_given || classic_ver != 0, "UNDERTHEC_CASTLE_NAME", argv[0], w_buf, &castle_name_arg, exit_code)) return false;
+  if (out->message_arg == NULL && classic_ver == 0) {
     const char *env_val = getenv("UNDERTHEC_MESSAGE");
     if (env_val != NULL) out->message_arg = env_val;
   }
-  if (out->message_color_arg == NULL) {
+  if (out->message_color_arg == NULL && classic_ver == 0) {
     const char *env_val = getenv("UNDERTHEC_MESSAGE_COLOR");
     if (env_val != NULL) {
       if (!color_name_valid(env_val)) {
@@ -307,8 +318,8 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       out->message_color_arg = env_val;
     }
   }
-  if (!apply_env(message_position_given, "UNDERTHEC_MESSAGE_POSITION", argv[0], w_msgpos, &out->message_position, exit_code)) return false;
-  if (!fish_given) {
+  if (!apply_env(message_position_given || classic_ver != 0, "UNDERTHEC_MESSAGE_POSITION", argv[0], w_msgpos, &out->message_position, exit_code)) return false;
+  if (!fish_given && classic_ver == 0) {
     const char *env_val = getenv("UNDERTHEC_FISH");
     if (env_val != NULL) {
       char errbuf[128];
@@ -318,23 +329,13 @@ bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code) {
       }
     }
   }
-  if (!a_given) {
+  if (!a_given && classic_ver == 0) {
     const char *env_val = getenv("UNDERTHEC_AQUATIC_LIFE");
     if (env_val != NULL) {
       char errbuf[128];
       bool fish_set = false;
       if (!opts_parse_aquatic_life(env_val, &out->aquatic, false, &fish_set, errbuf, sizeof errbuf)) {
         *exit_code = err_env_bad(argv[0], "UNDERTHEC_AQUATIC_LIFE", errbuf);
-        return false;
-      }
-    }
-  }
-  if (!c_given) {
-    const char *env_val = getenv("UNDERTHEC_CLASSIC");
-    if (env_val != NULL) {
-      char errbuf[128];
-      if (!opts_parse_classic(env_val, &classic_ver, errbuf, sizeof errbuf)) {
-        *exit_code = err_env_bad(argv[0], "UNDERTHEC_CLASSIC", errbuf);
         return false;
       }
     }

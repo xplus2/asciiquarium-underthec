@@ -134,7 +134,7 @@ void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *color
   ui->scene = scene;
   ui->sel_row = 0;
   ui->sel_col = 0;
-  ui->saved_fps = *fps;
+  ui->saved_fps = ui->scene->classic_ver != 0 ? DEFAULT_FPS : *fps;
 }
 
 bool settings_ui_is_open(const struct settings_ui *ui) { return ui->open; }
@@ -195,7 +195,10 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
       break;
     }
     case FIELD_FISH: {
-      int next = clampi(current_fish_value(ui->scene) + dir, 0, 999);
+      int cur = ui->scene->aquatic.fish_count;
+      int next = cur < 0 ? clampi(current_fish_value(ui->scene) + dir, 0, 999) : cur + dir;
+      if (next < 0) next = -1;
+      if (next > 999) next = 999;
       scene_set_fish_count(ui->scene, term_w, term_h, next);
       break;
     }
@@ -305,7 +308,10 @@ static void format_adj_value(const struct settings_ui *ui, enum field_kind kind,
     case FIELD_FPS: opts_append_int_bounded(out, out_cap - 1, &p, *ui->fps, value_w); break;
     case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 1); break;
     case FIELD_UTURN: opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->uturn_chance, value_w); break;
-    case FIELD_FISH: opts_append_int_bounded(out, out_cap - 1, &p, current_fish_value(ui->scene), value_w); break;
+    case FIELD_FISH:
+      if (ui->scene->aquatic.fish_count < 0) opts_append_bounded_w(out, out_cap - 1, &p, "auto", value_w);
+      else opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->aquatic.fish_count, value_w);
+      break;
     case FIELD_COLORS: {
       char lbl[15];
       colors_mode_label(*ui->colors_mode, lbl, sizeof lbl);

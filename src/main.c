@@ -51,7 +51,7 @@ static double now_seconds(void) {
   return (double)uclock() / (double)UCLOCKS_PER_SEC;
 #else
   struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 #endif
 }

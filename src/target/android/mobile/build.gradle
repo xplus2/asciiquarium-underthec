@@ -1,0 +1,19 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.underthec.mobile'
+
+    defaultConfig {
+        applicationId 'org.underthec.mobile'
+    }
+}
+
+dependencies {
+    implementation project(':lib')
+}
+
+base {
+    archivesName = "underthec-${rootProject.ext.toolVersion}-android"
+}

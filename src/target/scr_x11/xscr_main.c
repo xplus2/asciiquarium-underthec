@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "../../app.h"
 #include "../../config.h"
 #include "xscr_font.h"
@@ -38,9 +39,16 @@ static void on_signal(int sig) {
   g_should_quit = 1;
 }
 
+static int on_x_error(Display *dpy, XErrorEvent *ev) {
+  (void)dpy;
+  (void)ev;
+  g_should_quit = 1;
+  return 0;
+}
+
 static double now_seconds(void) {
   struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
@@ -59,26 +67,8 @@ static void backbuf_free(struct xscr *x) {
   x->backbuf = None;
 }
 
-static void layout(struct xscr *x, int w, int h) {
-  if (w <= 0 || h <= 0) return;
-  XWindowAttributes wa;
-  XGetWindowAttributes(x->dpy, x->win, &wa);
-  backbuf_free(x);
-  x->backbuf = XCreatePixmap(x->dpy, x->win, (unsigned)w, (unsigned)h, (unsigned)wa.depth);
-  xscr_font_retarget(x->font, x->backbuf);
-  x->bmp_w = w;
-  x->bmp_h = h;
-  int cols = w / x->cell_w;
-  int rows = h / x->cell_h;
-  if (cols < 1) cols = 1;
-  if (rows < 1) rows = 1;
-  x->off_x = (w - cols * x->cell_w) / 2;
-  x->off_y = (h - rows * x->cell_h) / 2;
-  if (x->started) app_resize(&x->app, cols, rows);
-}
-
-/* runs of same fg attr per row, font's own advance (monospace ASCII content) */
-static void draw_row(struct xscr *x, int row) {
+/* runs of same fg attr in cols lo..hi, font's own advance (monospace ASCII content) */
+static void draw_row(struct xscr *x, int row, int lo, int hi) {
   const struct canvas *c = &x->app.canvas;
   const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
   int y = x->off_y + row * x->cell_h + xscr_font_ascent(x->font);
@@ -86,7 +76,7 @@ static void draw_row(struct xscr *x, int row) {
   int n = 0;
   int run_x = x->off_x;
   const struct cell *run_attr = NULL;
-  for (int col = 0; col < c->width; col++) {
+  for (int col = lo; col <= hi; col++) {
     const struct cell *cell = &line[col];
     if (cell->cont) continue;
     bool same = run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold;
@@ -103,26 +93,72 @@ static void draw_row(struct xscr *x, int row) {
   if (run_attr != NULL) xscr_font_draw_run(x->font, x->backbuf, x->gc, run_x, y, text, n, run_attr->col, run_attr->bold);
 }
 
-static void draw_canvas(struct xscr *x) {
+static void draw_span(struct xscr *x, int row, int lo, int hi) {
   const struct canvas *c = &x->app.canvas;
-  for (int row = 0; row < c->height; row++) {
-    for (int col = 0; col < c->width; col++) {
-      const struct cell *cell = &c->cells[(size_t)row * (size_t)c->width + (size_t)col];
-      if (cell->bg == COL_DEFAULT) continue;
-      XSetForeground(x->dpy, x->gc, xscr_font_pixel(x->font, cell->bg, cell->bg_bold));
-      XFillRectangle(x->dpy, x->backbuf, x->gc, x->off_x + col * x->cell_w, x->off_y + row * x->cell_h, (unsigned)x->cell_w, (unsigned)x->cell_h);
-    }
+  int px = x->off_x + lo * x->cell_w;
+  int py = x->off_y + row * x->cell_h;
+  XSetForeground(x->dpy, x->gc, BlackPixel(x->dpy, x->screen));
+  XFillRectangle(x->dpy, x->backbuf, x->gc, px, py, (unsigned)((hi - lo + 1) * x->cell_w), (unsigned)x->cell_h);
+  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
+  for (int col = lo; col <= hi; col++) {
+    if (line[col].bg == COL_DEFAULT) continue;
+    XSetForeground(x->dpy, x->gc, xscr_font_pixel(x->font, line[col].bg, line[col].bg_bold));
+    XFillRectangle(x->dpy, x->backbuf, x->gc, x->off_x + col * x->cell_w, py, (unsigned)x->cell_w, (unsigned)x->cell_h);
   }
-  for (int row = 0; row < c->height; row++) draw_row(x, row);
+  draw_row(x, row, lo, hi);
 }
 
-static void present(struct xscr *x) {
+static void present_all(struct xscr *x) {
+  if (x->backbuf == None) return;
+  XCopyArea(x->dpy, x->backbuf, x->win, x->gc, 0, 0, (unsigned)x->bmp_w, (unsigned)x->bmp_h, 0, 0);
+  XFlush(x->dpy);
+}
+
+static void present_diff(struct xscr *x) {
+  if (x->backbuf == None || !x->started) return;
+  struct canvas *c = &x->app.canvas;
+  if (!canvas_diff(c)) return;
+  for (int row = 0; row < c->height; row++) {
+    int lo = c->row_lo[row];
+    int hi = c->row_hi[row];
+    if (hi < lo) continue;
+    draw_span(x, row, lo, hi);
+    XCopyArea(x->dpy, x->backbuf, x->win, x->gc, x->off_x + lo * x->cell_w, x->off_y + row * x->cell_h,
+              (unsigned)((hi - lo + 1) * x->cell_w), (unsigned)x->cell_h, x->off_x + lo * x->cell_w, x->off_y + row * x->cell_h);
+  }
+  XFlush(x->dpy);
+}
+
+static void present_full(struct xscr *x) {
   if (x->backbuf == None) return;
   XSetForeground(x->dpy, x->gc, BlackPixel(x->dpy, x->screen));
   XFillRectangle(x->dpy, x->backbuf, x->gc, 0, 0, (unsigned)x->bmp_w, (unsigned)x->bmp_h);
-  if (x->started) draw_canvas(x);
-  XCopyArea(x->dpy, x->backbuf, x->win, x->gc, 0, 0, (unsigned)x->bmp_w, (unsigned)x->bmp_h, 0, 0);
-  XFlush(x->dpy);
+  if (x->started) {
+    struct canvas *c = &x->app.canvas;
+    canvas_diff_invalidate(c);
+    if (canvas_diff(c))
+      for (int row = 0; row < c->height; row++) draw_span(x, row, 0, c->width - 1);
+  }
+  present_all(x);
+}
+
+static void layout(struct xscr *x, int w, int h) {
+  if (w <= 0 || h <= 0) return;
+  XWindowAttributes wa;
+  XGetWindowAttributes(x->dpy, x->win, &wa);
+  backbuf_free(x);
+  x->backbuf = XCreatePixmap(x->dpy, x->win, (unsigned)w, (unsigned)h, (unsigned)wa.depth);
+  xscr_font_retarget(x->font, x->backbuf);
+  x->bmp_w = w;
+  x->bmp_h = h;
+  int cols = w / x->cell_w;
+  int rows = h / x->cell_h;
+  if (cols < 1) cols = 1;
+  if (rows < 1) rows = 1;
+  x->off_x = (w - cols * x->cell_w) / 2;
+  x->off_y = (h - rows * x->cell_h) / 2;
+  if (x->started) app_resize(&x->app, cols, rows);
+  present_full(x);
 }
 
 static void cursor_hide(Display *dpy, Window win) {
@@ -189,6 +225,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  XSetErrorHandler(on_x_error);
   struct xscr x = {0};
   x.dpy = dpy;
   x.win = target;
@@ -239,13 +276,13 @@ int main(int argc, char **argv) {
       XEvent ev;
       XNextEvent(dpy, &ev);
       if (ev.type == ConfigureNotify) layout(&x, ev.xconfigure.width, ev.xconfigure.height);
-      else if (ev.type == Expose) present(&x);
+      else if (ev.type == Expose) present_all(&x);
       else if (ev.type == DestroyNotify) g_should_quit = 1;
     }
     double t = now_seconds();
     if (t >= deadline) {
       app_frame(&x.app, t);
-      present(&x);
+      present_diff(&x);
       deadline += frame_period;
       if (deadline < t) deadline = t + frame_period;
       continue;

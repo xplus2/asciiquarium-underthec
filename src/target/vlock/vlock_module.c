@@ -55,7 +55,7 @@ static bool build_config(struct config *cfg) {
 
 static double now_seconds(void) {
   struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
@@ -67,11 +67,11 @@ static void on_term(int sig) {
 }
 
 static void child_run(void) {
-  if (term_init() != 0) _exit(1);
   struct sigaction sa;
   memset(&sa, 0, sizeof sa);
   sa.sa_handler = on_term;
   sigaction(SIGTERM, &sa, NULL);
+  if (term_init() != 0) _exit(1);
 
   struct config cfg;
   if (!build_config(&cfg)) {

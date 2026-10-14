@@ -1,0 +1,81 @@
+plugins {
+    id 'com.android.application' version '8.7.2' apply false
+    id 'com.android.library' version '8.7.2' apply false
+}
+
+def versionMatch = (file('../../version.h').text =~ /TOOL_VERSION "(\d+)\.(\d+)\.(\d+)"/)[0]
+def verMajor = versionMatch[1] as int
+def verMinor = versionMatch[2] as int
+def verPatch = versionMatch[3] as int
+
+ext {
+    toolVersion = "${verMajor}.${verMinor}.${verPatch}"
+    toolCode = verMajor * 10000 + verMinor * 100 + verPatch
+}
+
+def keystoreBase64 = findProperty('ANDROID_KEYSTORE_BASE64')
+def ndkRoot = findProperty('UNDERTHEC_NDK') ?: System.getenv('ANDROID_NDK_ROOT')
+
+subprojects {
+    plugins.withId('com.android.base') {
+        android {
+            compileSdk 34
+
+            if (ndkRoot) {
+                ndkPath = ndkRoot
+                ndkVersion = new File(ndkRoot).name
+            }
+
+            defaultConfig {
+                minSdk 21
+                ndk {
+                    abiFilters 'arm64-v8a', 'armeabi-v7a'
+                }
+            }
+
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_11
+                targetCompatibility JavaVersion.VERSION_11
+            }
+
+            lint {
+                abortOnError true
+                warningsAsErrors true
+            }
+        }
+    }
+
+    plugins.withId('com.android.application') {
+        android {
+            defaultConfig {
+                targetSdk 34
+                versionCode rootProject.ext.toolCode
+                versionName rootProject.ext.toolVersion
+            }
+
+            signingConfigs {
+                release {
+                    if (keystoreBase64) {
+                        def keystoreFile = layout.buildDirectory.file('release.jks').get().asFile
+                        keystoreFile.parentFile.mkdirs()
+                        keystoreFile.bytes = keystoreBase64.decodeBase64()
+                        storeFile keystoreFile
+                        storePassword findProperty('ANDROID_KEYSTORE_PASSWORD')
+                        keyAlias findProperty('ANDROID_KEY_ALIAS')
+                        keyPassword findProperty('ANDROID_KEY_PASSWORD')
+                    }
+                }
+            }
+
+            buildTypes {
+                release {
+                    if (keystoreBase64) signingConfig signingConfigs.release
+                }
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << '-Xlint:all' << '-Werror'
+    }
+}

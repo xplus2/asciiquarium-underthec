@@ -40,10 +40,12 @@ const char *web_init(double now_ms) {
   cfg_defaults();
   if (!config_check(&cfg, err, sizeof err)) {
     config_free(&cfg);
+    cfg_ready = false;
     return err;
   }
   config_start(&cfg, &app, now_ms / 1000.0);
   config_free(&cfg);
+  cfg_ready = false;
   return NULL;
 }
 

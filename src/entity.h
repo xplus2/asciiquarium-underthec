@@ -2,9 +2,13 @@
 #define UNDERTHEC_ENTITY_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "canvas.h"
 #include "sprite.h"
+
+#define TICKS_PER_SECOND 10
+#define DIE_SECONDS(s) ((int)((s) * TICKS_PER_SECOND + 0.5))
 
 enum entity_type {
   ENT_WATERLINE,           ENT_CASTLE,   ENT_SEAWEED,  ENT_FISH,        ENT_BUBBLE,
@@ -55,7 +59,7 @@ struct entity {
   bool die_offscreen;
   int die_frame;
   int age_ticks;
-  double die_after;
+  int die_after;
   enum death_action death_action;
   bool marked_dead;
   bool spawn_splat;
@@ -125,8 +129,10 @@ int entity_utf8_display_width(const char *s);
 int entity_utf8_byte_offset(const char *s, int col);
 int entity_height(struct entity *e);
 void entity_shape_changed(struct entity *e);
-void entity_tick_all(struct entity_list *list, int term_w, int term_h);
-void entity_collide_all(struct entity_list *list);
+#define ENT_BIT(t) ((uint64_t)1 << (t))
+
+uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h);
+void entity_collide_all(struct entity_list *list, uint64_t present);
 void entity_collide_shutdown(void);
 bool entity_glyph_overlap(struct entity *a, struct entity *b);
 typedef void (*entity_death_fn)(const struct entity *dead, void *ctx);

@@ -32,6 +32,7 @@ struct aquatic_life {
 };
 
 #define CLASSIC_FPS 10
+#define DEFAULT_FPS 24
 
 #define CASTLE_NAME_LEN 11
 #define CASTLE_NAME_MAX_BYTES (CASTLE_NAME_LEN * 4)
@@ -59,6 +60,7 @@ struct scene {
   char *castle_name;
   int uturn_chance;
   bool feed_alerted;
+  bool feed_active;
 };
 
 /* all on, fish=auto */

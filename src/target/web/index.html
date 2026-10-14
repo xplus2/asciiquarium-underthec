@@ -102,21 +102,25 @@ function layout(M) {
   M._web_resize(Math.max(1, Math.floor(window.innerWidth / cellW)), Math.max(1, Math.floor(window.innerHeight / cellH)));
   cols = M._web_width();
   rows = M._web_height();
+  prev = null;
 }
 
-function present(M, ptr) {
-  const cells = M.HEAPU32.subarray(ptr >>> 2, (ptr >>> 2) + cols * rows);
+let prev = null;
+
+function drawSpan(cells, row, lo, hi) {
+  const y = row * cellH;
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-  for (let i = 0; i < cells.length; i++) {
-    const bg = (cells[i] >>> 5) & 0xf;
+  ctx.fillRect(lo * cellW, y, (hi - lo + 1) * cellW, cellH);
+  const base = row * cols;
+  for (let col = lo; col <= hi; col++) {
+    const bg = (cells[base + col] >>> 5) & 0xf;
     if (bg === 0) continue;
-    ctx.fillStyle = PALETTE[bg][(cells[i] >>> 9) & 1];
-    ctx.fillRect((i % cols) * cellW, Math.floor(i / cols) * cellH, cellW, cellH);
+    ctx.fillStyle = PALETTE[bg][(cells[base + col] >>> 9) & 1];
+    ctx.fillRect(col * cellW, y, cellW, cellH);
   }
   let font = null;
-  for (let i = 0; i < cells.length; i++) {
-    const v = cells[i];
+  for (let col = lo; col <= hi; col++) {
+    const v = cells[base + col];
     const cp = v >>> 10;
     if (cp === 0 || cp === 0x20) continue;
     const bold = v & 1;
@@ -126,8 +130,39 @@ function present(M, ptr) {
       font = f;
     }
     ctx.fillStyle = PALETTE[(v >>> 1) & 0xf][bold];
-    ctx.fillText(String.fromCodePoint(cp), (i % cols) * cellW, Math.floor(i / cols) * cellH + cellH / 2 + 1);
+    ctx.fillText(String.fromCodePoint(cp), col * cellW, y + cellH / 2 + 1);
   }
+}
+
+function present(M, ptr) {
+  const cells = M.HEAPU32.subarray(ptr >>> 2, (ptr >>> 2) + cols * rows);
+  const full = prev === null || prev.length !== cells.length;
+  if (full) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    prev = new Uint32Array(cells.length);
+  }
+  for (let row = 0; row < rows; row++) {
+    const base = row * cols;
+    let lo = 0;
+    let hi = cols - 1;
+    if (!full) {
+      lo = cols;
+      hi = -1;
+      for (let col = 0; col < cols; col++) {
+        if (cells[base + col] === prev[base + col]) continue;
+        if (col < lo) lo = col;
+        hi = col;
+      }
+      if (hi < lo) continue;
+      lo = Math.max(0, lo - 1);
+      hi = Math.min(cols - 1, hi + 1);
+      while (lo > 0 && cells[base + lo] >>> 10 === 0) lo--;
+      if (hi + 1 < cols && cells[base + hi + 1] >>> 10 === 0) hi++;
+    }
+    drawSpan(cells, row, lo, hi);
+  }
+  prev.set(cells);
 }
 
 function applyOptions(M) {

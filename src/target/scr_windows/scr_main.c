@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define RUN_MAX 512
 #define MOUSE_SLACK 8
@@ -99,6 +100,104 @@ static void backbuffer_free(void) {
   scr.mem_dc = NULL;
 }
 
+static void draw_run(const WCHAR *text, INT *dx, int n, int x, int y, const struct cell *attr) {
+  if (n == 0) return;
+  int b = attr->bold ? 1 : 0;
+  SelectObject(scr.mem_dc, scr.font[b]);
+  SetTextColor(scr.mem_dc, palette[attr->col][b]);
+  ExtTextOutW(scr.mem_dc, x, y, 0, NULL, text, (UINT)n, dx);
+}
+
+/* runs of same fg attr per row, fixed advance */
+static void draw_row(int row, int lo, int hi) {
+  const struct canvas *c = &scr.app.canvas;
+  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
+  int y = scr.off_y + row * scr.cell_h;
+  WCHAR text[RUN_MAX];
+  INT dx[RUN_MAX];
+  int n = 0;
+  int run_x = scr.off_x;
+  const struct cell *run_attr = NULL;
+  for (int col = lo; col <= hi; col++) {
+    const struct cell *cell = &line[col];
+    if (cell->cont) {
+      if (n > 0) dx[n - 1] += scr.cell_w;
+      continue;
+    }
+    bool same = run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold;
+    if (!same || n + 2 > RUN_MAX) {
+      if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
+      n = 0;
+      run_x = scr.off_x + col * scr.cell_w;
+      run_attr = cell;
+    }
+    int units = MultiByteToWideChar(CP_UTF8, 0, cell->glyph, (int)strlen(cell->glyph), &text[n], 2);
+    if (units <= 0) {
+      text[n] = L' ';
+      units = 1;
+    }
+    dx[n] = scr.cell_w;
+    if (units == 2) dx[n + 1] = 0;
+    n += units;
+  }
+  if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
+}
+
+static void draw_span(int row, int lo, int hi) {
+  const struct canvas *c = &scr.app.canvas;
+  RECT r = {scr.off_x + lo * scr.cell_w, scr.off_y + row * scr.cell_h, 0, 0};
+  r.right = scr.off_x + (hi + 1) * scr.cell_w;
+  r.bottom = r.top + scr.cell_h;
+  FillRect(scr.mem_dc, &r, GetStockObject(BLACK_BRUSH));
+  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
+  for (int col = lo; col <= hi; col++) {
+    if (line[col].bg == COL_DEFAULT) continue;
+    RECT cr = {scr.off_x + col * scr.cell_w, r.top, 0, r.bottom};
+    cr.right = cr.left + scr.cell_w;
+    FillRect(scr.mem_dc, &cr, bg_brush(line[col].bg, line[col].bg_bold));
+  }
+  draw_row(row, lo, hi);
+}
+
+static void draw_error(void) {
+  WCHAR msg[300];
+  int n = MultiByteToWideChar(CP_UTF8, 0, scr.err, -1, msg, (int)(sizeof msg / sizeof msg[0]));
+  if (n <= 0) return;
+  RECT r = {scr.cell_w, scr.cell_h, scr.bmp_w - scr.cell_w, scr.bmp_h - scr.cell_h};
+  SelectObject(scr.mem_dc, scr.font[0]);
+  SetTextColor(scr.mem_dc, palette[0][0]);
+  DrawTextW(scr.mem_dc, msg, -1, &r, DT_WORDBREAK | DT_NOPREFIX);
+}
+
+static void redraw_full(void) {
+  if (scr.mem_dc == NULL) return;
+  RECT all = {0, 0, scr.bmp_w, scr.bmp_h};
+  FillRect(scr.mem_dc, &all, GetStockObject(BLACK_BRUSH));
+  if (scr.err[0] != '\0') {
+    draw_error();
+    return;
+  }
+  if (!scr.started) return;
+  struct canvas *c = &scr.app.canvas;
+  canvas_diff_invalidate(c);
+  if (canvas_diff(c))
+    for (int row = 0; row < c->height; row++) draw_span(row, 0, c->width - 1);
+}
+
+static void redraw_diff(HWND wnd) {
+  if (scr.mem_dc == NULL || scr.err[0] != '\0' || !scr.started) return;
+  struct canvas *c = &scr.app.canvas;
+  if (!canvas_diff(c)) return;
+  for (int row = 0; row < c->height; row++) {
+    if (c->row_hi[row] < c->row_lo[row]) continue;
+    draw_span(row, c->row_lo[row], c->row_hi[row]);
+    RECT r = {scr.off_x + c->row_lo[row] * scr.cell_w, scr.off_y + row * scr.cell_h, 0, 0};
+    r.right = scr.off_x + (c->row_hi[row] + 1) * scr.cell_w;
+    r.bottom = r.top + scr.cell_h;
+    InvalidateRect(wnd, &r, FALSE);
+  }
+}
+
 static void layout(HWND wnd, int w, int h) {
   if (w <= 0 || h <= 0) return;
   HDC dc = GetDC(wnd);
@@ -118,85 +217,16 @@ static void layout(HWND wnd, int w, int h) {
   scr.off_x = (w - cols * scr.cell_w) / 2;
   scr.off_y = (h - rows * scr.cell_h) / 2;
   if (scr.started) app_resize(&scr.app, cols, rows);
-}
-
-static void draw_run(const WCHAR *text, INT *dx, int n, int x, int y, const struct cell *attr) {
-  if (n == 0) return;
-  int b = attr->bold ? 1 : 0;
-  SelectObject(scr.mem_dc, scr.font[b]);
-  SetTextColor(scr.mem_dc, palette[attr->col][b]);
-  ExtTextOutW(scr.mem_dc, x, y, 0, NULL, text, (UINT)n, dx);
-}
-
-/* runs of same fg attr per row, fixed advance */
-static void draw_row(int row) {
-  const struct canvas *c = &scr.app.canvas;
-  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
-  int y = scr.off_y + row * scr.cell_h;
-  WCHAR text[RUN_MAX];
-  INT dx[RUN_MAX];
-  int n = 0;
-  int run_x = scr.off_x;
-  const struct cell *run_attr = NULL;
-  for (int col = 0; col < c->width; col++) {
-    const struct cell *cell = &line[col];
-    if (cell->cont) {
-      if (n > 0) dx[n - 1] += scr.cell_w;
-      continue;
-    }
-    bool same = run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold;
-    if (!same || n + 2 > RUN_MAX) {
-      if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
-      n = 0;
-      run_x = scr.off_x + col * scr.cell_w;
-      run_attr = cell;
-    }
-    int units = MultiByteToWideChar(CP_UTF8, 0, cell->glyph, -1, &text[n], 2) - 1;
-    if (units <= 0) {
-      text[n] = L' ';
-      units = 1;
-    }
-    dx[n] = scr.cell_w;
-    if (units == 2) dx[n + 1] = 0;
-    n += units;
-  }
-  if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
-}
-
-static void draw_canvas(void) {
-  const struct canvas *c = &scr.app.canvas;
-  for (int row = 0; row < c->height; row++) {
-    for (int col = 0; col < c->width; col++) {
-      const struct cell *cell = &c->cells[(size_t)row * (size_t)c->width + (size_t)col];
-      if (cell->bg == COL_DEFAULT) continue;
-      RECT r = {scr.off_x + col * scr.cell_w, scr.off_y + row * scr.cell_h, 0, 0};
-      r.right = r.left + scr.cell_w;
-      r.bottom = r.top + scr.cell_h;
-      FillRect(scr.mem_dc, &r, bg_brush(cell->bg, cell->bg_bold));
-    }
-  }
-  for (int row = 0; row < c->height; row++) draw_row(row);
-}
-
-static void draw_error(void) {
-  WCHAR msg[300];
-  int n = MultiByteToWideChar(CP_UTF8, 0, scr.err, -1, msg, (int)(sizeof msg / sizeof msg[0]));
-  if (n <= 0) return;
-  RECT r = {scr.cell_w, scr.cell_h, scr.bmp_w - scr.cell_w, scr.bmp_h - scr.cell_h};
-  SelectObject(scr.mem_dc, scr.font[0]);
-  SetTextColor(scr.mem_dc, palette[0][0]);
-  DrawTextW(scr.mem_dc, msg, -1, &r, DT_WORDBREAK | DT_NOPREFIX);
+  redraw_full();
+  InvalidateRect(wnd, NULL, FALSE);
 }
 
 static void paint(HWND wnd) {
   PAINTSTRUCT ps;
   HDC dc = BeginPaint(wnd, &ps);
   if (scr.mem_dc != NULL) {
-    RECT all = {0, 0, scr.bmp_w, scr.bmp_h};
-    FillRect(scr.mem_dc, &all, GetStockObject(BLACK_BRUSH));
-    if (scr.err[0] != '\0') draw_error();
-    else if (scr.started) draw_canvas();
-    BitBlt(dc, 0, 0, scr.bmp_w, scr.bmp_h, scr.mem_dc, 0, 0, SRCCOPY);
+    const RECT *r = &ps.rcPaint;
+    BitBlt(dc, r->left, r->top, r->right - r->left, r->bottom - r->top, scr.mem_dc, r->left, r->top, SRCCOPY);
   }
   EndPaint(wnd, &ps);
 }
@@ -218,7 +248,7 @@ static LRESULT CALLBACK wnd_proc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) {
       return 0;
     case WM_TIMER:
       if (scr.started) app_frame(&scr.app, now_seconds());
-      InvalidateRect(wnd, NULL, FALSE);
+      redraw_diff(wnd);
       return 0;
     case WM_ERASEBKGND:
       return 1;

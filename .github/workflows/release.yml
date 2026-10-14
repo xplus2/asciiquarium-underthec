@@ -43,8 +43,10 @@ jobs:
       - run: |
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
-          mkdir "$name"
-          cp build/underthec build/underthec.so build-xscr/underthec_xscr src/target/scr_x11/underthec.xml LICENSE "$name"/
+          mkdir -p "$name"/vlock "$name"/xscreensaver
+          cp build/underthec LICENSE "$name"/
+          cp build/underthec.so "$name"/vlock/
+          cp build-xscr/underthec_xscr src/target/scr_x11/underthec.xml "$name"/xscreensaver/
           cp -r build-xscr/plasma_wallpaper "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
@@ -91,8 +93,9 @@ jobs:
       - run: |
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
-          mkdir "$name"
-          cp build/underthec build/underthec.so LICENSE "$name"/
+          mkdir -p "$name"/vlock
+          cp build/underthec LICENSE "$name"/
+          cp build/underthec.so "$name"/vlock/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -221,8 +224,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install pinned SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-34" "build-tools;34.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
-      - name: build signed apk
-        working-directory: src/target/androidtv
+      - name: build signed apks
+        working-directory: src/target/android
         env:
           ORG_GRADLE_PROJECT_ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ORG_GRADLE_PROJECT_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -234,10 +237,12 @@ jobs:
       - run: |
           ver=${{ needs.version.outputs.version }}
           cp src/target/androidtv/build/outputs/apk/release/underthec-${ver}-androidtv-release.apk underthec-${ver}-androidtv.apk
+          cp src/target/android/mobile/build/outputs/apk/release/underthec-${ver}-android-release.apk underthec-${ver}-android.apk
+          cp src/target/androidwear/build/outputs/apk/release/underthec-${ver}-wearos-release.apk underthec-${ver}-wearos.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android
-          path: underthec-*-androidtv.apk
+          path: underthec-*.apk
 
   release:
     needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, dos, web, android]

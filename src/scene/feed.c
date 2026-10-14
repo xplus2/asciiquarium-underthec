@@ -48,10 +48,10 @@ void feed_trigger(struct scene *sc, int w, int h, int col) {
       have_fish = true;
     }
   }
-  if (have_fish) for (int i = 0; i < sc->entities.count; i++) {
+  for (int i = 0; i < sc->entities.count; i++) {
     const struct entity *e = &sc->entities.items[i];
     if (e->marked_dead || e->type != ENT_FLAKE) continue;
-    if (e->y <= lowest_fish_y) return;
+    if (have_fish ? e->y <= lowest_fish_y : e->die_after < 0) return;
   }
   int max_band = w - FLAKE_BAND_WIDTH;
   if (max_band < 1) max_band = 1;
@@ -64,13 +64,14 @@ void feed_trigger(struct scene *sc, int w, int h, int col) {
   }
   for (int i = 0; i < FLAKE_COUNT; i++) spawn_flake(sc, band_x0 + rng_int(FLAKE_BAND_WIDTH));
   sc->feed_alerted = false;
+  sc->feed_active = true;
 }
 
 static void feed_tick_flakes(struct scene *sc, int floor_row) {
   for (int i = 0; i < sc->entities.count; i++) {
     struct entity *e = &sc->entities.items[i];
     if (e->marked_dead || e->type != ENT_FLAKE) continue;
-    if (e->die_after >= 0.0) continue;
+    if (e->die_after >= 0) continue;
     double old_y = e->y;
     double vy;
     if (old_y < WATER_SURFACE_ROW) vy = FLAKE_FALL_SPEED;
@@ -83,7 +84,7 @@ static void feed_tick_flakes(struct scene *sc, int floor_row) {
     bool at_floor = e->y >= floor_row;
     if (at_floor) {
       e->owned_shape_rows[0][0][0] = '_';
-      e->die_after = FLAKE_BOTTOM_LINGER;
+      e->die_after = DIE_SECONDS(FLAKE_BOTTOM_LINGER);
     } else if (crossed_surface) {
       e->owned_shape_rows[0][0][0] = '_';
       e->frame_timer = 0.0;
@@ -117,7 +118,7 @@ static void feed_alert_fish(struct scene *sc) {
   bool any_in_main = false;
   for (int i = 0; i < sc->entities.count; i++) {
     const struct entity *e = &sc->entities.items[i];
-    if (e->marked_dead || e->type != ENT_FLAKE || e->die_after >= 0.0) continue;
+    if (e->marked_dead || e->type != ENT_FLAKE || e->die_after >= 0) continue;
     if (e->y >= MAIN_REGION_TOP_ROW) any_in_main = true;
     int col = round_to_int(e->x);
     bool dup = false;
@@ -159,6 +160,7 @@ static void feed_advance_heading_fish(struct scene *sc) {
     bool reached = (fish->vx > 0 && front >= fish->feed_target_col) || (fish->vx < 0 && front <= fish->feed_target_col);
     if (reached) {
       fish->x = fish->vx > 0 ? fish->feed_target_col - width : fish->feed_target_col;
+      fish->has_prev = false;
       fish->vx = 0.0;
       fish->feed_wait = true;
     }
@@ -230,8 +232,13 @@ static void feed_release_waiting_fish(struct scene *sc) {
   }
 }
 
-void feed_tick(struct scene *sc, int w, int h) {
+void feed_tick(struct scene *sc, int w, int h, bool flakes) {
   (void)w;
+  if (!flakes) {
+    feed_release_waiting_fish(sc);
+    sc->feed_active = false;
+    return;
+  }
   int floor_row = h - 1;
   feed_tick_flakes(sc, floor_row);
   feed_alert_fish(sc);

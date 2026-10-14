@@ -297,7 +297,7 @@ void add_seaweed(struct scene *sc, int w, int h) {
   if (sc->classic_ver != 0) {
     e->z = Z_SEAWEED_MAX;
     e->seaweed_static = true;
-    e->die_after = rng_range(CLASSIC_SEAWEED_MIN_S, CLASSIC_SEAWEED_MAX_S);
+    e->die_after = DIE_SECONDS(rng_range(CLASSIC_SEAWEED_MIN_S, CLASSIC_SEAWEED_MAX_S));
     e->death_action = DEATH_ADD_SEAWEED;
   }
   e->seaweed_orig_height = height;
@@ -489,6 +489,7 @@ void reposition_message(const struct scene *sc, struct entity *e, int w, int h) 
   int block_w = message_block_width(sc, rows);
   if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_CENTER) e->x = (w - block_w) / 2;
   if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_MARQUEE) e->y = (h - rows) / 2;
+  e->has_prev = false;
 }
 
 void spawn_message_event(struct scene *sc, int w, int h) {

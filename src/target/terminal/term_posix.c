@@ -6,7 +6,9 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -14,9 +16,62 @@
 static int tty_fd = -1;
 
 static struct termios orig_termios;
+static struct termios raw_termios;
 static bool have_orig_termios = false;
-static bool is_active = false;
+static volatile sig_atomic_t is_active = 0;
+static volatile sig_atomic_t need_redraw = 0;
 static char stdout_buf[1 << 16];
+
+static const char enter_seq[] = "\x1b[?1049h\x1b[?25l\x1b[2J\x1b[H";
+static const char leave_seq[] = "\x1b[?25h\x1b[?1049l";
+
+static void write_tty(const char *s, size_t n) {
+  while (n > 0) {
+    ssize_t w = write(tty_fd, s, n);
+    if (w <= 0) return;
+    s += w;
+    n -= (size_t)w;
+  }
+}
+
+static void on_fatal_signal(int sig) {
+  if (is_active) {
+    write_tty(leave_seq, sizeof leave_seq - 1);
+    tcsetattr(tty_fd, TCSADRAIN, &orig_termios);
+  }
+  raise(sig);
+}
+
+static void install(int sig, void (*fn)(int), int flags) {
+  struct sigaction sa;
+  memset(&sa, 0, sizeof sa);
+  sa.sa_handler = fn;
+  sa.sa_flags = flags;
+  sigaction(sig, &sa, NULL);
+}
+
+static void on_cont_signal(int sig) {
+  (void)sig;
+  if (!is_active) return;
+  install(SIGTSTP, on_fatal_signal, SA_RESETHAND);
+  tcsetattr(tty_fd, TCSAFLUSH, &raw_termios);
+  write_tty(enter_seq, sizeof enter_seq - 1);
+  need_redraw = 1;
+}
+
+static void install_handlers(void) {
+  install(SIGQUIT, on_fatal_signal, SA_RESETHAND);
+  install(SIGHUP, on_fatal_signal, SA_RESETHAND);
+  install(SIGTSTP, on_fatal_signal, SA_RESETHAND);
+  install(SIGCONT, on_cont_signal, SA_RESTART);
+}
+
+static void remove_handlers(void) {
+  signal(SIGQUIT, SIG_DFL);
+  signal(SIGHUP, SIG_DFL);
+  signal(SIGTSTP, SIG_DFL);
+  signal(SIGCONT, SIG_DFL);
+}
 
 int term_init(void) {
   tty_fd = open("/dev/tty", O_RDWR);
@@ -32,6 +87,7 @@ int term_init(void) {
   raw.c_lflag |= ISIG; /* keep ctrl+c/ctrl+\ generating SIGINT/SIGQUIT */
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 0;
+  raw_termios = raw;
   if (tcsetattr(tty_fd, TCSAFLUSH, &raw) != 0) {
     close(tty_fd);
     tty_fd = -1;
@@ -39,18 +95,20 @@ int term_init(void) {
     return -1;
   }
   setvbuf(stdout, stdout_buf, _IOFBF, sizeof(stdout_buf));
-  fputs("\x1b[?1049h\x1b[?25l\x1b[2J\x1b[H", stdout);
+  fputs(enter_seq, stdout);
   fflush(stdout);
-  is_active = true;
+  is_active = 1;
+  install_handlers();
   return 0;
 }
 
 void term_shutdown(void) {
   if (!is_active) return;
-  is_active = false;
-  fputs("\x1b[?25h\x1b[?1049l", stdout);
+  is_active = 0;
+  remove_handlers();
+  fputs(leave_seq, stdout);
   fflush(stdout);
-  if (have_orig_termios) tcsetattr(tty_fd, TCSAFLUSH, &orig_termios);
+  if (have_orig_termios) tcsetattr(tty_fd, TCSADRAIN, &orig_termios); /* keep typeahead */
   if (tty_fd >= 0) {
     close(tty_fd);
     tty_fd = -1;
@@ -86,19 +144,29 @@ static bool read_byte(int timeout_ms, unsigned char *out) {
 }
 
 int term_poll_key(int timeout_ms) {
+  if (need_redraw) {
+    need_redraw = 0;
+    term_invalidate();
+  }
   unsigned char c;
   if (!read_byte(timeout_ms, &c)) return -1;
   if (c != 0x1b) return tolower(c);
 
   unsigned char c2;
   if (!read_byte(25, &c2)) return 27;
-  if (c2 != '[') {
+  if (c2 != '[' && c2 != 'O') {
     have_pending = true;
     pending_byte = c2;
     return 27;
   }
   unsigned char c3;
   if (!read_byte(25, &c3)) return 27;
+  if (c2 == '[') {
+    /* CSI: params 0x30-0x3f, intermediates 0x20-0x2f, final 0x40-0x7e */
+    for (int n = 0; c3 < 0x40 && n < 32; n++) {
+      if (!read_byte(25, &c3)) return -1;
+    }
+  }
   switch (c3) {
     case 'A': return TERM_KEY_UP;
     case 'B': return TERM_KEY_DOWN;

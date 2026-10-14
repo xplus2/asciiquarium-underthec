@@ -31,7 +31,7 @@ public final class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
     SharedPreferences prefs = Options.prefs(this);
-    view.configure(Options.build(prefs), Options.fontSize(prefs));
+    view.configure(Options.build(this, prefs), Options.fontSize(prefs));
   }
 
   @Override

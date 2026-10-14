@@ -2,6 +2,7 @@
 #define UNDERTHEC_PLASMA_ITEM_H
 
 #include <QFont>
+#include <QHash>
 #include <QQuickPaintedItem>
 #include <QStringList>
 #include <QTimer>
@@ -43,6 +44,7 @@ private:
   void stop();
   void layout();
   void step();
+  const QString &glyphString(const char *glyph);
 
   struct app app_ = {};
   bool started_ = false;
@@ -52,11 +54,13 @@ private:
   int fontSize_ = 0;
   QFont font_;
   QFont boldFont_;
+  QHash<quint32, QString> glyphs_;
   int cellW_ = 1;
   int cellH_ = 1;
   int ascent_ = 1;
   int offX_ = 0;
   int offY_ = 0;
+  bool fullRedraw_ = true;
 };
 
 /* creature names for the settings page */

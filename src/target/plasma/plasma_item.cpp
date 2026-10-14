@@ -1,9 +1,10 @@
 #include "plasma_item.h"
 
 #include <array>
+#include <cstring>
 
 #include <QByteArray>
-#include <QDateTime>
+#include <QElapsedTimer>
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QPainter>
@@ -17,6 +18,7 @@ extern "C" {
 namespace {
 
 const int kMinFontPx = 7;
+const int kGlyphCacheMax = 4096;
 
 /* [enum color * 2 + bold] as 0xRRGGBB */
 const std::array<QRgb, 18> kPalette = {
@@ -36,7 +38,9 @@ QColor colorOf(enum color col, bool bold) {
 }
 
 double nowSeconds() {
-  return static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000.0;
+  static QElapsedTimer clk;
+  if (!clk.isValid()) clk.start();
+  return static_cast<double>(clk.nsecsElapsed()) / 1e9;
 }
 
 void applyOption(struct config *cfg, const QString &name, const QString &value) {
@@ -120,6 +124,8 @@ void UnderTheC::layout() {
   offX_ = (static_cast<int>(width()) - cols * cellW_) / 2;
   offY_ = (static_cast<int>(height()) - rows * cellH_) / 2;
   app_resize(&app_, cols, rows);
+  canvas_diff_invalidate(&app_.canvas);
+  fullRedraw_ = true;
 }
 
 void UnderTheC::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
@@ -136,28 +142,76 @@ void UnderTheC::itemChange(ItemChange change, const ItemChangeData &value) {
 
 void UnderTheC::step() {
   app_frame(&app_, nowSeconds());
-  update();
+  struct canvas &c = app_.canvas;
+  if (fullRedraw_) {
+    canvas_diff_invalidate(&c);
+    canvas_diff(&c);
+    update();
+    fullRedraw_ = false;
+    return;
+  }
+  if (!canvas_diff(&c)) return;
+  QRect dirty;
+  for (int row = 0; row < c.height; row++) {
+    if (c.row_hi[row] < c.row_lo[row]) continue;
+    dirty |= QRect(offX_ + c.row_lo[row] * cellW_, offY_ + row * cellH_, (c.row_hi[row] - c.row_lo[row] + 1) * cellW_, cellH_);
+  }
+  update(dirty);
+}
+
+const QString &UnderTheC::glyphString(const char *glyph) {
+  char buf[4] = {0, 0, 0, 0};
+  size_t len = strnlen(glyph, 4);
+  memcpy(buf, glyph, len);
+  quint32 key;
+  memcpy(&key, buf, 4);
+  auto it = glyphs_.find(key);
+  if (it != glyphs_.end()) return it.value();
+  if (glyphs_.size() >= kGlyphCacheMax) glyphs_.clear();
+  return glyphs_.insert(key, QString::fromUtf8(glyph)).value();
 }
 
 void UnderTheC::paint(QPainter *painter) {
-  painter->fillRect(boundingRect(), Qt::black);
+  QRect clip = painter->clipBoundingRect().toAlignedRect().intersected(boundingRect().toAlignedRect());
+  painter->fillRect(clip, Qt::black);
   if (!started_) return;
   const struct canvas &c = app_.canvas;
-  for (int row = 0; row < c.height; row++) {
-    for (int col = 0; col < c.width; col++) {
-      const struct cell &cell = c.cells[static_cast<size_t>(row) * static_cast<size_t>(c.width) + static_cast<size_t>(col)];
+  if (c.width <= 0 || c.height <= 0) return;
+  int row0 = qBound(0, (clip.top() - offY_) / cellH_, c.height - 1);
+  int row1 = qBound(0, (clip.bottom() - offY_) / cellH_, c.height - 1);
+  int col0 = qBound(0, (clip.left() - offX_) / cellW_, c.width - 1);
+  int col1 = qBound(0, (clip.right() - offX_) / cellW_, c.width - 1);
+  auto cellAt = [&c](int row, int col) -> const struct cell & {
+    return c.cells[static_cast<size_t>(row) * static_cast<size_t>(c.width) + static_cast<size_t>(col)];
+  };
+  for (int row = row0; row <= row1; row++) {
+    for (int col = col0; col <= col1; col++) {
+      const struct cell &cell = cellAt(row, col);
       if (cell.bg == COL_DEFAULT) continue;
       painter->fillRect(offX_ + col * cellW_, offY_ + row * cellH_, cellW_, cellH_, colorOf(cell.bg, cell.bg_bold));
     }
   }
   painter->setRenderHint(QPainter::TextAntialiasing);
-  for (int row = 0; row < c.height; row++) {
-    for (int col = 0; col < c.width; col++) {
-      const struct cell &cell = c.cells[static_cast<size_t>(row) * static_cast<size_t>(c.width) + static_cast<size_t>(col)];
+  bool fontBold = false;
+  bool penSet = false;
+  enum color penCol = COL_DEFAULT;
+  bool penBold = false;
+  painter->setFont(font_);
+  for (int row = row0; row <= row1; row++) {
+    for (int col = col0; col <= col1; col++) {
+      const struct cell &cell = cellAt(row, col);
       if (cell.cont || cell.glyph[0] == ' ' || cell.glyph[0] == '\0') continue;
-      painter->setFont(cell.bold ? boldFont_ : font_);
-      painter->setPen(colorOf(cell.col, cell.bold));
-      painter->drawText(QPointF(offX_ + col * cellW_, offY_ + row * cellH_ + ascent_), QString::fromUtf8(cell.glyph));
+      if (cell.bold != fontBold) {
+        painter->setFont(cell.bold ? boldFont_ : font_);
+        fontBold = cell.bold;
+      }
+      if (!penSet || cell.col != penCol || cell.bold != penBold) {
+        painter->setPen(colorOf(cell.col, cell.bold));
+        penSet = true;
+        penCol = cell.col;
+        penBold = cell.bold;
+      }
+      painter->drawText(QPointF(offX_ + col * cellW_, offY_ + row * cellH_ + ascent_), glyphString(cell.glyph));
     }
   }
 }

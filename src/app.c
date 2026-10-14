@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-static bool too_small(const struct app *a) { return a->h < APP_MIN_ROWS; }
+static bool too_small(const struct app *a) { return a->h < APP_MIN_ROWS || a->w < APP_MIN_COLS; }
 
 static void draw_too_small(struct canvas *c) {
   static const char msg[] = "We're gonna need a bigger ocean";
@@ -49,22 +49,28 @@ void app_resize(struct app *a, int w, int h) {
 
 void app_key(struct app *a, int key) {
   if (too_small(a)) return;
-  if (key == 'r') scene_reset(&a->scene, a->w, a->h);
-  if (key == 'p' || (key == ' ' && !settings_ui_is_open(&a->settings))) a->paused = !a->paused;
-  if (key == 'f') app_feed(a, FEED_COL_AUTO);
   if (key == 's') {
     if (help_ui_is_open(&a->help)) help_ui_close(&a->help);
     settings_ui_toggle(&a->settings);
+    return;
   }
   if (key == 'h') {
     if (settings_ui_is_open(&a->settings)) settings_ui_close(&a->settings);
     help_ui_toggle(&a->help);
+    return;
   }
   if (settings_ui_is_open(&a->settings)) {
     if (key == '\x1b') settings_ui_close(&a->settings);
     else settings_ui_handle_key(&a->settings, key, a->w, a->h);
+    return;
   }
-  if (help_ui_is_open(&a->help) && key == '\x1b') help_ui_close(&a->help);
+  if (help_ui_is_open(&a->help) && key == '\x1b') {
+    help_ui_close(&a->help);
+    return;
+  }
+  if (key == 'r') scene_reset(&a->scene, a->w, a->h);
+  if (key == 'p' || key == ' ') a->paused = !a->paused;
+  if (key == 'f') app_feed(a, FEED_COL_AUTO);
 }
 
 void app_feed(struct app *a, int col) {

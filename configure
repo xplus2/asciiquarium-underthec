@@ -123,7 +123,7 @@ srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/entity/utf8.c 
 if [ "$emcc" = "1" ]; then
 	srcs="$srcs src/config.c src/target/web/web_main.c"
 elif [ "$android" = "1" ]; then
-	srcs="$srcs src/config.c src/target/androidtv/android_main.c"
+	srcs="$srcs src/config.c src/target/android/android_main.c"
 else
 	core_srcs="$srcs"
 	srcs="$srcs src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
@@ -152,7 +152,7 @@ else
 		is_macos=0
 		if [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then is_macos=1; fi
 		if [ "$is_macos" != "1" ]; then
-			vlock_srcs="$core_srcs src/config.c src/target/terminal/term_posix.c src/target/vlock/vlock_module.c"
+			vlock_srcs="$core_srcs src/config.c src/target/terminal/term_common.c src/target/terminal/term_posix.c src/target/vlock/vlock_module.c"
 		else
 			saver_srcs="$core_srcs src/config.c src/target/scr_macos/saver_view.m src/target/scr_macos/saver_cfg.m"
 		fi

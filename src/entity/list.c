@@ -1,6 +1,7 @@
 #include "priv.h"
 #include "xalloc.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,6 +29,10 @@ void entity_clear_owned(struct entity *e) {
     free(e->owned_shape_rows);
     e->owned_shape_rows = NULL;
     entity_clear_owned_mask_frames(e);
+    if (e->frames == e->owned_frame_table) {
+      e->frames = NULL;
+      e->frame_count = 0;
+    }
     free(e->owned_frame_table);
     e->owned_frame_table = NULL;
   }
@@ -62,9 +67,10 @@ struct entity *entity_spawn(struct entity_list *list) {
   }
   struct entity *e = &list->items[list->count++];
   memset(e, 0, sizeof(*e));
-  e->id = next_entity_id++;
+  e->id = next_entity_id;
+  next_entity_id = next_entity_id == INT_MAX ? 1 : next_entity_id + 1;
   e->die_frame = -1;
-  e->die_after = -1.0;
+  e->die_after = -1;
   e->death_action = DEATH_NONE;
   return e;
 }
@@ -96,7 +102,10 @@ void entity_reap(struct entity_list *list, entity_death_fn fn, void *ctx) {
       entity_clear_owned(&list->items[read]);
       continue;
     }
-    if (write != read) list->items[write] = list->items[read];
+    if (write != read) {
+      list->items[write] = list->items[read];
+      list->items[read].marked_dead = true;
+    }
     write++;
   }
   int extra = list->count - original_count;

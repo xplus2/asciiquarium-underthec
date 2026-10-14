@@ -19,7 +19,7 @@ If `libx11` and `libxft` headers are installed, this also builds the X11 screens
 
 If the Qt6 Quick development files (Qt 6.4 or newer, e.g. `qt6-base-dev` and `qt6-declarative-dev`) and a C++ compiler are installed,
 this also builds the Plasma wallpaper plugin (non-static, target `plasma_wallpaper`, output in `build/plasma_wallpaper/`).
-`-DUNDERTHEC_PLASMA_WALLPAPER=OFF` disables it. See [wallpaper.md](wallpaper.md) for installation.
+`-DUNDERTHEC_PLASMA_WALLPAPER=OFF` disables it. See [screensaver.md](screensaver.md) for installation.
 
 The resulting `.so` shared library is the vlock plugin (usage: [screensaver.md](screensaver.md)).
 It's not needed for anything else.
@@ -27,6 +27,8 @@ It's not needed for anything else.
 ### Windows
 This section describes cross-compiling static Windows builds from Linux using the `mingw-w64` cross toolchain.
 They also produce the screensaver `underthec.scr` (needs `windres` that usually already comes with mingw-w64).
+
+The binaries should run on Windows 10 1609 and above.
 
 ```sh
 cmake -B build-win -DCMAKE_TOOLCHAIN_FILE=toolchain/mingw-w64-toolchain.cmake
@@ -37,7 +39,7 @@ With configure + make, `--host=*-mingw32` builds `build/underthec.scr`.
 > Building natively on Windows: Technically possible.
 
 ### macOS
-Same as on Linux:
+Same as on Linux, works on Intel and ARM:
 ```sh
 cmake -B build
 cmake --build build
@@ -48,7 +50,7 @@ One small difference: Apple's libSystem does not support fully static binaries.
 It also builds the screensaver bundle `underthec.saver` (Objective-C, needs Xcode command line tools).
 `-DUNDERTHEC_MACOS_SAVER=OFF` disables it. See [screensaver.md](screensaver.md) for installation.
 
-### Android TV
+### Android (TV, phones, tablets and Wear OS)
 
 #### NDK Part
 The native library needs the Android NDK (r27 and r29 tested). Android 5.0 (API 21) is the minimum.
@@ -67,19 +69,26 @@ Result is `build-android/libunderthec_android.so`.
 Needs a JDK 17 or newer, the Android SDK (platform 34, build-tools 34.0.0, CMake 3.22.1) and an NDK.
 The native library is built from the top level `CMakeLists.txt`.
 
-Create `src/target/androidtv/local.properties` with `sdk.dir=` pointing to the SDK,
+Create `src/target/android/local.properties` with `sdk.dir=` pointing to the SDK,
 and `cmake.dir=` pointing to a CMake install (only if the SDK has none).
 
-The APK is built by Gradle from `src/target/androidtv`, which runs this CMake build for both ABIs.
+The APKs are built by Gradle from `src/target/android`, which runs this CMake build for both ABIs.
 
 ```sh
-cd src/target/androidtv
+cd src/target/android
 ./gradlew assembleDebug -PUNDERTHEC_NDK=$NDK
 ```
 
 `UNDERTHEC_NDK` (or `ANDROID_NDK_ROOT`) selects the NDK.
-The APK ends up in `build/outputs/apk/debug/underthec-VERSION-androidtv-debug.apk`.
-`assembleRelease` builds the release APK next to it. It is signed when these Gradle properties are set
+The APKs end up in `mobile/build/outputs/apk/debug/underthec-VERSION-android-debug.apk` and
+`../androidtv/build/outputs/apk/debug/underthec-VERSION-androidtv-debug.apk`.
+
+The Wear OS app (Wear OS 3, API 30+) ends up in
+`../androidwear/build/outputs/apk/debug/underthec-VERSION-wearos-debug.apk`.
+Its debug APK also contains x86_64 to run in the emulator.
+
+`:mobile:assembleDebug`, `:tv:assembleDebug` or `:wear:assembleDebug` build just one of them.
+`assembleRelease` builds the release APKs next to them. It is signed when these Gradle properties are set
 (e.g. in `~/.gradle/gradle.properties`), otherwise unsigned:
 * `ANDROID_KEYSTORE_BASE64`: the keystore file, base64, one line.
 * `ANDROID_KEYSTORE_PASSWORD`
@@ -87,6 +96,7 @@ The APK ends up in `build/outputs/apk/debug/underthec-VERSION-androidtv-debug.ap
 * `ANDROID_KEY_PASSWORD`
 
 ### WebAssembly
+
 Building the WebAssembly requires emscripten (`emcc`, `emcmake`) and the output will be `underthec.js`, `underthec.wasm`
 and `index.html` in the build directory.
 
@@ -131,7 +141,7 @@ make install
 `./configure --help` lists the available options.
 
 It builds the Plasma wallpaper plugin if `pkg-config` finds Qt6 Quick 6.4 or newer, a C++ compiler and Qt's `moc`
-(`--qml-moduledir` and `--plasma-packagedir` set the installation locations, see [wallpaper.md](wallpaper.md)).
+(`--qml-moduledir` and `--plasma-packagedir` set the installation locations, see [screensaver.md](screensaver.md)).
 
 Pass `--debug` for an unstripped `-g -O0` build.
 

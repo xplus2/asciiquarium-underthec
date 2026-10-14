@@ -1,0 +1,28 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.underthec.wear'
+
+    defaultConfig {
+        applicationId 'org.underthec.wear'
+        minSdk 30
+    }
+
+    buildTypes {
+        debug {
+            ndk {
+                abiFilters 'x86_64'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation project(':lib')
+}
+
+base {
+    archivesName = "underthec-${rootProject.ext.toolVersion}-wearos"
+}

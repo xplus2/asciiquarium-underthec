@@ -16,6 +16,7 @@ VLOCK_OBJS := $(patsubst %.c,$(BUILDDIR)/vlock/%.o,$(VLOCK_SRCS))
 # own object dir, no lto
 SAVER_OBJS := $(patsubst %.c,$(BUILDDIR)/saver/%.o,$(filter %.c,$(SAVER_SRCS))) $(patsubst %.m,$(BUILDDIR)/saver/%.o,$(filter %.m,$(SAVER_SRCS)))
 SAVER_PLIST := $(BUILDDIR)/underthec.saver/Contents/Info.plist
+SAVER_THUMBS := $(BUILDDIR)/underthec.saver/Contents/Resources/thumbnail.png $(BUILDDIR)/underthec.saver/Contents/Resources/thumbnail@2x.png
 # own object dir, needs -fPIC, no lto
 PLASMA_OBJDIR := $(BUILDDIR)/plasma
 PLASMA_OBJS := $(patsubst %.c,$(PLASMA_OBJDIR)/%.o,$(PLASMA_C_SRCS)) $(patsubst %.cpp,$(PLASMA_OBJDIR)/%.o,$(PLASMA_CXX_SRCS)) $(PLASMA_OBJDIR)/moc_plasma_item.o
@@ -24,7 +25,7 @@ DEPS := $(sort $(OBJS:.o=.d) $(patsubst %.c,$(BUILDDIR)/%.d,$(SCR_SRCS)) $(patsu
 
 .PHONY: all clean install
 
-all: $(TARGET) $(WEB_FILES) $(SCR_TARGET) $(XSCR_TARGET) $(VLOCK_TARGET) $(SAVER_TARGET) $(if $(SAVER_TARGET),$(SAVER_PLIST)) $(PLASMA_TARGET) $(if $(PLASMA_TARGET),$(PLASMA_FILES))
+all: $(TARGET) $(WEB_FILES) $(SCR_TARGET) $(XSCR_TARGET) $(VLOCK_TARGET) $(SAVER_TARGET) $(if $(SAVER_TARGET),$(SAVER_PLIST) $(SAVER_THUMBS)) $(PLASMA_TARGET) $(if $(PLASMA_TARGET),$(PLASMA_FILES))
 
 $(TARGET): $(OBJS) $(RC_OBJS)
 	$(CC) $(OBJS) $(RC_OBJS) $(LDFLAGS) $(TERM_LDFLAGS) -o $@
@@ -47,6 +48,10 @@ $(SAVER_TARGET): $(SAVER_OBJS)
 $(SAVER_PLIST): src/target/scr_macos/Info.plist.in src/version.h
 	@mkdir -p $(dir $@)
 	sed 's/@UNDERTHEC_VERSION@/$(SAVER_VERSION)/' $< > $@
+
+$(BUILDDIR)/underthec.saver/Contents/Resources/%: src/target/scr_macos/%
+	@mkdir -p $(dir $@)
+	cp $< $@
 
 $(BUILDDIR)/saver/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -118,7 +123,7 @@ $(BUILDDIR)/favicon.ico: src/target/windows/underthec.ico
 
 clean:
 	rm -rf $(BUILDDIR) $(TARGET)
-	rm -rf src/target/androidtv/build src/target/androidtv/.cxx src/target/androidtv/.gradle
+	rm -rf src/target/android/.gradle src/target/android/lib/build src/target/android/lib/.cxx src/target/android/mobile/build src/target/androidtv/build src/target/androidwear/build
 
 install: $(TARGET)
 	@if [ -n "$(WEB_FILES)" ]; then echo "install: not supported for the web build" >&2; exit 1; fi
@@ -140,6 +145,8 @@ install: $(TARGET)
 		install -d "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/MacOS"; \
 		install -m 755 $(SAVER_TARGET) "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/MacOS/underthec"; \
 		install -m 644 $(SAVER_PLIST) "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/Info.plist"; \
+		install -d "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/Resources"; \
+		install -m 644 $(SAVER_THUMBS) "$(DESTDIR)$(SAVER_DIR)/underthec.saver/Contents/Resources/"; \
 	fi
 	@if [ -n "$(PLASMA_TARGET)" ]; then \
 		install -d $(DESTDIR)$(PLASMA_QMLDIR)/org/underthec; \

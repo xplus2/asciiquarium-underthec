@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'underthec-android'
+include ':lib', ':mobile', ':tv', ':wear'
+project(':tv').projectDir = file('../androidtv')
+project(':wear').projectDir = file('../androidwear')

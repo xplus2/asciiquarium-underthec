@@ -68,7 +68,7 @@ if (ANDROID)
     add_library(underthec_android SHARED
             ${UNDERTHEC_CORE_SOURCES}
             src/config.c
-            src/target/androidtv/android_main.c
+            src/target/android/android_main.c
     )
     target_include_directories(underthec_android PRIVATE src)
     target_link_libraries(underthec_android PRIVATE log)
@@ -267,12 +267,15 @@ if (APPLE AND NOT EMSCRIPTEN)
     set(UNDERTHEC_MACOS_SAVERDIR "/Library/Screen Savers" CACHE PATH "install dir for the macOS screensaver bundle")
     if (UNDERTHEC_MACOS_SAVER)
         enable_language(OBJC)
+        set(UNDERTHEC_SAVER_THUMBS src/target/scr_macos/thumbnail.png src/target/scr_macos/thumbnail@2x.png)
+        set_source_files_properties(${UNDERTHEC_SAVER_THUMBS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
         configure_file(src/target/scr_macos/Info.plist.in ${CMAKE_BINARY_DIR}/macos_saver/Info.plist @ONLY)
         add_library(macos_saver MODULE
                 ${UNDERTHEC_CORE_SOURCES}
                 src/config.c
                 src/target/scr_macos/saver_view.m
                 src/target/scr_macos/saver_cfg.m
+                ${UNDERTHEC_SAVER_THUMBS}
         )
         target_include_directories(macos_saver PRIVATE src)
         target_link_libraries(macos_saver PRIVATE "-framework Cocoa" "-framework ScreenSaver")

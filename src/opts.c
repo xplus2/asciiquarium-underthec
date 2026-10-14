@@ -119,7 +119,9 @@ bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbu
 }
 
 bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool allow_fish, bool *fish_set, char *errbuf, size_t errbuf_len) {
-  scene_aquatic_fill(out, false);
+  struct aquatic_life tmp = *out;
+  bool fish_seen = false;
+  scene_aquatic_fill(&tmp, false);
   char *buf = opts_strdup(definition);
   size_t len = strlen(buf);
   bool ok = true;
@@ -134,22 +136,30 @@ bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, b
       if (!allow_fish) {
         opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"fish must be set via UNDERTHEC_FISH, not here"}, 1);
         ok = false;
-      } else if (!opts_parse_fish_count(token + 5, &out->fish_count, errbuf, errbuf_len)) {
+      } else if (!opts_parse_fish_count(token + 5, &tmp.fish_count, errbuf, errbuf_len)) {
         ok = false;
       } else {
-        *fish_set = true;
+        fish_seen = true;
       }
-    } else if (!scene_aquatic_set_flag(out, token)) {
+    } else if (!scene_aquatic_set_flag(&tmp, token)) {
       opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"unknown aquatic-life entry '", token, "'"}, 3);
       ok = false;
     }
     token = buf + i + 1;
   }
   free(buf);
+  if (ok) {
+    *out = tmp;
+    if (fish_seen) *fish_set = true;
+  }
   return ok;
 }
 
 bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errbuf_len) {
+  if (strcmp(val, "0") == 0 || strcmp(val, "off") == 0) {
+    *out_ver = 0;
+    return true;
+  }
   if (val[0] == '\0' || strcmp(val, "1.0") == 0) {
     *out_ver = 1;
     return true;
@@ -158,7 +168,7 @@ bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errb
     *out_ver = 2;
     return true;
   }
-  opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid value '", val, "', expected 1.0 or 1.1"}, 3);
+  opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid value '", val, "', expected 0, off, 1.0 or 1.1"}, 3);
   return false;
 }
 
@@ -340,6 +350,38 @@ bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *er
   return true;
 }
 
+static void opts_sanitize_row(char *row) {
+  char *w = row;
+  for (const char *r = row; *r;) {
+    unsigned char c = (unsigned char)*r;
+    if (c == 0x1B) {
+      r++;
+      if (*r == '[') {
+        r++;
+        while (*r && (unsigned char)*r < 0x40) r++;
+        if (*r) r++;
+      } else if (*r == ']') {
+        r++;
+        while (*r && *r != '\a' && !(*r == 0x1B && r[1] == '\\')) r++;
+        if (*r == 0x1B) r++;
+        if (*r) r++;
+      } else if (*r) {
+        r++;
+      }
+    } else if (c == '\t') {
+      *w++ = ' ';
+      r++;
+    } else if (c < 0x20 || c == 0x7F) {
+      r++;
+    } else if (c == 0xC2 && (unsigned char)r[1] >= 0x80 && (unsigned char)r[1] <= 0x9F) {
+      r += 2;
+    } else {
+      *w++ = *r++;
+    }
+  }
+  *w = '\0';
+}
+
 int opts_split_lines(char *buf, char ***out_rows) {
   size_t cap = 16;
   char **rows = xmalloc(cap * sizeof(*rows));
@@ -349,6 +391,7 @@ int opts_split_lines(char *buf, char ***out_rows) {
     if (*p == '\n' || *p == '\0') {
       char end = *p;
       *p = '\0';
+      opts_sanitize_row(start);
       if ((size_t)count == cap) {
         cap *= 2;
         rows = xrealloc(rows, cap * sizeof(*rows));

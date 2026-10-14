@@ -10,23 +10,25 @@ See [doc/wasm.md](doc/wasm.md) for a list of available GET parameters.
 Release platforms:
 * Linux
   - Terminal: amd64, arm64, armel, armhf, i386, riscv64
-  - XScreensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
-  - vlock plugin: amd64, arm64, armel, armhf, i386, riscv64 (see [doc/screensaver.md](doc/screensaver.md))
-  - KDE Plasma wallpaper and lock screen: amd64, arm64 (see [doc/wallpaper.md](doc/wallpaper.md))
+  - [XScreensaver](doc/screensaver.md): amd64, arm64
+  - [vlock plugin](doc/screensaver.md): amd64, arm64, armel, armhf, i386, riscv64
+  - [KDE Plasma wallpaper](doc/screensaver.md) and lock screen: amd64, arm64
 * Windows
   - Terminal: amd64, arm64
-  - Screensaver: amd64, arm64 (see [doc/screensaver.md](doc/screensaver.md))
+  - [Screensaver](doc/screensaver.md): amd64, arm64
 * macOS
   - Terminal: arm64
-  - Screensaver: arm64 (see [doc/screensaver.md](doc/screensaver.md))
-* Android TV
+  - [Screensaver](doc/screensaver.md): arm64
+* Android TV, phones and tablets
   - App: arm64-v8a, armeabi-v7a
-  - Daydream screensaver: arm64-v8a, armeabi-v7a (see [doc/screensaver.md](doc/screensaver.md))
+  - [Daydream screensaver](doc/screensaver.md): arm64-v8a, armeabi-v7a
+* Wear OS 3+
+  - App: arm64-v8a, armeabi-v7a
 * DOS (MS-DOS, PC-DOS, DR-DOS, FreeDOS)
   - Terminal: 386+
-* WebAssembly [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC) (see [doc/wasm.md](doc/wasm.md))
-* EBU Teletext
-  - text and mosaic, t42 and TS/PES  (see [doc/teletext.md](doc/teletext.md))
+* [WebAssembly](doc/wasm.md): [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC)
+* [EBU Teletext](doc/teletext.md) 
+  - text and mosaic, t42 and TS/PES
 
 ... or build it yourself on others.
 
@@ -42,11 +44,19 @@ Some of the optional release targets have special (platform dependent) needs, mo
 * `libx11` for the X11 screensaver, plus `libxft` for nicer fonts.
 * `qt6-base-dev`+`qt6-declarative-dev` (Qt 6.4+) for the Plasma wallpaper.
 * Emscripten for the WebAssembly.
-* A JDK (17+) plus the Android SDK (34+) and NDK (r27+) for Android TV.
+* A JDK (17+) plus the Android SDK (34+) and NDK (r27+) for the Android apps.
 * `mingw-w64` to build Windows stuff on Linux.
 * Xcode command line tools for the macOS screensaver.
 
 From time to time, it is recommended to feed the fish.
+
+## Installation
+
+* Terminal binaries (Linux, Windows, macOS, DOS): Just run them.
+* Android apps (TV, phones, tablets and Wear OS): Sideloading (enable ADB, `adb connect`, `adb install <filename>.apk`)
+* WebAssembly: put `index.html`, `underthec.js` and `underthec.wasm` in the same directory of a webserver.
+* Screensavers, lock screens and wallpapers: see [doc/screensaver.md](doc/screensaver.md)
+* EBU Teletext: see [doc/teletext.md](doc/teletext.md)
 
 ## Usage
 
@@ -134,7 +144,7 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 |------------------------------------------------|----------------------|
 | `UNDERTHEC_FISH=auto\|number`                  | `fish=` from `-a`    |
 | `UNDERTHEC_AQUATIC_LIFE=<def>`                 | `-a`, except fish    |
-| `UNDERTHEC_CLASSIC=1.0\|1.1`                   | `-c`                 |
+| `UNDERTHEC_CLASSIC=1.0\|1.1\|0\|off`           | `-c`                 |
 | `UNDERTHEC_MESSAGE=<text>`                     | `-m`                 |
 | `UNDERTHEC_MESSAGE_COLOR=<color>`              | `-M`                 |
 | `UNDERTHEC_MESSAGE_POSITION=<pos>`             | `-P`                 |
@@ -172,6 +182,16 @@ In the settings dialog, the arrow keys are used to select a setting,
 Android TV:
 * `OK` feeds (not in classic mode)
 * `up` or holding `OK` opens the settings
+
+Android phones and tablets:
+* Touching the screen feeds at that position (not in classic mode)
+* Swiping up, left or right opens the settings (start away from the screen edges)
+* Battery saver: 10 fps by default, 5 fps while the system battery saver is on
+
+Wear OS:
+* Touching the screen feeds at that position (not in classic mode)
+* Long press opens a menu (pause, settings)
+* The app is not shown in ambient mode
 
 ## Credits
 

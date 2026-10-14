@@ -29,10 +29,13 @@ src/*.o
 
 
 # Android
+/src/target/android/.gradle/
+/src/target/android/local.properties
+/src/target/android/lib/build/
+/src/target/android/lib/.cxx/
+/src/target/android/mobile/build/
 /src/target/androidtv/build/
-/src/target/androidtv/.gradle/
-/src/target/androidtv/.cxx/
-/src/target/androidtv/local.properties
+/src/target/androidwear/build/
 *.jks
 keystore.b64
 

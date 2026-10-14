@@ -24,6 +24,8 @@ void term_common_shutdown(void) {
   row_bounds_cap = 0;
 }
 
+void term_invalidate(void) { prev_valid = false; }
+
 void term_set_transparent(bool on) {
   transparent = on;
   prev_valid = false; /* repaint bg */

@@ -86,7 +86,7 @@ void fishhook_tick(struct scene *sc, int term_h);
 
 /* feed.c */
 void feed_trigger(struct scene *sc, int w, int h, int col);
-void feed_tick(struct scene *sc, int w, int h);
+void feed_tick(struct scene *sc, int w, int h, bool flakes);
 void feed_shutdown(void);
 
 /* turtle.c */

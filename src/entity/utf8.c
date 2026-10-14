@@ -16,8 +16,18 @@ unsigned utf8_decode(const char *s, int seq_len) {
   else if (seq_len == 3) mask = 0x0F;
   else mask = 0x07;
   unsigned cp = c0 & mask;
-  for (int k = 1; k < seq_len; k++) cp = (cp << 6) | (unsigned)((unsigned char)s[k] & 0x3F);
+  for (int k = 1; k < seq_len; k++) {
+    if (((unsigned char)s[k] & 0xC0) != 0x80) break;
+    cp = (cp << 6) | (unsigned)((unsigned char)s[k] & 0x3F);
+  }
   return cp;
+}
+
+static int utf8_valid_len(const char *s) {
+  int n = utf8_seq_len((unsigned char)s[0]);
+  for (int k = 1; k < n; k++)
+    if (((unsigned char)s[k] & 0xC0) != 0x80) return 1;
+  return n;
 }
 
 /* most common cases: cjk, hangul, emoji blocks */
@@ -37,27 +47,46 @@ static const struct wide_range wide_ranges[] = {
   {0xFFE0, 0xFFE6}, {0x1F1E6, 0x1F1FF}, {0x1F300, 0x1FAFF},{0x20000, 0x3FFFD},
 };
 
-static bool codepoint_is_wide(unsigned cp) {
+/* combining marks, joiners, variation selectors */
+static const struct wide_range zero_ranges[] = {
+  {0x0300, 0x036F}, {0x0483, 0x0489}, {0x0591, 0x05BD}, {0x0610, 0x061A},
+  {0x064B, 0x065F}, {0x0E31, 0x0E31}, {0x0E34, 0x0E3A}, {0x0E47, 0x0E4E},
+  {0x1AB0, 0x1AFF}, {0x1DC0, 0x1DFF}, {0x200B, 0x200F}, {0x2028, 0x202E},
+  {0x2060, 0x2064}, {0x20D0, 0x20FF}, {0xFE00, 0xFE0F}, {0xFE20, 0xFE2F},
+  {0xFEFF, 0xFEFF}, {0xE0100, 0xE01EF},
+};
+
+static bool codepoint_in(const struct wide_range *tab, int n, unsigned cp) {
   int lo = 0;
-  int hi = (int)(sizeof(wide_ranges) / sizeof(wide_ranges[0])) - 1;
+  int hi = n - 1;
   while (lo <= hi) {
     int mid = (lo + hi) / 2;
-    if (cp < wide_ranges[mid].lo) hi = mid - 1;
-    else if (cp > wide_ranges[mid].hi) lo = mid + 1;
+    if (cp < tab[mid].lo) hi = mid - 1;
+    else if (cp > tab[mid].hi) lo = mid + 1;
     else return true;
   }
   return false;
 }
 
+static bool codepoint_is_wide(unsigned cp) {
+  return codepoint_in(wide_ranges, (int)(sizeof(wide_ranges) / sizeof(wide_ranges[0])), cp);
+}
+
+static bool codepoint_is_zero(unsigned cp) {
+  return codepoint_in(zero_ranges, (int)(sizeof(zero_ranges) / sizeof(zero_ranges[0])), cp);
+}
+
 int utf8_char_width(const char *s, int seq_len) {
   if (seq_len == 1) return 1;
-  return codepoint_is_wide(utf8_decode(s, seq_len)) ? 2 : 1;
+  unsigned cp = utf8_decode(s, seq_len);
+  if (codepoint_is_zero(cp)) return 0;
+  return codepoint_is_wide(cp) ? 2 : 1;
 }
 
 int utf8_col_width(const char *s) {
   int cols = 0;
   for (int i = 0; s[i] != '\0'; ) {
-    int seq_len = utf8_seq_len((unsigned char)s[i]);
+    int seq_len = utf8_valid_len(s + i);
     cols += utf8_char_width(s + i, seq_len);
     i += seq_len;
   }
@@ -68,7 +97,7 @@ int utf8_byte_offset(const char *s, int col) {
   int i = 0;
   int c = 0;
   while (s[i] != '\0') {
-    int seq_len = utf8_seq_len((unsigned char)s[i]);
+    int seq_len = utf8_valid_len(s + i);
     int width = utf8_char_width(s + i, seq_len);
     if (col < c + width) return i;
     c += width;
