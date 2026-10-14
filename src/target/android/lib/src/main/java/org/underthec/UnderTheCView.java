@@ -264,7 +264,6 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
   private boolean swipeAllowed(float dx, float dy) {
     boolean horizontal = Math.abs(dx) > Math.abs(dy);
     if (!horizontal && dy > 0) return false;
-    if (downX < edgePx || downX > getWidth() - edgePx || downY > getHeight() - edgePx) return false;
-    return true;
+    return downX >= edgePx && downX <= getWidth() - edgePx && downY <= getHeight() - edgePx;
   }
 }

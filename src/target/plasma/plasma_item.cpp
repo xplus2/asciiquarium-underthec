@@ -160,13 +160,12 @@ void UnderTheC::step() {
 }
 
 const QString &UnderTheC::glyphString(const char *glyph) {
-  char buf[4] = {0, 0, 0, 0};
-  size_t len = strnlen(glyph, 4);
-  memcpy(buf, glyph, len);
+  std::array<char, 4> buf = {0, 0, 0, 0};
+  size_t len = strnlen(glyph, buf.size());
+  memcpy(buf.data(), glyph, len);
   quint32 key;
-  memcpy(&key, buf, 4);
-  auto it = glyphs_.find(key);
-  if (it != glyphs_.end()) return it.value();
+  memcpy(&key, buf.data(), buf.size());
+  if (auto it = glyphs_.find(key); it != glyphs_.end()) return it.value();
   if (glyphs_.size() >= kGlyphCacheMax) glyphs_.clear();
   return glyphs_.insert(key, QString::fromUtf8(glyph)).value();
 }
