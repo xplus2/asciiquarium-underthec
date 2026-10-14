@@ -22,7 +22,7 @@ Release platforms:
 * Android TV, phones and tablets
   - App: arm64-v8a, armeabi-v7a
   - [Daydream screensaver](doc/screensaver.md): arm64-v8a, armeabi-v7a
-* Wear OS 3+
+* Wear OS
   - App: arm64-v8a, armeabi-v7a
 * DOS (MS-DOS, PC-DOS, DR-DOS, FreeDOS)
   - Terminal: 386+
@@ -76,7 +76,7 @@ underthec {-h|-v}
 | `-p`  | `--pace`             | `<pace>`               | speed, 0.01-10 (default: 1)           |
 | `-u`  | `--uturn-chance`     | `<N>`                  | fish turn chance (default: 1 in 400)  |
 | `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|16>`  | fg colors (default: 16)               |
-| `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 24)       |
+| `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 30)       |
 | `-s`  | `--screensaver`      |                        | (terminal) exit on any keypress       |
 | `-t`  | `--transparent`      |                        | transparent background                |
 |       | `--teletext`         | `<t42\|ts>`            | Teletext to stdout (see below)        |

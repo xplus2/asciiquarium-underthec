@@ -84,6 +84,18 @@ static void tick_swan_baby(struct entity_list *list, struct entity *e) {
   }
 }
 
+static void ease_vx(struct entity *e) {
+  if (e->vx_step <= 0.0) return;
+  double d = e->vx_goal - e->vx;
+  double ad = d < 0.0 ? -d : d;
+  if (ad <= e->vx_step) {
+    e->vx = e->vx_goal;
+    e->vx_step = 0.0;
+  } else {
+    e->vx += d > 0.0 ? e->vx_step : -e->vx_step;
+  }
+}
+
 static void advance_frame(struct entity *e) {
   if (e->frame_count <= 1 || e->frame_interval <= 0.0) return;
   e->frame_timer += 1.0;
@@ -119,7 +131,6 @@ uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h) {
                                advance_frame(e);                break;
       case ENT_WATERLINE:
       case ENT_CASTLE:
-      case ENT_FISH:
       case ENT_BUBBLE:
       case ENT_SPLAT:
       case ENT_TEETH:
@@ -144,6 +155,10 @@ uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       case ENT_SEAWEED:        tick_seaweed_growth(e);
                                advance_frame(e);                break;
       case ENT_SEAWEED_DEBRIS: tick_seaweed_debris(e, term_h);  break;
+      case ENT_FISH:           ease_vx(e);
+                               e->x += e->vx;
+                               e->y += e->vy;
+                               advance_frame(e);                break;
       case ENT_ROWERS:         tick_rowers(e);
                                advance_frame(e);                break;
     }

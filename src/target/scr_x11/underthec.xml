@@ -57,7 +57,7 @@ Classic modes ignore aquatic-life, message, castle name, U-turn chance and FPS.
   </hgroup>
   <hgroup>
     <_label>Frames per second</_label>
-    <number id="fps" type="slider" arg="--fps %" low="1" high="240" default="24"/>
+    <number id="fps" type="slider" arg="--fps %" low="1" high="240" default="30"/>
   </hgroup>
   <hgroup>
     <select id="colors">

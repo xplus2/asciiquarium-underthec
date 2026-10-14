@@ -3,6 +3,7 @@
 #include "color.h"
 #include "rng.h"
 #include "xalloc.h"
+#include <math.h>
 #include <string.h>
 
 #define FLAKE_COUNT 10
@@ -135,17 +136,13 @@ static void feed_alert_fish(struct scene *sc) {
     int width = entity_width(fish);
     double front = fish->vx > 0 ? fish->x + width : fish->x;
     bool away = (fish->vx > 0 && (double)col < front) || (fish->vx < 0 && (double)col > front);
+    double cruise = fish->vx_step > 0.0 ? fish->vx_goal : fish->vx;
+    double sped = fabs(cruise) * FEED_HEADING_SPEEDUP;
     fish->feed_target_col = col;
     fish->feed_heading = true;
-    fish->feed_resume_vx = away ? -fish->vx : fish->vx;
-    if (away) {
-      fish->turn_state = TURN_SHRINK;
-      fish->turn_step = 0;
-      fish->turn_vx = -fish->vx * FEED_HEADING_SPEEDUP;
-      fish->vx = 0.0;
-    } else {
-      fish->vx *= FEED_HEADING_SPEEDUP;
-    }
+    fish->feed_resume_vx = away ? -cruise : cruise;
+    if (away) fish_begin_turn(fish, cruise > 0.0 ? -sped : sped);
+    else fish_set_vx(sc, fish, cruise > 0.0 ? sped : -sped);
   }
   sc->feed_alerted = true;
 }
@@ -205,7 +202,7 @@ static void feed_check_touches(struct scene *sc) {
       if (flake->marked_dead || flake->type != ENT_FLAKE) continue;
       if (fish_mouth_touch(fish, flake)) {
         flake->marked_dead = true;
-        fish->vx = fish->feed_resume_vx;
+        fish_set_vx(sc, fish, fish->feed_resume_vx);
         fish->feed_heading = false;
         fish->feed_wait = false;
         break;
@@ -225,7 +222,7 @@ static void feed_release_waiting_fish(struct scene *sc) {
       if (flake->y <= fish->y) { any_above = true; break; }
     }
     if (!any_above) {
-      fish->vx = fish->feed_resume_vx;
+      fish_set_vx(sc, fish, fish->feed_resume_vx);
       fish->feed_heading = false;
       fish->feed_wait = false;
     }

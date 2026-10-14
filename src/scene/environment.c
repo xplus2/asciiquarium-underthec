@@ -508,7 +508,13 @@ void environment_tick(struct scene *sc) {
   for (int i = 0; i < sc->entities.count; i++) {
     struct entity *wl = &sc->entities.items[i];
     if (wl->marked_dead || wl->type != ENT_WATERLINE || wl->splat_z <= 0) continue;
-    while (wl->x <= -wl->splat_z) wl->x += wl->splat_z;
-    while (wl->x > 0) wl->x -= wl->splat_z;
+    while (wl->x <= -wl->splat_z) {
+      wl->x += wl->splat_z;
+      wl->prev_x += wl->splat_z;
+    }
+    while (wl->x > 0) {
+      wl->x -= wl->splat_z;
+      wl->prev_x -= wl->splat_z;
+    }
   }
 }

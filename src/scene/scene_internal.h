@@ -52,6 +52,9 @@ void spawn_bubble(struct scene *sc, double fish_x, double fish_y, int fish_z, in
 void spawn_fish(struct scene *sc, int w, int h);
 void spawn_jellyfish(struct scene *sc, int w, int h);
 void fish_turn_tick(struct entity *e, int term_w, int uturn_one_in);
+void fish_begin_turn(struct entity *e, double new_vx);
+/* ramp vx, instant in classic */
+void fish_set_vx(const struct scene *sc, struct entity *e, double goal);
 void spawn_random_object(struct scene *sc, int w, int h);
 void schedule_random_object_return(struct scene *sc);
 void finish_creature_spawn(struct entity *e, enum entity_type type, int z, double vx, double vy, enum death_action death, struct attr attr);

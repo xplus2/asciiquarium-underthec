@@ -105,6 +105,35 @@ static void finish_turn(struct entity *e) {
   e->hidden = false;
 }
 
+#define FISH_EASE_TICKS 3
+
+static int ticks_for(int cols) {
+  int n = (cols + TURN_STEP_COLS - 1) / TURN_STEP_COLS;
+  return n < FISH_EASE_TICKS ? FISH_EASE_TICKS : n;
+}
+
+static void ease_to(struct entity *e, double goal, int ticks) {
+  double d = goal - e->vx;
+  e->vx_goal = goal;
+  e->vx_step = (d < 0.0 ? -d : d) / ticks;
+}
+
+void fish_set_vx(const struct scene *sc, struct entity *e, double goal) {
+  if (sc->classic_ver != 0) {
+    e->vx = goal;
+    e->vx_step = 0.0;
+    return;
+  }
+  ease_to(e, goal, FISH_EASE_TICKS);
+}
+
+void fish_begin_turn(struct entity *e, double new_vx) {
+  e->turn_state = TURN_SHRINK;
+  e->turn_step = 0;
+  e->turn_vx = new_vx;
+  ease_to(e, 0.0, ticks_for((turn_max_band(entity_width(e)) + 1) / 2));
+}
+
 static void swap_turn_frames(struct entity *e) {
   const struct sprite_pair *old = e->frames;
   int old_w = entity_width(e);
@@ -113,10 +142,13 @@ static void swap_turn_frames(struct entity *e) {
   entity_shape_changed(e);
   if (e->frames->mask != NULL) apply_fish_colors(e, e->frames->mask);
   int new_w = entity_width(e);
-  e->x += (old_w - new_w) / 2.0;
-  e->vx = e->turn_vx;
+  double shift = (old_w - new_w) / 2.0;
+  e->x += shift;
+  e->prev_x += shift;
   e->turn_step = (turn_max_band(new_w) + 1) / 2;
   e->turn_state = TURN_GROW;
+  e->vx = 0.0;
+  ease_to(e, e->turn_vx, ticks_for(e->turn_step));
 }
 
 void fish_turn_tick(struct entity *e, int term_w, int uturn_one_in) {
@@ -127,12 +159,15 @@ void fish_turn_tick(struct entity *e, int term_w, int uturn_one_in) {
     }
     if (e->turn_state == TURN_SHRINK) {
       e->turn_step += TURN_STEP_COLS;
-      if (2 * e->turn_step >= turn_max_band(entity_width(e))) swap_turn_frames(e);
+      if (2 * e->turn_step >= turn_max_band(entity_width(e)) && e->vx_step == 0.0) swap_turn_frames(e);
     } else {
       e->turn_step -= TURN_STEP_COLS;
       if (e->turn_step <= 0) {
-        finish_turn(e);
-        return;
+        e->turn_step = 0;
+        if (e->vx_step == 0.0) {
+          finish_turn(e);
+          return;
+        }
       }
     }
     set_turn_hide(e);
@@ -142,10 +177,7 @@ void fish_turn_tick(struct entity *e, int term_w, int uturn_one_in) {
   int w = entity_width(e);
   if (e->x < 0.0 || e->x + w > term_w) return;
   if (uturn_one_in <= 0 || rng_int(uturn_one_in) != 0) return;
-  e->turn_state = TURN_SHRINK;
-  e->turn_step = 0;
-  e->turn_vx = -e->vx;
-  e->vx = 0.0;
+  fish_begin_turn(e, -e->vx);
 }
 
 void spawn_fish(struct scene *sc, int w, int h) {

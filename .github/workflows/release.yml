@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.get.outputs.version }}
     steps:
@@ -27,7 +27,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
@@ -76,7 +76,7 @@ jobs:
             compiler: riscv64-linux-musl-gcc
             zigtarget: riscv64-linux-musl
             toolchain: toolchain/riscv64-linux-musl-toolchain.cmake
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install zig cross toolchain
@@ -124,7 +124,7 @@ jobs:
 
   windows-amd64:
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y mingw-w64
@@ -144,7 +144,7 @@ jobs:
 
   windows-arm64:
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install llvm-mingw toolchain
@@ -169,7 +169,7 @@ jobs:
 
   dos:
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install djgpp cross toolchain
@@ -199,7 +199,7 @@ jobs:
 
   web:
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y emscripten
@@ -219,7 +219,7 @@ jobs:
 
   android:
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install pinned SDK packages
@@ -246,7 +246,7 @@ jobs:
 
   release:
     needs: [version, linux, linux-musl-cross, macos-arm64, windows-amd64, windows-arm64, dos, web, android]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:

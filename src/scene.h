@@ -32,7 +32,7 @@ struct aquatic_life {
 };
 
 #define CLASSIC_FPS 10
-#define DEFAULT_FPS 24
+#define DEFAULT_FPS 30
 
 #define CASTLE_NAME_LEN 11
 #define CASTLE_NAME_MAX_BYTES (CASTLE_NAME_LEN * 4)

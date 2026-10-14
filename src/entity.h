@@ -82,6 +82,8 @@ struct entity {
   bool feed_wait;
   int feed_target_col;
   double feed_resume_vx;
+  double vx_goal;
+  double vx_step; /* per tick, 0=off */
 
   int seaweed_orig_height;
   int seaweed_grown;
