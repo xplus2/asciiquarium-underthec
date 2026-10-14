@@ -9,22 +9,22 @@ See [doc/wasm.md](doc/wasm.md) for a list of available GET parameters.
 
 Release platforms:
 * Linux
-  - Terminal: amd64, arm64, armel, armhf, i386, riscv64
-  - [XScreensaver](doc/screensaver.md): amd64, arm64
-  - [vlock plugin](doc/screensaver.md): amd64, arm64, armel, armhf, i386, riscv64
-  - [KDE Plasma wallpaper](doc/screensaver.md) and lock screen: amd64, arm64
-* Windows
+  - Terminal: amd64, arm64, armel, armhf, i386, riscv64 (musl, static)
+  - [XScreensaver](doc/screensaver.md): amd64, arm64 (glibc 2.39+)
+  - [vlock plugin](doc/screensaver.md): amd64, arm64 (glibc 2.39+), armel, armhf, i386, riscv64 (musl)
+  - [KDE Plasma wallpaper](doc/screensaver.md) and lock screen: amd64, arm64 (glibc 2.39+)
+* Windows (1609+)
   - Terminal: amd64, arm64
   - [Screensaver](doc/screensaver.md): amd64, arm64
-* macOS
+* macOS (26+)
   - Terminal: arm64
   - [Screensaver](doc/screensaver.md): arm64
-* Android TV, phones and tablets
+* Android TV, phones and tablets (5+)
   - App: arm64-v8a, armeabi-v7a
   - [Daydream screensaver](doc/screensaver.md): arm64-v8a, armeabi-v7a
-* Wear OS
+* Wear OS (3+)
   - App: arm64-v8a, armeabi-v7a
-* DOS (MS-DOS, PC-DOS, DR-DOS, FreeDOS)
+* DOS (3.2+)
   - Terminal: 386+
 * [WebAssembly](doc/wasm.md): [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC)
 * [EBU Teletext](doc/teletext.md) 

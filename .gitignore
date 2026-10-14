@@ -30,6 +30,8 @@ src/*.o
 
 # Android
 /src/target/android/.gradle/
+/src/target/androidtv/.gradle/
+/src/target/androidwear/.gradle/
 /src/target/android/local.properties
 /src/target/android/lib/build/
 /src/target/android/lib/.cxx/

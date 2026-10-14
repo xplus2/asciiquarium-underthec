@@ -123,7 +123,7 @@ $(BUILDDIR)/favicon.ico: src/target/windows/underthec.ico
 
 clean:
 	rm -rf $(BUILDDIR) $(TARGET)
-	rm -rf src/target/android/.gradle src/target/android/lib/build src/target/android/lib/.cxx src/target/android/mobile/build src/target/androidtv/build src/target/androidwear/build
+	rm -rf src/target/android/.gradle src/target/androidtv/.gradle src/target/androidwear/.gradle src/target/android/lib/build src/target/android/lib/.cxx src/target/android/mobile/build src/target/androidtv/build src/target/androidwear/build
 
 install: $(TARGET)
 	@if [ -n "$(WEB_FILES)" ]; then echo "install: not supported for the web build" >&2; exit 1; fi
