@@ -1,0 +1,13 @@
+macOS screensaver
+=================
+
+By default, downloaded binaries are quarantined.
+Clear that before first use:
+
+  xattr -d -r com.apple.quarantine underthec.saver
+
+
+Double-click `underthec.saver`, or copy it to `~/Library/Screen Savers` (single-user)
+or to `/Library/Screen Savers` (global).
+
+Then select "Under The C" in System Settings -> Screen Saver and enjoy the mysteries of the C.

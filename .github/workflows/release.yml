@@ -44,10 +44,12 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir -p "$name"/vlock "$name"/xscreensaver
-          cp build/underthec LICENSE "$name"/
+          cp build/underthec LICENSE man/underthec.1 "$name"/
           cp build/underthec.so "$name"/vlock/
-          cp build-xscr/underthec_xscr src/target/scr_x11/underthec.xml "$name"/xscreensaver/
+          cp src/target/vlock/install.txt "$name"/vlock/
+          cp build-xscr/underthec_xscr src/target/scr_x11/underthec.xml src/target/scr_x11/install.txt "$name"/xscreensaver/
           cp -r build-xscr/plasma_wallpaper "$name"/
+          cp src/target/plasma/install.txt "$name"/plasma_wallpaper/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -94,8 +96,9 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-linux-${{ matrix.arch }}
           mkdir -p "$name"/vlock
-          cp build/underthec LICENSE "$name"/
+          cp build/underthec LICENSE man/underthec.1 "$name"/
           cp build/underthec.so "$name"/vlock/
+          cp src/target/vlock/install.txt "$name"/vlock/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -114,7 +117,10 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-macos-arm64
           mkdir "$name"
-          cp -R build/underthec build/underthec.saver LICENSE "$name"/
+          mkdir "$name/screensaver"
+          cp -R build/underthec LICENSE "$name"/
+          cp -R build/underthec.saver "$name/screensaver"/
+          cp src/target/scr_macos/install.txt "$name/screensaver"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs shasum -a 256 > SHA256SUMS)
           tar -czf "${name}.tar.gz" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

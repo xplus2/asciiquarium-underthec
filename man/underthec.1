@@ -1,4 +1,4 @@
-.TH UNDERTHEC 1 "2026-09-30" "underthec 0.6.1" "User Commands"
+.TH UNDERTHEC 1 "2026-10-15" "underthec 0.6.4" "User Commands"
 .SH NAME
 underthec
 .SH SYNOPSIS
@@ -14,18 +14,18 @@ underthec
 .SH DESCRIPTION
 Enjoy the mysteries of the C from the safety of a terminal!
 
-.B underthec
-Is a C-port of Asciiquarium v1.1.
+\fBunderthec\f1 started as a C-port of Asciiquarium v1.1.
 .SH OPTIONS
+
 .TP
 .BR \-a ", " \-\-aquatic\-life " \fIdefinition\fR"
-comma-separated, default: all on, fish=auto
+comma-separated, default: fish=auto, all on
 .RS
 .PP
-.BR fish=<N|auto> ", " ducks ", " dolphins ", " ship ", " swan ", " kaiju ", "
-.BR crab ", " shark ", " submarine ", " whale ", " jellyfish ", " monster ", "
-.BR bigfish ", " swordfish ", " seahorse ", " rowers ", " sailboat ", "
-.BR fishhook ", " turtle
+\fBfish=\fI<N|auto>\f1,\fBbigfish\f1,\fBcrab\f1,\fBdolphins\f1,\fBducks\f1,\fBfishhook\f1,
+\fBjellyfish\f1,\fBkaiju\f1,\fBmonster\f1,\fBrowers\f1,\fBsailboat\f1,\fBseahorse\f1,
+\fBshark\f1,\fBship\f1,\fBsubmarine\f1,\fBswan\f1,\fBswordfish\f1,\fBturtle\f1,\fBwhale\f1
+
 .RE
 .TP
 .BR \-c ", " \-\-classic " [\fI1.0\fR|\fI1.1\fR]"
@@ -119,81 +119,73 @@ show help
 show version
 .SH KEYS
 .PP
-.B q
-quit,
-.B r
-redraw,
-.B p/[space]
-pause,
-.B t
-toggle transparency,
-.B f
-feed (not in classic mode),
-.B s
-settings,
-.B h
-help
-.SH ENVIRONMENT
+\fBq\f1 quit,
+\fBr\f1 redraw,
+\fBp\f1/\fB[space]\f1 pause,
+\fBt\f1 toggle transparency,
+\fBf\f1 feed,
+\fBs\f1 settings,
+\fBh\f1 help
+
+.SH SIGNALS
+.TP
+\fBSIGUSR1\f1 feed the fish (random position)
+
+.SH ENVIRONMENT VARIABLES
 Each mirrors a command-line option.
 .PP
-.B UNDERTHEC_FISH=auto|number
-like \-a's fish=
-.PP
-.B UNDERTHEC_AQUATIC_LIFE=<def>
-like \-a, except for fish=
-.PP
-.B UNDERTHEC_CLASSIC=1.0|1.1|0|off
-like \-c, 0 or off to disable.
-.PP
-.B UNDERTHEC_MESSAGE=<text>
-like \-m
-.PP
-.B UNDERTHEC_MESSAGE_COLOR=<color>
-like \-M
-.PP
-.B UNDERTHEC_MESSAGE_POSITION=<pos>
-like \-P
-.PP
-.B UNDERTHEC_PACE=<pace>
-like \-p
-.PP
-.B UNDERTHEC_FPS=<N>
-like \-f
-.PP
-.B UNDERTHEC_SCREENSAVER=0|1
-like \-s
-.PP
-.B UNDERTHEC_UTURN_CHANCE=<N>
-like \-u
-.PP
-.B UNDERTHEC_COLORS=<1|1\-*|2|2\-*|4|7|8|8\-bold|16>
-like \-C
-.PP
-.B UNDERTHEC_TRANSPARENT=0|1
-like \-t
-.PP
-.B UNDERTHEC_TELETEXT=t42|ts
-like \-\-teletext
-.PP
-.B UNDERTHEC_TELETEXT_MODE=text|mosaic
-like \-\-teletext\-mode
-.PP
-.B UNDERTHEC_MCAST=<GROUP:PORT>
-like \-\-mcast
-.PP
-.B UNDERTHEC_MCAST_TTL=<N>
-like \-\-ttl
-.PP
-.B UNDERTHEC_MCAST_IFACE=<if>
-like \-\-iface
-.PP
-.B UNDERTHEC_TELETEXT_CAPTION=<text>
-like \-\-teletext\-caption
-.PP
-.B UNDERTHEC_CASTLE_NAME=<text>
-like \-\-castle\-name
-.PP
-.B UNDERTHEC_NO_CASTLE=0|1
-like \-\-no\-castle
+\fBUNDERTHEC_FISH=\fIauto|number\f1 like \-a's fish=
+.br
+\fBUNDERTHEC_AQUATIC_LIFE=\fI<def>\f1 like \-a, except for fish=
+.br
+\fBUNDERTHEC_CLASSIC=\fI1.0|1.1|0|off\f1 like \-c, 0 or off to disable.
+.br
+\fBUNDERTHEC_MESSAGE=\fI<text>\f1 like \-m
+.br
+\fBUNDERTHEC_MESSAGE_COLOR=\fI<color>\f1 like \-M
+.br
+\fBUNDERTHEC_MESSAGE_POSITION=\fI<pos>\f1 like \-P
+.br
+\fBUNDERTHEC_PACE=\fI<pace>\f1 like \-p
+.br
+\fBUNDERTHEC_FPS=\fI<N>\f1 like \-f
+.br
+\fBUNDERTHEC_SCREENSAVER=\fI0|1\f1 like \-s
+.br
+\fBUNDERTHEC_UTURN_CHANCE=\fI<N>\f1 like \-u
+.br
+\fBUNDERTHEC_COLORS=\fI<1|1\-*|2|2\-*|4|7|8|8\-bold|16>\f1 like \-C
+.br
+\fBUNDERTHEC_TRANSPARENT=\fI0|1\f1 like \-t
+.br
+\fBUNDERTHEC_TELETEXT=\fIt42|ts\f1 like \-\-teletext
+.br
+\fBUNDERTHEC_TELETEXT_MODE=\fItext|mosaic\f1 like \-\-teletext\-mode
+.br
+\fBUNDERTHEC_MCAST=\fI<GROUP:PORT>\f1 like \-\-mcast
+.br
+\fBUNDERTHEC_MCAST_TTL=\fI<N>\f1 like \-\-ttl
+.br
+\fBUNDERTHEC_MCAST_IFACE=\fI<if>\f1 like \-\-iface
+.br
+\fBUNDERTHEC_TELETEXT_CAPTION=\fI<text>\f1 like \-\-teletext\-caption
+.br
+\fBUNDERTHEC_CASTLE_NAME=\fI<text>\f1 like \-\-castle\-name
+.br
+\fBUNDERTHEC_NO_CASTLE=\fI0|1\f1 like \-\-no\-castle
+
+.SH SEE ALSO
+\fBvlock(1)\f1, \fBfiglet(6)\f1, \fBxscreensaver(3)\f1, \fBlolcat(6)\f1, \fBtoilet(1)\f1, \fBtune2fs(8)\f1
+
+.SH CREDITS
+The original asciiquarium program and most of its design are by
+.URL "https://robobunny.com/projects/asciiquarium/html/" "Kirk Baucom" "."
+.br
+A lot of the ASCII art is by
+.URL "https://web.archive.org/web/20091027174549/http://www.geocities.com/SoHo/7373/" "Joan Stark" "."
+.br
+The big jellyfish is from
+.URL "https://github.com/nothub/asciiquarium" "nothub/asciiquarium" "."
+
 .SH LICENSE
 GPL\-2.0\-or\-later.

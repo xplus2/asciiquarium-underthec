@@ -1,0 +1,14 @@
+vlock screensaver plugin
+========================
+
+Installation:
+The directory can differ, depending on your distribution. Usually, it's like in the following example.
+
+    cp underthec.so /usr/lib/vlock/modules/
+
+Usage:
+Run vlock with an idle timeout and the plugin name: `vlock -t 10 underthec`
+
+Configuration:
+You cannot pass command line arguments to the plugin, but environment variables work.
+Put them in your ~/.vlockrc file (or create one if it does not exist).

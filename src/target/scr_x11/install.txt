@@ -1,0 +1,18 @@
+XScreenSaver
+============
+
+Installation:
+Run the commands from the unpacked release archive (it contains the `xscreensaver` directory).
+The directories can differ, depending on your distribution. Usually, they are like in the following example.
+
+    install -m 755 xscreensaver/underthec_xscr /usr/libexec/xscreensaver/underthec
+    install -m 644 xscreensaver/underthec.xml /usr/share/xscreensaver/config/underthec.xml
+
+Then run `xscreensaver-settings` and select "Under The C" in the list.
+If it is not listed, add this line to the `programs:` section of your ~/.xscreensaver file:
+
+    underthec \n\
+
+Restart the daemon after updates:
+
+    xscreensaver-command -restart
