@@ -23,7 +23,7 @@ unsigned utf8_decode(const char *s, int seq_len) {
   return cp;
 }
 
-static int utf8_valid_len(const char *s) {
+int utf8_valid_len(const char *s) {
   int n = utf8_seq_len((unsigned char)s[0]);
   for (int k = 1; k < n; k++)
     if (((unsigned char)s[k] & 0xC0) != 0x80) return 1;

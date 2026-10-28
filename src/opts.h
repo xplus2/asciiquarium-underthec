@@ -21,8 +21,8 @@ bool opts_parse_bool(const char *val, bool *out, char *errbuf, size_t errbuf_len
 bool opts_parse_int_range(const char *val, int lo, int hi, int *out);
 /* auto = -1 */
 bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbuf_len);
-/* reset creature flags. fish= only on allow_fish */
-bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool allow_fish, bool *fish_set, char *errbuf, size_t errbuf_len);
+/* reset creature flags */
+bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool *fish_set, char *errbuf, size_t errbuf_len);
 /* "" or 1.0 = 1, 1.1 = 2 */
 bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errbuf_len);
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len);

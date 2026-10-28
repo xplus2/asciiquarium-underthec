@@ -20,6 +20,7 @@ struct config {
   int uturn_chance;
   int fps;
   int colors_mode;
+  unsigned set_mask; /* by config_set */
 };
 
 void config_init(struct config *cfg);
@@ -27,6 +28,9 @@ void config_free(struct config *cfg);
 
 /* name in errors. false: err set */
 bool config_set(struct config *cfg, const char *name, const char *value, const char *shown, char *err, size_t err_len);
+bool config_is_set(const struct config *cfg, const char *name);
+/* UNDERTHEC_* for options not set yet. classic skips disabled opts */
+bool config_apply_env(struct config *cfg, char *err, size_t err_len);
 /* cross options. classic wins: disabled options reset */
 bool config_check(struct config *cfg, char *err, size_t err_len);
 /* rng, app init */

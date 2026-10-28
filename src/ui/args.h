@@ -5,23 +5,13 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "../scene.h"
+#include "../config.h"
 #include "../target/teletext/teletext.h"
 
+/* terminal-only, rest in struct */
 struct cli_args {
-  int classic_ver; /* 0=off, 1=1.0, 2=1.1 */
   bool screensaver;
   bool transparent;
-  bool no_castle;
-  double pace;
-  int fps;
-  int uturn_chance;
-  int colors_mode;
-  struct aquatic_life aquatic;
-
-  const char *message_arg;
-  const char *message_color_arg;
-  enum message_position message_position;
 
   bool teletext_requested;
   bool mcast_requested;
@@ -31,12 +21,10 @@ struct cli_args {
   const char *iface_arg;
   int mcast_ttl;
   char teletext_caption[TT_HDR_LEN + 1];
-
-  char castle_name[CASTLE_NAME_MAX_BYTES + 1];
 };
 
-/* false: *exit_code 0 = h/v, 2 = usage error, caller ret as-is */
-bool args_parse(int argc, char **argv, struct cli_args *out, int *exit_code);
+/* cfg inited here, caller frees. false: *exit_code 0 = h/v, 2 = usage error, caller ret as-is */
+bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg, int *exit_code);
 
 void write_parts(FILE *stream, const char *const *parts, size_t count);
 

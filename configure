@@ -126,7 +126,7 @@ elif [ "$android" = "1" ]; then
 	srcs="$srcs src/config.c src/target/android/android_main.c"
 else
 	core_srcs="$srcs"
-	srcs="$srcs src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
+	srcs="$srcs src/config.c src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
 	windows=0
 	dos=0
 	case "$host" in

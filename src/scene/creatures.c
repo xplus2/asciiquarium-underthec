@@ -31,6 +31,12 @@ int random_swim_y(int h, int sprite_height) {
   return rng_int(min_height - max_height) + max_height;
 }
 
+bool swim_fits(int h, ascii_rows shape) {
+  int rows = 0;
+  while (shape[rows] != NULL) rows++;
+  return h - rows >= MAIN_REGION_TOP_ROW;
+}
+
 void finish_creature_spawn(struct entity *e, enum entity_type type, int z, double vx, double vy, enum death_action death, struct attr attr) {
   e->type = type;
   e->z = z;
@@ -68,6 +74,7 @@ static void apply_fish_colors(struct entity *e, ascii_rows tmpl) {
 
 static void spawn_fish_from_table(struct scene *sc, const struct sprite_pair *table, int pair_count, int w, int h) {
   int fish_num = rng_int(pair_count);
+  if (!swim_fits(h, table[fish_num].shape)) return;
   bool odd = (fish_num % 2) != 0;
   double speed = rng_double(2.0) + 0.25;
   if (odd) speed = -speed;
@@ -188,6 +195,10 @@ void spawn_fish(struct scene *sc, int w, int h) {
 
 static void spawn_big_fish_variant(struct scene *sc, int w, int h, const struct sprite_pair *frames, double speed) {
   int dir = rng_int(2);
+  if (!swim_fits(h, frames[dir].shape)) {
+    schedule_random_object_return(sc);
+    return;
+  }
   double v = mirror_speed(dir, speed);
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = &frames[dir];
@@ -330,6 +341,10 @@ static void spawn_submarine(struct scene *sc, int w, int h) {
 
 static void spawn_swordfish(struct scene *sc, int w, int h) {
   int dir = rng_int(2);
+  if (!swim_fits(h, swordfish[dir].shape)) {
+    schedule_random_object_return(sc);
+    return;
+  }
   double speed = mirror_speed(dir, 3.5);
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = &swordfish[dir];
@@ -440,10 +455,11 @@ void spawn_jellyfish(struct scene *sc, int w, int h) {
   if (!sc->aquatic.jellyfish) return;
   int dir = rng_int(2);
   double speed = mirror_speed(dir, rng_double(0.3) + 0.1);
-  struct entity *e = entity_spawn(&sc->entities);
   static const char body_letters[] = {'c', 'b', 'K'};
   char body = body_letters[rng_int((int)sizeof(body_letters))];
   const struct sprite_pair *src = rng_int(2) ? jellyfish_small_frames : jellyfish_frames;
+  if (!swim_fits(h, src[0].shape)) return;
+  struct entity *e = entity_spawn(&sc->entities);
   char ***shapes = xmalloc(2 * sizeof(*shapes));
   char ***masks = xmalloc(2 * sizeof(*masks));
   for (int i = 0; i < 2; i++) {
@@ -461,6 +477,10 @@ void spawn_jellyfish(struct scene *sc, int w, int h) {
 
 static void spawn_seahorse(struct scene *sc, int w, int h) {
   int dir = rng_int(2);
+  if (!swim_fits(h, seahorse[dir][0].shape)) {
+    schedule_random_object_return(sc);
+    return;
+  }
   double speed = mirror_speed(dir, rng_double(0.4) + 0.5);
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = seahorse[dir];
@@ -492,7 +512,7 @@ void spawn_random_object(struct scene *sc, int w, int h) {
   {spawn_message_event, sc->message_rows != NULL && sc->classic_ver == 0 && sc->message_position == MSG_POS_EVENT},
   };
   const int count = (int)(sizeof(table) / sizeof(table[0]));
-  spawn_fn enabled[count];
+  spawn_fn enabled[sizeof(table) / sizeof(table[0])];
   int enabled_count = 0;
   for (int i = 0; i < count; i++) if (table[i].enabled) enabled[enabled_count++] = table[i].fn;
   if (enabled_count == 0) return;

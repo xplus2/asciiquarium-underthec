@@ -49,7 +49,7 @@ void print_help(const char *prog) {
     "\n"
     "environment variables:\n"
     "  UNDERTHEC_FISH=auto|number          like -a's fish=\n"
-    "  UNDERTHEC_AQUATIC_LIFE=<def>        like -a, except for fish=\n"
+    "  UNDERTHEC_AQUATIC_LIFE=<def>        like -a\n"
     "  UNDERTHEC_CLASSIC=1.0|1.1|0|off     like -c, 0/off disables\n"
     "  UNDERTHEC_MESSAGE=<text>            like -m\n"
     "  UNDERTHEC_MESSAGE_COLOR=<color>     like -M\n"

@@ -125,18 +125,20 @@ void fishhook_tick(struct scene *sc, int term_h) {
         hook->physical = false;
         candidate->physical = false;
         candidate->vx = 0;
+        candidate->vx_step = 0.0;
         candidate->vy = -1;
         candidate->feed_heading = false;
         candidate->feed_wait = false;
         candidate->z = Z_HOOKED;
         break;
       }
-    } else {
+    } else if (hook->splat_x > 0.0) {
       hook->splat_x -= 1.0;
-      if (hook->splat_x <= 0.0)
-        hook->marked_dead = true;
-      else
-        update_fishhook_shape(hook, (int)hook->splat_x);
+      update_fishhook_shape(hook, (int)hook->splat_x);
+    } else {
+      /* rope gone, hook leaves */
+      hook->y -= 1.0;
+      if (hook->y + fishhook_body_height() <= 0.0) hook->marked_dead = true;
     }
   }
 }

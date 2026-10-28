@@ -16,36 +16,10 @@
 #include <time.h>
 #include <unistd.h>
 
-static const struct {
-  const char *env;
-  const char *opt;
-} CONFIG_ENV_VARS[] = {
-    {"UNDERTHEC_CLASSIC", "classic"},
-    {"UNDERTHEC_AQUATIC_LIFE", "aquatic-life"},
-    {"UNDERTHEC_MESSAGE", "message"},
-    {"UNDERTHEC_MESSAGE_COLOR", "message-color"},
-    {"UNDERTHEC_MESSAGE_POSITION", "message-position"},
-    {"UNDERTHEC_CASTLE_NAME", "castle-name"},
-    {"UNDERTHEC_NO_CASTLE", "no-castle"},
-    {"UNDERTHEC_PACE", "pace"},
-    {"UNDERTHEC_UTURN_CHANCE", "uturn-chance"},
-    {"UNDERTHEC_FPS", "fps"},
-    {"UNDERTHEC_COLORS", "colors"},
-};
-
 static bool build_config(struct config *cfg) {
   config_init(cfg);
   char err[256];
-  for (size_t i = 0; i < sizeof(CONFIG_ENV_VARS) / sizeof(CONFIG_ENV_VARS[0]); i++) {
-    const char *value = getenv(CONFIG_ENV_VARS[i].env);
-    if (value == NULL) continue;
-    if (!config_set(cfg, CONFIG_ENV_VARS[i].opt, value, CONFIG_ENV_VARS[i].env, err, sizeof err)) {
-      fprintf(stderr, "underthec vlock plugin: %s\n", err);
-      config_free(cfg);
-      return false;
-    }
-  }
-  if (!config_check(cfg, err, sizeof err)) {
+  if (!config_apply_env(cfg, err, sizeof err) || !config_check(cfg, err, sizeof err)) {
     fprintf(stderr, "underthec vlock plugin: %s\n", err);
     config_free(cfg);
     return false;

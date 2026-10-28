@@ -119,8 +119,7 @@ void entity_draw_all(const struct entity_list *list, struct canvas *c, double al
           seq_len = 1;
           width = 1;
         } else {
-          seq_len = utf8_seq_len(ch);
-          if (byte_idx + seq_len > byte_len) seq_len = byte_len - byte_idx;
+          seq_len = utf8_valid_len(srow + byte_idx);
           width = utf8_char_width(srow + byte_idx, seq_len);
         }
         bool in_band = e->hidden && col >= e->hide_x0 && col < e->hide_x1;

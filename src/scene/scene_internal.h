@@ -59,6 +59,8 @@ void spawn_random_object(struct scene *sc, int w, int h);
 void schedule_random_object_return(struct scene *sc);
 void finish_creature_spawn(struct entity *e, enum entity_type type, int z, double vx, double vy, enum death_action death, struct attr attr);
 int random_swim_y(int h, int sprite_height);
+/* space between main region top and bottom */
+bool swim_fits(int h, ascii_rows shape);
 
 /* environment.c */
 void add_environment(struct scene *sc, int w, int h);

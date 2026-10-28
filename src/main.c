@@ -1,10 +1,7 @@
 #define _DEFAULT_SOURCE
 
 #include "app.h"
-#include "canvas.h"
-#include "color.h"
-#include "opts.h"
-#include "rng.h"
+#include "config.h"
 #include "scene.h"
 #include "target/teletext/teletext.h"
 #include "target/terminal/term.h"
@@ -14,7 +11,6 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,8 +92,12 @@ int main(int argc, char **argv) {
   if (win_argv != NULL) argv = win_argv;
 #endif
   struct cli_args args;
+  struct config cfg;
   int exit_code = 0;
-  if (!args_parse(argc, argv, &args, &exit_code)) return exit_code;
+  if (!args_parse(argc, argv, &args, &cfg, &exit_code)) {
+    config_free(&cfg);
+    return exit_code;
+  }
 
   struct tt_stream *tt = NULL;
   struct tt_net *tt_net = NULL;
@@ -107,15 +107,19 @@ int main(int argc, char **argv) {
       tt_net = tt_net_open(args.mcast_arg, args.mcast_ttl, args.iface_arg, errbuf, sizeof errbuf);
       if (tt_net == NULL) {
         write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, "\n"}, 4);
+        config_free(&cfg);
         return 2;
       }
     } else if (tt_stdout_is_tty()) {
       write_parts(stderr, (const char *[]){argv[0], ": refusing to write binary teletext to a terminal\n"}, 2);
+      config_free(&cfg);
       return 2;
     }
-    tt = tt_stream_open(args.tt_mode, args.tt_glyphs, tt_net, args.fps, args.teletext_caption);
+    tt = tt_stream_open(args.tt_mode, args.tt_glyphs, tt_net, cfg.fps, args.teletext_caption);
     if (tt == NULL) {
       write_parts(stderr, (const char *[]){argv[0], ": failed to open the teletext output\n"}, 2);
+      if (tt_net != NULL) tt_net_close(tt_net);
+      config_free(&cfg);
       return 1;
     }
 #ifdef SIGPIPE
@@ -123,18 +127,14 @@ int main(int argc, char **argv) {
 #endif
   }
 
-  char *message_buf = NULL;
-  char **message_rows = NULL;
-  int message_row_count = 0;
-  if (args.message_arg != NULL) {
-    message_buf = (strcmp(args.message_arg, "-") == 0) ? read_all_stdin() : opts_strdup(args.message_arg);
-    message_row_count = opts_split_lines(message_buf, &message_rows);
+  if (cfg.message != NULL && strcmp(cfg.message, "-") == 0) {
+    free(cfg.message);
+    cfg.message = read_all_stdin();
   }
-  rng_seed((uint64_t)time(NULL) ^ ((uint64_t)clock() << 32));
+  if (tt != NULL) cfg.colors_mode = 16;
   if (tt == NULL && term_init() != 0) {
     write_parts(stderr, (const char *[]){argv[0], ": failed to initialize the terminal\n"}, 2);
-    free(message_rows);
-    free(message_buf);
+    config_free(&cfg);
     return 1;
   }
   bool transparent = args.transparent;
@@ -149,16 +149,8 @@ int main(int argc, char **argv) {
   sigaction(SIGUSR1, &feed_sa, NULL);
 #endif
   struct app app;
-  int colors_mode = tt != NULL ? 16 : args.colors_mode;
-  app_init(&app, args.classic_ver, args.aquatic, args.pace, args.fps, colors_mode, now_seconds());
-  scene_set_castle(&app.scene, !args.no_castle);
-  if (args.castle_name[0] != '\0') scene_set_castle_name(&app.scene, args.castle_name);
-  if (args.message_color_arg != NULL) scene_set_message_color(&app.scene, color_from_name(args.message_color_arg));
-  scene_set_message_position(&app.scene, args.message_position);
-  scene_set_uturn_chance(&app.scene, args.uturn_chance);
-  if (message_row_count > 0) scene_set_message(&app.scene, (const char *const *)message_rows, message_row_count);
-  free(message_rows);
-  free(message_buf);
+  config_start(&cfg, &app, now_seconds());
+  config_free(&cfg);
   exit_code = 0;
   double deadline = app.last;
   while (!g_should_quit) {

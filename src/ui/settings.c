@@ -50,7 +50,7 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #define MINUS0_X 7
 #define PLUS0_X 11
 #define MINUS1_X 20
-#define PLUS1_X 25
+#define PLUS1_X 26
 #define PLUS_COLORS_X 25
 #define PLUS1_FISH_X 25
 /* "[x] " before species label */
@@ -182,8 +182,8 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
       *ui->fps = clampi(*ui->fps + dir, 1, 240);
       break;
     case FIELD_PACE: {
-      int tenths = (int)(*ui->pace * 10.0 + (*ui->pace >= 0 ? 0.5 : -0.5)) + dir;
-      *ui->pace = clampd((double)tenths / 10.0, 0.01, 10.0);
+      int hundredths = (int)(*ui->pace * 100.0 + 0.5) + dir * 10;
+      *ui->pace = clampd((double)hundredths / 100.0, 0.01, 10.0);
       break;
     }
     case FIELD_UTURN:
@@ -293,7 +293,7 @@ static const struct adj_field CLASSIC_ROW[2] = {{FIELD_CLASSIC, "classic", 7, 3}
 
 static const struct adj_field TOP_ROWS[TOP_ROW_COUNT][2] = {
   {{FIELD_COLORS, "colors", 7, 17}, {FIELD_NONE, NULL, 0, 0}},
-  {{FIELD_FPS, "fps", 7, 3}, {FIELD_PACE, "pace", 6, 4}},
+  {{FIELD_FPS, "fps", 7, 3}, {FIELD_PACE, "pace", 6, 5}},
   {{FIELD_UTURN, "uturn", 7, 3}, {FIELD_FISH, "fish", 6, 4}},
 };
 
@@ -306,7 +306,7 @@ static void format_adj_value(const struct settings_ui *ui, enum field_kind kind,
       break;
     }
     case FIELD_FPS: opts_append_int_bounded(out, out_cap - 1, &p, *ui->fps, value_w); break;
-    case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 1); break;
+    case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 2); break;
     case FIELD_UTURN: opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->uturn_chance, value_w); break;
     case FIELD_FISH:
       if (ui->scene->aquatic.fish_count < 0) opts_append_bounded_w(out, out_cap - 1, &p, "auto", value_w);

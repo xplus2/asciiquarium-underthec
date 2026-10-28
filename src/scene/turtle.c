@@ -31,6 +31,7 @@ void spawn_turtle(struct scene *sc, int w, int h) {
   if (!sc->aquatic.turtle) return;
   if (live_turtle_count(sc) >= 3) return;
   int dir = rng_int(2);
+  if (!swim_fits(h, turtle[dir].shape)) return;
   double speed = mirror_speed(dir, rng_double(0.5) + 0.3);
   struct entity *e = entity_spawn(&sc->entities);
   e->frames = &turtle[dir];

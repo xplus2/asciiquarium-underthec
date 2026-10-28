@@ -118,7 +118,7 @@ bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbu
   return true;
 }
 
-bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool allow_fish, bool *fish_set, char *errbuf, size_t errbuf_len) {
+bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool *fish_set, char *errbuf, size_t errbuf_len) {
   struct aquatic_life tmp = *out;
   bool fish_seen = false;
   scene_aquatic_fill(&tmp, false);
@@ -133,10 +133,7 @@ bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, b
       opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"empty entry in aquatic-life definition"}, 1);
       ok = false;
     } else if (strncmp(token, "fish=", 5) == 0) {
-      if (!allow_fish) {
-        opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"fish must be set via UNDERTHEC_FISH, not here"}, 1);
-        ok = false;
-      } else if (!opts_parse_fish_count(token + 5, &tmp.fish_count, errbuf, errbuf_len)) {
+      if (!opts_parse_fish_count(token + 5, &tmp.fish_count, errbuf, errbuf_len)) {
         ok = false;
       } else {
         fish_seen = true;
@@ -289,7 +286,7 @@ bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, cha
   return true;
 }
 
-static int castle_name_utf8_decode(const char *s, size_t len, unsigned *cp_out) {
+static int utf8_decode_strict(const char *s, size_t len, unsigned *cp_out) {
   unsigned char b0 = (unsigned char)s[0];
   if (b0 < 0x80) {
     *cp_out = b0;
@@ -327,7 +324,7 @@ bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *er
   size_t len = strlen(val);
   for (size_t i = 0; i < len; ) {
     unsigned cp;
-    int n = castle_name_utf8_decode(val + i, len - i, &cp);
+    int n = utf8_decode_strict(val + i, len - i, &cp);
     if (n < 0) {
       opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' has invalid UTF-8 encoding"}, 3);
       return false;
@@ -352,6 +349,7 @@ bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *er
 
 static void opts_sanitize_row(char *row) {
   char *w = row;
+  const char *end = row + strlen(row);
   for (const char *r = row; *r;) {
     unsigned char c = (unsigned char)*r;
     if (c == 0x1B) {
@@ -373,8 +371,17 @@ static void opts_sanitize_row(char *row) {
       r++;
     } else if (c < 0x20 || c == 0x7F) {
       r++;
-    } else if (c == 0xC2 && (unsigned char)r[1] >= 0x80 && (unsigned char)r[1] <= 0x9F) {
-      r += 2;
+    } else if (c >= 0x80) {
+      unsigned cp;
+      int n = utf8_decode_strict(r, (size_t)(end - r), &cp);
+      if (n < 0) {
+        *w++ = '?';
+        r++;
+      } else if (cp <= 0x9F) {
+        r += n; /* C1 control */
+      } else {
+        for (int k = 0; k < n; k++) *w++ = *r++;
+      }
     } else {
       *w++ = *r++;
     }

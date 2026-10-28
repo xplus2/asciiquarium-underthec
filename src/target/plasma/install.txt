@@ -2,18 +2,18 @@ KDE Plasma wallpaper and lock screen
 ====================================
 
 Installation:
-Run the commands from the unpacked release archive (it contains the `plasma_wallpaper` directory).
-
+Run the commands from the same folder of this file.
+Make sure that you have the appropriate permissions (pkexec, run0, doas, sudo, ...).
 
     QML_DIR=$(qtpaths6 --query QT_INSTALL_QML)
     mkdir -p "$QML_DIR/org/underthec"
-    install -m 755 plasma_wallpaper/qml/org/underthec/libunderthec_qml.so "$QML_DIR/org/underthec/"
-    install -m 644 plasma_wallpaper/qml/org/underthec/qmldir "$QML_DIR/org/underthec/"
-    kpackagetool6 -t Plasma/Wallpaper -g -i plasma_wallpaper/package
+    install -m 755 qml/org/underthec/libunderthec_qml.so "$QML_DIR/org/underthec/"
+    install -m 644 qml/org/underthec/qmldir "$QML_DIR/org/underthec/"
+    kpackagetool6 -t Plasma/Wallpaper -g -i package
 
-Restart Plasma after updates:
+Restart Plasma for your current user after updates:
+
     systemctl --user restart plasma-plasmashell
-
 
 Uninstall:
 

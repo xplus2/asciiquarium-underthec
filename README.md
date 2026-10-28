@@ -139,11 +139,12 @@ Default (no `-a`): every flag on, `fish=auto`. Example: `-a fish=10,jellyfish,do
 ### Environment variables
 Each mirrors a command-line option.
 If both an env var and its cmdline option are given, the cmdline option wins.
+`UNDERTHEC_FISH` wins over `fish=` in `UNDERTHEC_AQUATIC_LIFE`.
 
 | Variable                                       | Mirrors              |
 |------------------------------------------------|----------------------|
 | `UNDERTHEC_FISH=auto\|number`                  | `fish=` from `-a`    |
-| `UNDERTHEC_AQUATIC_LIFE=<def>`                 | `-a`, except fish    |
+| `UNDERTHEC_AQUATIC_LIFE=<def>`                 | `-a`                 |
 | `UNDERTHEC_CLASSIC=1.0\|1.1\|0\|off`           | `-c`                 |
 | `UNDERTHEC_MESSAGE=<text>`                     | `-m`                 |
 | `UNDERTHEC_MESSAGE_COLOR=<color>`              | `-M`                 |

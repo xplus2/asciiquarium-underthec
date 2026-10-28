@@ -1,4 +1,4 @@
-.TH UNDERTHEC 1 "2026-10-15" "underthec 0.6.4" "User Commands"
+.TH UNDERTHEC 1 "2026-10-15" "underthec 0.6.5" "User Commands"
 .SH NAME
 underthec
 .SH SYNOPSIS
@@ -31,33 +31,6 @@ comma-separated, default: fish=auto, all on
 .BR \-c ", " \-\-classic " [\fI1.0\fR|\fI1.1\fR]"
 classic mode, no arg = 1.0. Not combinable with \fB\-a\fR, \fB\-f\fR, \fB\-u\fR, \fB\-m\fR, \fB\-M\fR, \fB\-P\fR, \fB\-n\fR.
 .TP
-.BR \-m ", " \-\-message " \fItext\fR"
-bg text/ascii art ('\-' for stdin)
-.TP
-.BR \-M ", " \-\-message\-color " \fIcolor\fR"
-\-m text color (default: blue)
-.RS
-.PP
-.BR red ", " green ", " blue ", " yellow ", " magenta ", " cyan ", " white ", " black
-.br
-capitalized first letter=bold
-.RE
-.TP
-.BR \-P ", " \-\-message\-position " \fIposition\fR"
-\-m placement
-.RS
-.PP
-.BR middle : " horizontally+vertically centered (default)"
-.br
-.BR center : " horizontally centered, vertical top"
-.br
-.BR marquee : " centered scrolling"
-.br
-.BR swim : " top row, scrolls right to left"
-.br
-.BR event : " like swim, but random"
-.RE
-.TP
 .BR \-p ", " \-\-pace " \fIpace\fR"
 speed multiplier, 0.01\-10 (default: 1)
 .TP
@@ -88,6 +61,44 @@ text on the castle, max 11 chars
 .B \-\-no\-castle
 disable the castle
 .TP
+.BR \-h ", " \-\-help
+show help
+.TP
+.BR \-v ", " \-\-version
+show version
+
+.SS Message
+
+.TP
+.BR \-m ", " \-\-message " \fItext\fR"
+bg text/ascii art ('\-' for stdin)
+.TP
+.BR \-M ", " \-\-message\-color " \fIcolor\fR"
+\-m text color (default: blue)
+.RS
+.PP
+.BR red ", " green ", " blue ", " yellow ", " magenta ", " cyan ", " white ", " black
+.br
+capitalized first letter=bold
+.RE
+.TP
+.BR \-P ", " \-\-message\-position " \fIposition\fR"
+\-m placement
+.RS
+.PP
+.BR middle : " horizontally+vertically centered (default)"
+.br
+.BR center : " horizontally centered, vertical top"
+.br
+.BR marquee : " centered scrolling"
+.br
+.BR swim : " top row, scrolls right to left"
+.br
+.BR event : " like swim, but random"
+.RE
+
+.SS Teletext
+.TP
 .BR \-\-teletext " \fIt42\fR|\fIts\fR"
 binary teletext stream to stdout instead of the terminal
 .RS
@@ -111,12 +122,7 @@ multicast interface: local address (IPv4) or name (IPv6)
 .TP
 .BR \-\-teletext\-caption " \fIt\fR"
 page caption (default: UNDERTHEC)
-.TP
-.BR \-h ", " \-\-help
-show help
-.TP
-.BR \-v ", " \-\-version
-show version
+
 .SH KEYS
 .PP
 \fBq\f1 quit,
@@ -136,7 +142,7 @@ Each mirrors a command-line option.
 .PP
 \fBUNDERTHEC_FISH=\fIauto|number\f1 like \-a's fish=
 .br
-\fBUNDERTHEC_AQUATIC_LIFE=\fI<def>\f1 like \-a, except for fish=
+\fBUNDERTHEC_AQUATIC_LIFE=\fI<def>\f1 like \-a, fish= loses to UNDERTHEC_FISH
 .br
 \fBUNDERTHEC_CLASSIC=\fI1.0|1.1|0|off\f1 like \-c, 0 or off to disable.
 .br

@@ -80,6 +80,7 @@ if (EMSCRIPTEN)
     list(APPEND UNDERTHEC_SOURCES src/config.c src/target/web/web_main.c)
 else ()
     list(APPEND UNDERTHEC_SOURCES
+            src/config.c
             src/main.c
             src/ui/args.c
             src/ui/cli_help.c
