@@ -15,6 +15,7 @@
 #define Z_CASTLE_DOOR 22
 #define Z_CASTLE 23
 #define Z_MESSAGE 24
+#define Z_CLOCK 25
 #define Z_SHIP 7
 #define Z_WHALE 5
 #define Z_MONSTER 5
@@ -79,6 +80,11 @@ void add_message(struct scene *sc, int w, int h);
 void reposition_message(const struct scene *sc, struct entity *e, int w, int h);
 void spawn_message_event(struct scene *sc, int w, int h);
 void environment_tick(struct scene *sc);
+
+/* clock.c */
+void add_clock(struct scene *sc, int w, int h);
+void reposition_clock(const struct scene *sc, struct entity *e, int w, int h);
+void clock_tick(struct scene *sc, int w, int h);
 
 /* kaiju.c */
 void spawn_kaiju(struct scene *sc, int w, int h);

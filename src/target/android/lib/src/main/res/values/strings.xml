@@ -19,6 +19,11 @@
     <string name="message">Message</string>
     <string name="message_color">Message color</string>
     <string name="message_position">Message position</string>
+    <string name="time_menu">Time</string>
+    <string name="time_format">Show time</string>
+    <string name="time_24">24 hours</string>
+    <string name="time_12">12 hours (am/pm)</string>
+    <string name="time_color">Time color</string>
     <string name="castle">Show castle</string>
     <string name="castle_name">Castle name</string>
     <string name="pace">Pace</string>

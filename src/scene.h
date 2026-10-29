@@ -37,6 +37,9 @@ struct aquatic_life {
 #define CASTLE_NAME_LEN 11
 #define CASTLE_NAME_MAX_BYTES (CASTLE_NAME_LEN * 4)
 
+#define CLOCK_ROWS 5
+#define CLOCK_COLS 96
+
 enum message_position {
   MSG_POS_MIDDLE,
   MSG_POS_CENTER,
@@ -55,6 +58,12 @@ struct scene {
   struct sprite_pair message_frame;
   struct attr message_attr;
   enum message_position message_position;
+  int time_mode; /* 0=off, 12, 24 */
+  struct attr time_attr;
+  char clock_buf[CLOCK_ROWS][CLOCK_COLS];
+  char *clock_rows[CLOCK_ROWS + 1];
+  struct sprite_pair clock_frame;
+  int clock_stamp;
   bool castle;
   int castle_hidden_by;
   char *castle_name;
@@ -86,6 +95,9 @@ void scene_tick(struct scene *sc, int term_w, int term_h);
 void scene_set_message(struct scene *sc, const char *const *rows, int row_count);
 void scene_set_message_color(struct scene *sc, struct attr attr);
 void scene_set_message_position(struct scene *sc, enum message_position pos);
+/* mode 0, 12 or 24. ignored in classic */
+void scene_set_time(struct scene *sc, int mode);
+void scene_set_time_color(struct scene *sc, struct attr attr);
 void scene_set_uturn_chance(struct scene *sc, int one_in);
 void scene_set_castle(struct scene *sc, bool on);
 void scene_toggle_castle(struct scene *sc, int w, int h);

@@ -122,6 +122,7 @@ uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h) {
       case ENT_KAIJU_TIMER:
       case ENT_RANDOM_OBJECT_TIMER:
       case ENT_TURTLE_TIMER:
+      case ENT_CLOCK:
       case ENT_FLAKE:
       case ENT_CASTLE_DOOR:                                     break;
       case ENT_DOLPHIN:        tick_dolphin(e);

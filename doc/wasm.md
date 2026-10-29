@@ -13,6 +13,8 @@ with the same values as on the command line:
 | `message`          | `m`   | `?m=HowMuchIsTheFish` |
 | `message-color`    | `M`   | `?M=Yellow`           |
 | `message-position` | `P`   | `?P=middle`           |
+| `time`             |       | `?time=12`            |
+| `time-color`       |       | `?time-color=red`     |
 | `pace`             | `p`   | `?p=2`                |
 | `uturn-chance`     | `u`   | `?u=50`               |
 | `colors`           | `C`   | `?colors=16`          |
@@ -21,6 +23,6 @@ with the same values as on the command line:
 | `no-castle`        |       | `?no-castle`          |
 
 An invalid value shows the error instead of the aquarium.
-With `classic`, conflicting params (`a`, `m`, `M`, `P`, `u`, `f`, `n`) are ignored.
+With `classic`, conflicting params (`a`, `m`, `M`, `P`, `u`, `f`, `n`, `time`, `time-color`) are ignored.
 
 > `&m=` is not necessarily limited to a single line (%0D%0A)

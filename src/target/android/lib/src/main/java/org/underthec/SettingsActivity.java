@@ -176,6 +176,11 @@ public final class SettingsActivity extends Activity {
     msg.add(choice("message-position", getString(R.string.message_position), Options.POSITIONS,
         Options.POSITIONS, "middle", NOT_CLASSIC));
 
+    List<Row> clock = new ArrayList<>();
+    clock.add(choice("time", getString(R.string.time_format), Options.TIME_FORMATS,
+        new String[] {getString(R.string.off), getString(R.string.time_24), getString(R.string.time_12)}, "", NOT_CLASSIC));
+    clock.add(choice("time-color", getString(R.string.time_color), Options.MESSAGE_COLORS, colorLabels, "", NOT_CLASSIC));
+
     rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16", ALWAYS));
     String[] sizes = new String[24];
     String[] sizeLabels = new String[24];
@@ -190,6 +195,9 @@ public final class SettingsActivity extends Activity {
     Row msgMenu = submenu(getString(R.string.message_menu), msg);
     msgMenu.rule = NOT_CLASSIC;
     rootRows.add(msgMenu);
+    Row clockMenu = submenu(getString(R.string.time_menu), clock);
+    clockMenu.rule = NOT_CLASSIC;
+    rootRows.add(clockMenu);
     rootRows.add(step("pace", getString(R.string.pace), 1, 1000, 5, 100, 100, ALWAYS));
     rootRows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, NOT_CLASSIC));
     rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, getResources().getInteger(R.integer.default_fps), 1, NOT_CLASSIC));

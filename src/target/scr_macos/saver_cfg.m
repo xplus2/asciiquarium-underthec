@@ -7,19 +7,21 @@
 #include "../../opts.h"
 #include "../../version.h"
 
-enum saver_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT };
+enum saver_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_COUNT };
 
 /* long CLI names */
 static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors",
+  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color",
 };
 
 /* sheet names in errors */
 static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors",
+  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color",
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
+static const char *const time_items[] = {"off", "24", "12"};
+static const char *const time_labels[] = {"Off", "24 hours", "12 hours (am/pm)"};
 static const char *const colors_items[] = {
   "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
   "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
@@ -72,6 +74,8 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   NSTextView *_message;
   NSPopUpButton *_msgColor;
   NSPopUpButton *_msgPos;
+  NSPopUpButton *_time;
+  NSPopUpButton *_timeColor;
   NSButton *_castle;
   NSTextField *_castleName;
   NSTextField *_pace;
@@ -179,6 +183,10 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   _fish = [self field];
   _msgColor = [self popupWith:color_labels count:COUNT(color_labels)];
   _msgPos = [self popupWith:position_items count:COUNT(position_items)];
+  _time = [self popupWith:time_labels count:COUNT(time_labels)];
+  _time.target = self;
+  _time.action = @selector(toggled:);
+  _timeColor = [self popupWith:color_labels count:COUNT(color_labels)];
   _castle = [NSButton checkboxWithTitle:@"enabled" target:self action:@selector(toggled:)];
   _castleName = [self field];
   _pace = [self field];
@@ -193,6 +201,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
     @[[NSTextField labelWithString:@"Message"], [self messageView]],
     @[[NSTextField labelWithString:@"Color"], _msgColor],
     @[[NSTextField labelWithString:@"Position"], _msgPos],
+    @[[NSTextField labelWithString:@"Time"], [self rowOf:@[_time, _timeColor]]],
     @[[NSTextField labelWithString:@"Castle"], [self rowOf:@[_castle, _castleName]]],
     @[[NSTextField labelWithString:@"Pace"], _pace],
     @[[NSTextField labelWithString:@"U-turn chance"], _uturn],
@@ -238,6 +247,11 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
     if (strcmp(cfg->message_color, color_items[i]) == 0) color = (NSInteger)i;
   [_msgColor selectItemAtIndex:color];
   [_msgPos selectItemAtIndex:cfg->message_position];
+  [_time selectItemAtIndex:cfg->time_mode == 24 ? 1 : cfg->time_mode == 12 ? 2 : 0];
+  NSInteger timeColor = 0;
+  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(color_items); i++)
+    if (strcmp(cfg->time_color, color_items[i]) == 0) timeColor = (NSInteger)i;
+  [_timeColor selectItemAtIndex:timeColor];
   _castle.state = cfg->no_castle ? NSControlStateValueOff : NSControlStateValueOn;
   [self setText:_castleName to:cfg->castle_name];
   _pace.stringValue = [NSString stringWithFormat:@"%g", cfg->pace];
@@ -258,6 +272,8 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   _message.textColor = freeLife ? [NSColor textColor] : [NSColor disabledControlTextColor];
   _msgColor.enabled = freeLife;
   _msgPos.enabled = freeLife;
+  _time.enabled = freeLife;
+  _timeColor.enabled = freeLife && _time.indexOfSelectedItem != 0;
   _uturn.enabled = freeLife;
   _fps.enabled = freeLife;
   _castleName.enabled = freeLife && _castle.state == NSControlStateValueOn;
@@ -289,7 +305,12 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   if (message.length > 0) vals[OPT_MESSAGE] = message;
   NSInteger color = _msgColor.indexOfSelectedItem;
   if (color > 0) vals[OPT_COLOR] = @(color_items[color]);
-  vals[OPT_POSITION] = @(position_items[_msgPos.indexOfSelectedItem]);
+  NSInteger timeSel = _time.indexOfSelectedItem;
+  NSInteger position = _msgPos.indexOfSelectedItem;
+  if (timeSel > 0) vals[OPT_TIME] = @(time_items[timeSel]);
+  NSInteger timeColor = _timeColor.indexOfSelectedItem;
+  if (timeSel > 0 && timeColor > 0) vals[OPT_TIME_COLOR] = @(color_items[timeColor]);
+  if (timeSel == 0 || position != 0) vals[OPT_POSITION] = @(position_items[position]);
   if (_castleName.stringValue.length > 0) vals[OPT_CASTLE_NAME] = _castleName.stringValue;
   vals[OPT_NO_CASTLE] = _castle.state == NSControlStateValueOn ? @"0" : @"1";
   vals[OPT_PACE] = _pace.stringValue;

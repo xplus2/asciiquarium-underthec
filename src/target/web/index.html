@@ -51,6 +51,8 @@ const OPTIONS = [
   ["message",          "m"],
   ["message-color",    "M"],
   ["message-position", "P"],
+  ["time",             null],
+  ["time-color",       null],
   ["pace",             "p"],
   ["uturn-chance",     "u"],
   ["colors",           "C"],
@@ -172,7 +174,7 @@ function applyOptions(M) {
     if (e) return e;
   }
   for (const [long, short] of OPTIONS) {
-    const shown = params.has(long) ? long : params.has(short) ? short : null;
+    const shown = params.has(long) ? long : short !== null && params.has(short) ? short : null;
     if (shown === null) continue;
     const e = M.ccall("web_opt", "string", ["string", "string", "string"], [long, params.get(shown), shown]);
     if (e) return e;

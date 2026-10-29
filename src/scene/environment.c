@@ -453,6 +453,11 @@ static struct entity *spawn_message_entity(struct scene *sc, double x, double y)
   return e;
 }
 
+static enum message_position message_position_effective(const struct scene *sc) {
+  if (sc->time_mode != 0 && sc->message_position == MSG_POS_MIDDLE) return MSG_POS_CENTER;
+  return sc->message_position;
+}
+
 void add_message(struct scene *sc, int w, int h) {
   if (sc->classic_ver != 0) return;
   int rows = message_row_count(sc);
@@ -460,7 +465,8 @@ void add_message(struct scene *sc, int w, int h) {
   int block_w = message_block_width(sc, rows);
   int y_mid = (h - rows) / 2;
 
-  switch (sc->message_position) {
+  enum message_position pos = message_position_effective(sc);
+  switch (pos) {
     case MSG_POS_EVENT:
       break;
     case MSG_POS_CENTER:
@@ -468,7 +474,7 @@ void add_message(struct scene *sc, int w, int h) {
       break;
     case MSG_POS_MARQUEE:
     case MSG_POS_SWIM: {
-      bool swim = sc->message_position == MSG_POS_SWIM;
+      bool swim = pos == MSG_POS_SWIM;
       double y = swim ? message_surface_y(rows) : y_mid;
       struct entity *e = spawn_message_entity(sc, w, y);
       if (swim) e->z = Z_MESSAGE_SURFACE;
@@ -487,8 +493,9 @@ void add_message(struct scene *sc, int w, int h) {
 void reposition_message(const struct scene *sc, struct entity *e, int w, int h) {
   int rows = message_row_count(sc);
   int block_w = message_block_width(sc, rows);
-  if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_CENTER) e->x = (w - block_w) / 2;
-  if (sc->message_position == MSG_POS_MIDDLE || sc->message_position == MSG_POS_MARQUEE) e->y = (h - rows) / 2;
+  enum message_position pos = message_position_effective(sc);
+  if (pos == MSG_POS_MIDDLE || pos == MSG_POS_CENTER) e->x = (w - block_w) / 2;
+  if (pos == MSG_POS_MIDDLE || pos == MSG_POS_MARQUEE) e->y = (h - rows) / 2;
   e->has_prev = false;
 }
 

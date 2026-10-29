@@ -61,6 +61,7 @@ set(UNDERTHEC_CORE_SOURCES
         src/scene/fishhook.c
         src/scene/feed.c
         src/scene/turtle.c
+        src/scene/clock.c
 )
 set(UNDERTHEC_SOURCES ${UNDERTHEC_CORE_SOURCES})
 

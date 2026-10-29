@@ -169,6 +169,16 @@ bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errb
   return false;
 }
 
+bool opts_parse_time(const char *val, int *out, char *errbuf, size_t errbuf_len) {
+  if (val[0] == '\0' || strcmp(val, "24") == 0) *out = 24;
+  else if (strcmp(val, "12") == 0) *out = 12;
+  else {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid time format '", val, "' (expected 24 or 12)"}, 3);
+    return false;
+  }
+  return true;
+}
+
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len) {
   if (strcmp(val, "middle") == 0) *out = MSG_POS_MIDDLE;
   else if (strcmp(val, "center") == 0) *out = MSG_POS_CENTER;

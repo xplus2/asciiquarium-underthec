@@ -118,7 +118,7 @@ if [ "$emcc" = "1" ] || [ "$android" = "1" ]; then
 	static=0
 fi
 
-srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/entity/utf8.c src/entity/list.c src/entity/shape.c src/entity/tick.c src/entity/seaweed.c src/entity/collide.c src/entity/draw.c src/ui/help.c src/ui/settings.c src/scene/scene.c src/scene/effects.c src/scene/creatures.c src/scene/environment.c src/scene/kaiju.c src/scene/fishhook.c src/scene/feed.c src/scene/turtle.c"
+srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/entity/utf8.c src/entity/list.c src/entity/shape.c src/entity/tick.c src/entity/seaweed.c src/entity/collide.c src/entity/draw.c src/ui/help.c src/ui/settings.c src/scene/scene.c src/scene/effects.c src/scene/creatures.c src/scene/environment.c src/scene/kaiju.c src/scene/fishhook.c src/scene/feed.c src/scene/turtle.c src/scene/clock.c"
 
 if [ "$emcc" = "1" ]; then
 	srcs="$srcs src/config.c src/target/web/web_main.c"

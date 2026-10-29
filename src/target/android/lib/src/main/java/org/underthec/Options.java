@@ -20,6 +20,7 @@ public final class Options {
       "", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
       "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"
   };
+  static final String[] TIME_FORMATS = {"", "24", "12"};
   static final String[] POSITIONS = {"middle", "center", "marquee", "swim", "event"};
   static final String[] COLORS = {
       "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
@@ -94,7 +95,11 @@ public final class Options {
     else add(o, "aquatic-life", p.getString("aquatic-life", DEFAULT_LIFE));
     add(o, "message", p.getString("message", ""));
     add(o, "message-color", p.getString("message-color", ""));
-    add(o, "message-position", p.getString("message-position", "middle"));
+    String time = p.getString("time", "");
+    String position = p.getString("message-position", "middle");
+    if (time.isEmpty() || !position.equals("middle")) add(o, "message-position", position);
+    add(o, "time", time);
+    add(o, "time-color", p.getString("time-color", ""));
     add(o, "castle-name", p.getString("castle-name", ""));
     add(o, "no-castle", p.getString("no-castle", "0"));
     add(o, "pace", p.getString("pace", "1.00"));

@@ -25,6 +25,8 @@ bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbu
 bool opts_parse_aquatic_life(const char *definition, struct aquatic_life *out, bool *fish_set, char *errbuf, size_t errbuf_len);
 /* "" or 1.0 = 1, 1.1 = 2 */
 bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errbuf_len);
+/* "" or 24 = 24, 12 */
+bool opts_parse_time(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len);

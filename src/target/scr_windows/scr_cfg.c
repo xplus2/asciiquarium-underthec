@@ -9,19 +9,21 @@
 
 #define REG_PATH L"Software\\underthec\\Screensaver"
 
-enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT };
+enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_COUNT };
 
 /* long CLI names */
 static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors",
+  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color",
 };
 
 /* dialog names in errors */
 static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors",
+  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color",
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
+static const char *const time_items[] = {"off", "24", "12"};
+static const char *const time_labels[] = {"Off", "24 hours", "12 hours (am/pm)"};
 static const char *const colors_items[] = {
   "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
   "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
@@ -165,6 +167,8 @@ static void update_enabled(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_MESSAGE), free_mode);
   EnableWindow(GetDlgItem(dlg, IDC_MSG_COLOR), free_mode);
   EnableWindow(GetDlgItem(dlg, IDC_MSG_POS), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_TIME), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_TIME_COLOR), free_mode && combo_sel(dlg, IDC_TIME) != 0);
   EnableWindow(GetDlgItem(dlg, IDC_FPS), free_mode);
   EnableWindow(GetDlgItem(dlg, IDC_UTURN), free_mode);
   castle_update_enabled(dlg);
@@ -208,6 +212,12 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
     if (strcmp(cfg->message_color, color_items[i]) == 0) color = (int)i;
   SendDlgItemMessageW(dlg, IDC_MSG_COLOR, CB_SETCURSEL, (WPARAM)color, 0);
   SendDlgItemMessageW(dlg, IDC_MSG_POS, CB_SETCURSEL, (WPARAM)cfg->message_position, 0);
+  int time_sel = cfg->time_mode == 24 ? 1 : cfg->time_mode == 12 ? 2 : 0;
+  SendDlgItemMessageW(dlg, IDC_TIME, CB_SETCURSEL, (WPARAM)time_sel, 0);
+  int time_color = 0;
+  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(color_items); i++)
+    if (strcmp(cfg->time_color, color_items[i]) == 0) time_color = (int)i;
+  SendDlgItemMessageW(dlg, IDC_TIME_COLOR, CB_SETCURSEL, (WPARAM)time_color, 0);
   CheckDlgButton(dlg, IDC_CASTLE_ENABLED, cfg->no_castle ? BST_UNCHECKED : BST_CHECKED);
   item_set_text(dlg, IDC_CASTLE_NAME, cfg->castle_name != NULL ? cfg->castle_name : "");
   castle_update_enabled(dlg);
@@ -255,7 +265,12 @@ static bool apply(HWND dlg) {
   }
   int color = combo_sel(dlg, IDC_MSG_COLOR);
   if (color > 0) vals[OPT_COLOR] = opts_strdup(color_items[color]);
-  vals[OPT_POSITION] = opts_strdup(position_items[combo_sel(dlg, IDC_MSG_POS)]);
+  int time_sel = combo_sel(dlg, IDC_TIME);
+  int position = combo_sel(dlg, IDC_MSG_POS);
+  if (time_sel > 0) vals[OPT_TIME] = opts_strdup(time_items[time_sel]);
+  int time_color = combo_sel(dlg, IDC_TIME_COLOR);
+  if (time_sel > 0 && time_color > 0) vals[OPT_TIME_COLOR] = opts_strdup(color_items[time_color]);
+  if (time_sel == 0 || position != 0) vals[OPT_POSITION] = opts_strdup(position_items[position]);
   vals[OPT_CASTLE_NAME] = item_text(dlg, IDC_CASTLE_NAME);
   if (vals[OPT_CASTLE_NAME][0] == '\0') {
     free(vals[OPT_CASTLE_NAME]);
@@ -315,6 +330,8 @@ static void init_dialog(HWND dlg) {
   combo_fill(dlg, IDC_CLASSIC, classic_items, COUNT(classic_items));
   combo_fill(dlg, IDC_MSG_COLOR, color_labels, COUNT(color_labels));
   combo_fill(dlg, IDC_MSG_POS, position_items, COUNT(position_items));
+  combo_fill(dlg, IDC_TIME, time_labels, COUNT(time_labels));
+  combo_fill(dlg, IDC_TIME_COLOR, color_labels, COUNT(color_labels));
   combo_fill(dlg, IDC_COLORS, colors_labels, COUNT(colors_labels));
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) item_set_text(dlg, IDC_FLAG0 + (int)i, scene_aquatic_flag_name(i));
   message_font_set(dlg, window_dpi(dlg));
@@ -362,6 +379,9 @@ static INT_PTR CALLBACK dlg_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_COMMAND:
       switch (LOWORD(wp)) {
         case IDC_CLASSIC:
+          if (HIWORD(wp) == CBN_SELCHANGE) update_enabled(dlg);
+          return TRUE;
+        case IDC_TIME:
           if (HIWORD(wp) == CBN_SELCHANGE) update_enabled(dlg);
           return TRUE;
         case IDC_FISH_AUTO:

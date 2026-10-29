@@ -16,6 +16,8 @@ Kirigami.FormLayout {
     property string cfg_Message
     property string cfg_MessageColor
     property string cfg_MessagePosition
+    property string cfg_Time
+    property string cfg_TimeColor
     property bool cfg_CastleEnabled
     property string cfg_CastleName
     property double cfg_Pace
@@ -29,6 +31,8 @@ Kirigami.FormLayout {
                                         i18n("Black (bold)"), i18n("Red (bold)"), i18n("Green (bold)"), i18n("Yellow (bold)"),
                                         i18n("Blue (bold)"), i18n("Magenta (bold)"), i18n("Cyan (bold)"), i18n("White (bold)")]
     readonly property var positionValues: ["middle", "center", "marquee", "swim", "event"]
+    readonly property var timeValues: ["", "24", "12"]
+    readonly property var timeLabels: [i18n("Off"), i18n("24 hours"), i18n("12 hours (am/pm)")]
     readonly property var colorsValues: ["1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
                                          "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
                                          "4", "7", "8", "8-bold", "16"]
@@ -125,6 +129,22 @@ Kirigami.FormLayout {
         model: root.positionValues
         currentIndex: root.positionValues.indexOf(root.cfg_MessagePosition)
         onActivated: index => root.cfg_MessagePosition = root.positionValues[index]
+    }
+
+    QQC2.ComboBox {
+        Kirigami.FormData.label: i18n("Time:")
+        enabled: root.freeLife
+        model: root.timeLabels
+        currentIndex: root.timeValues.indexOf(root.cfg_Time)
+        onActivated: index => root.cfg_Time = root.timeValues[index]
+    }
+
+    QQC2.ComboBox {
+        Kirigami.FormData.label: i18n("Time color:")
+        enabled: root.freeLife && root.cfg_Time !== ""
+        model: root.colorLabels
+        currentIndex: root.colorValues.indexOf(root.cfg_TimeColor)
+        onActivated: index => root.cfg_TimeColor = root.colorValues[index]
     }
 
     QQC2.CheckBox {

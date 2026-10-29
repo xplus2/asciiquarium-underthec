@@ -45,6 +45,32 @@ Classic modes ignore aquatic-life, message, castle name, U-turn chance and FPS.
     </select>
   </hgroup>
   <hgroup>
+    <select id="time">
+      <option id="t-off" _label="Time off"/>
+      <option id="t-24" _label="Time 24 hours" arg-set="--time 24"/>
+      <option id="t-12" _label="Time 12 hours (am/pm)" arg-set="--time 12"/>
+    </select>
+    <select id="time-color">
+      <option id="tc-default" _label="Time color (default)"/>
+      <option id="tc-black" _label="Black" arg-set="--time-color black"/>
+      <option id="tc-red" _label="Red" arg-set="--time-color red"/>
+      <option id="tc-green" _label="Green" arg-set="--time-color green"/>
+      <option id="tc-yellow" _label="Yellow" arg-set="--time-color yellow"/>
+      <option id="tc-blue" _label="Blue" arg-set="--time-color blue"/>
+      <option id="tc-magenta" _label="Magenta" arg-set="--time-color magenta"/>
+      <option id="tc-cyan" _label="Cyan" arg-set="--time-color cyan"/>
+      <option id="tc-white" _label="White" arg-set="--time-color white"/>
+      <option id="tc-Black" _label="Black (bold)" arg-set="--time-color Black"/>
+      <option id="tc-Red" _label="Red (bold)" arg-set="--time-color Red"/>
+      <option id="tc-Green" _label="Green (bold)" arg-set="--time-color Green"/>
+      <option id="tc-Yellow" _label="Yellow (bold)" arg-set="--time-color Yellow"/>
+      <option id="tc-Blue" _label="Blue (bold)" arg-set="--time-color Blue"/>
+      <option id="tc-Magenta" _label="Magenta (bold)" arg-set="--time-color Magenta"/>
+      <option id="tc-Cyan" _label="Cyan (bold)" arg-set="--time-color Cyan"/>
+      <option id="tc-White" _label="White (bold)" arg-set="--time-color White"/>
+    </select>
+  </hgroup>
+  <hgroup>
     <string id="castle-name" arg="--castle-name %" _label="Castle name"/>
   </hgroup>
   <hgroup>

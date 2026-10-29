@@ -16,6 +16,8 @@ struct config {
   char *castle_name;
   bool no_castle;
   enum message_position message_position;
+  int time_mode; /* 0=off, 12, 24 */
+  char *time_color;
   double pace;
   int uturn_chance;
   int fps;

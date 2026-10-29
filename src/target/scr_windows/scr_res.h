@@ -20,6 +20,8 @@
 #define IDC_CASTLE_NAME 1012
 #define IDC_CASTLE_ENABLED 1013
 #define IDC_COLORS 1014
+#define IDC_TIME 1015
+#define IDC_TIME_COLOR 1016
 
 /* creature features */
 #define IDC_FLAG0 1100

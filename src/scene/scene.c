@@ -109,6 +109,9 @@ void scene_init(struct scene *sc, int classic_ver, struct aquatic_life aquatic) 
   sc->message_frame.mask = NULL;
   sc->message_attr = color_from_name("blue");
   sc->message_position = MSG_POS_MIDDLE;
+  sc->time_mode = 0;
+  sc->time_attr = color_from_name("blue");
+  sc->clock_stamp = -1;
   sc->uturn_chance = classic_ver != 0 ? 0 : 400;
   sc->feed_alerted = true;
 }
@@ -140,6 +143,7 @@ void scene_reset(struct scene *sc, int term_w, int term_h) {
   sc->feed_alerted = true;
   sc->feed_active = false;
   if (sc->message_rows != NULL) add_message(sc, term_w, term_h);
+  if (sc->time_mode != 0) add_clock(sc, term_w, term_h);
   add_environment(sc, term_w, term_h);
   if (sc->castle) add_castle(sc, term_w, term_h);
   add_all_seaweed(sc, term_w, term_h);
@@ -159,7 +163,7 @@ static bool resize_right_anchored(enum entity_type t) {
 }
 
 static bool resize_has_position(enum entity_type t) {
-  return t != ENT_WATERLINE && t != ENT_MESSAGE && t != ENT_KAIJU_TIMER && t != ENT_RANDOM_OBJECT_TIMER && t != ENT_TURTLE_TIMER;
+  return t != ENT_WATERLINE && t != ENT_MESSAGE && t != ENT_CLOCK && t != ENT_KAIJU_TIMER && t != ENT_RANDOM_OBJECT_TIMER && t != ENT_TURTLE_TIMER;
 }
 
 static double resize_swim_y(struct entity *e, double y, int old_h, int h) {
@@ -210,6 +214,8 @@ void scene_resize(struct scene *sc, int old_w, int old_h, int w, int h) {
       if (dw < 0 && e->x >= w) e->marked_dead = true;
     } else if (e->type == ENT_MESSAGE) {
       reposition_message(sc, e, w, h);
+    } else if (e->type == ENT_CLOCK) {
+      reposition_clock(sc, e, w, h);
     }
   }
   resize_environment(sc, w);
@@ -245,6 +251,7 @@ static void kill_teeth(struct scene *sc) {
 void scene_tick(struct scene *sc, int term_w, int term_h) {
   uint64_t present = entity_tick_all(&sc->entities, term_w, term_h);
   if (has_type(present, ENT_WATERLINE)) environment_tick(sc);
+  if (has_type(present, ENT_CLOCK)) clock_tick(sc, term_w, term_h);
   if (has_type(present, ENT_FISH)) fish_tick_all(sc, term_w, &present);
   if (rng_int(1200) == 0) spawn_jellyfish(sc, term_w, term_h);
   if (has_type(present, ENT_KAIJU) || has_type(present, ENT_LASER)) kaiju_tick(sc, term_w);
@@ -406,6 +413,14 @@ void scene_on_species_toggled(struct scene *sc, int w, int h) {
     scan_live_and_timer(sc, jf_live, 1, false, 0, &has_live, &has_timer);
     if (!has_live) spawn_jellyfish(sc, w, h);
   }
+}
+
+void scene_set_time(struct scene *sc, int mode) {
+  sc->time_mode = sc->classic_ver != 0 ? 0 : mode;
+}
+
+void scene_set_time_color(struct scene *sc, struct attr attr) {
+  sc->time_attr = attr;
 }
 
 void scene_set_message_position(struct scene *sc, enum message_position pos) {

@@ -24,14 +24,16 @@ void config_free(struct config *cfg) {
   free(cfg->message);
   free(cfg->message_color);
   free(cfg->castle_name);
+  free(cfg->time_color);
   cfg->message = NULL;
   cfg->message_color = NULL;
   cfg->castle_name = NULL;
+  cfg->time_color = NULL;
 }
 
 enum opt_id {
   OPT_CLASSIC, OPT_AQUATIC, OPT_FISH, OPT_MESSAGE, OPT_MESSAGE_COLOR, OPT_MESSAGE_POSITION,
-  OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT
+  OPT_TIME, OPT_TIME_COLOR, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT
 };
 
 struct opt_def {
@@ -48,6 +50,8 @@ static const struct opt_def opt_defs[OPT_COUNT] = {
   [OPT_MESSAGE]          = {"message", "UNDERTHEC_MESSAGE", true},
   [OPT_MESSAGE_COLOR]    = {"message-color", "UNDERTHEC_MESSAGE_COLOR", true},
   [OPT_MESSAGE_POSITION] = {"message-position", "UNDERTHEC_MESSAGE_POSITION", true},
+  [OPT_TIME]             = {"time", "UNDERTHEC_TIME", true},
+  [OPT_TIME_COLOR]       = {"time-color", "UNDERTHEC_TIME_COLOR", true},
   [OPT_CASTLE_NAME]      = {"castle-name", "UNDERTHEC_CASTLE_NAME", true},
   [OPT_NO_CASTLE]        = {"no-castle", "UNDERTHEC_NO_CASTLE", false},
   [OPT_PACE]             = {"pace", "UNDERTHEC_PACE", false},
@@ -100,6 +104,18 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
       break;
     case OPT_MESSAGE_POSITION:
       ok = opts_parse_message_position(value, &cfg->message_position, eb, sizeof eb);
+      break;
+    case OPT_TIME:
+      ok = opts_parse_time(value, &cfg->time_mode, eb, sizeof eb);
+      break;
+    case OPT_TIME_COLOR:
+      ok = color_name_valid(value);
+      if (!ok) {
+        opts_set_errbuf(eb, sizeof eb, (const char *[]){"invalid color '", value, "'"}, 3);
+        break;
+      }
+      free(cfg->time_color);
+      cfg->time_color = opts_strdup(value);
       break;
     case OPT_CASTLE_NAME: {
       char name_buf[CASTLE_NAME_MAX_BYTES + 1];
@@ -159,6 +175,9 @@ bool config_check(struct config *cfg, char *err, size_t err_len) {
   cfg->message = NULL;
   free(cfg->castle_name);
   cfg->castle_name = NULL;
+  free(cfg->time_color);
+  cfg->time_color = NULL;
+  cfg->time_mode = 0;
   return true;
 }
 
@@ -167,6 +186,8 @@ void config_start(const struct config *cfg, struct app *app, double now) {
   app_init(app, cfg->classic_ver, cfg->aquatic, cfg->pace, cfg->fps, cfg->colors_mode, now);
   if (cfg->message_color != NULL) scene_set_message_color(&app->scene, color_from_name(cfg->message_color));
   scene_set_message_position(&app->scene, cfg->message_position);
+  if (cfg->time_color != NULL) scene_set_time_color(&app->scene, color_from_name(cfg->time_color));
+  scene_set_time(&app->scene, cfg->time_mode);
   scene_set_uturn_chance(&app->scene, cfg->uturn_chance);
   scene_set_castle(&app->scene, !cfg->no_castle);
   if (cfg->castle_name != NULL) scene_set_castle_name(&app->scene, cfg->castle_name);

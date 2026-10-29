@@ -38,6 +38,14 @@
       <label>Message position</label>
       <default>middle</default>
     </entry>
+    <entry name="Time" type="String">
+      <label>Time format</label>
+      <default></default>
+    </entry>
+    <entry name="TimeColor" type="String">
+      <label>Time color</label>
+      <default></default>
+    </entry>
     <entry name="CastleEnabled" type="Bool">
       <label>Castle</label>
       <default>true</default>

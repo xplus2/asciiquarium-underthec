@@ -108,6 +108,7 @@ static const struct cfg_opt cfg_opts[] = {
   {"-n", "--castle-name", "castle-name"},
   {"-P", "--message-position", "message-position"},
   {"-m", "--message", "message"},
+  {NULL, "--time-color", "time-color"},
   {"-M", "--message-color", "message-color"},
   {"-a", "--aquatic-life", "aquatic-life"},
 };
@@ -123,6 +124,8 @@ static const struct {
   {"message", "-m/--message"},
   {"message-color", "-M/--message-color"},
   {"message-position", "-P/--message-position"},
+  {"time", "--time"},
+  {"time-color", "--time-color"},
   {"castle-name", "-n/--castle-name"},
 };
 
@@ -194,6 +197,11 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
       i++;
       if (i < argc && (strcmp(argv[i], "1.0") == 0 || strcmp(argv[i], "1.1") == 0)) ver = argv[i++];
       if (!config_set(cfg, "classic", ver, a, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
+    } else if (strcmp(a, "--time") == 0) {
+      const char *fmt = "";
+      i++;
+      if (i < argc && (strcmp(argv[i], "24") == 0 || strcmp(argv[i], "12") == 0)) fmt = argv[i++];
+      if (!config_set(cfg, "time", fmt, a, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
     } else if (strcmp(a, "-s") == 0 || strcmp(a, "--screensaver") == 0) {
       out->screensaver = true;
       s_given = true;
@@ -267,6 +275,11 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
       *exit_code = 2;
       return false;
     }
+  }
+  if (cfg->time_mode != 0 && config_is_set(cfg, "message-position") && cfg->message_position == MSG_POS_MIDDLE) {
+    write_parts(stderr, (const char *[]){argv[0], ": --time and -P/--message-position middle are mutually exclusive\n"}, 2);
+    *exit_code = 2;
+    return false;
   }
   if (!config_check(cfg, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
 

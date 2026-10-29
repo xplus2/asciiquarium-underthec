@@ -16,7 +16,9 @@ WallpaperItem {
         }
         o["message"] = cfg.Message;
         o["message-color"] = cfg.MessageColor;
-        o["message-position"] = cfg.MessagePosition;
+        if (cfg.Time === "" || cfg.MessagePosition !== "middle") o["message-position"] = cfg.MessagePosition;
+        o["time"] = cfg.Time;
+        o["time-color"] = cfg.TimeColor;
         o["castle-name"] = cfg.CastleName;
         o["no-castle"] = cfg.CastleEnabled ? "0" : "1";
         o["pace"] = cfg.Pace.toFixed(2);

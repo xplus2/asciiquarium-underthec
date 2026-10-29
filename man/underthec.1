@@ -6,7 +6,7 @@ underthec
 [\fB\-c\fR [\fI1.0\fR|\fI1.1\fR]] [\fB\-s\fR] [\fB\-t\fR] [\fB\-p\fR \fIpace\fR]
 [\fB\-u\fR \fIN\fR] [\fB\-C\fR \fI1\fR|\fI2\fR|\fI4\fR|\fI7\fR|\fI8\fR|\fI8\-bold\fR|\fI16\fR]
 [\fB\-f\fR \fIN\fR] [\fB\-m\fR \fItext\fR|\fB\-\fR] [\fB\-M\fR \fIcolor\fR]
-[\fB\-P\fR \fIposition\fR] [\fB\-n\fR \fItext\fR] [\fB\-\-no\-castle\fR]
+[\fB\-P\fR \fIposition\fR] [\fB\-\-time\fR [\fI24\fR|\fI12\fR]] [\fB\-\-time\-color\fR \fIcolor\fR] [\fB\-n\fR \fItext\fR] [\fB\-\-no\-castle\fR]
 [\fB\-a\fR \fIdefinition\fR] [\fIteletext options\fR]
 .br
 .B underthec
@@ -29,7 +29,7 @@ comma-separated, default: fish=auto, all on
 .RE
 .TP
 .BR \-c ", " \-\-classic " [\fI1.0\fR|\fI1.1\fR]"
-classic mode, no arg = 1.0. Not combinable with \fB\-a\fR, \fB\-f\fR, \fB\-u\fR, \fB\-m\fR, \fB\-M\fR, \fB\-P\fR, \fB\-n\fR.
+classic mode, no arg = 1.0. Not combinable with \fB\-a\fR, \fB\-f\fR, \fB\-u\fR, \fB\-m\fR, \fB\-M\fR, \fB\-P\fR, \fB\-n\fR, \fB\-\-time\fR, \fB\-\-time\-color\fR.
 .TP
 .BR \-p ", " \-\-pace " \fIpace\fR"
 speed multiplier, 0.01\-10 (default: 1)
@@ -97,6 +97,18 @@ capitalized first letter=bold
 .BR event : " like swim, but random"
 .RE
 
+.SS Time
+.TP
+.BR \-\-time " [\fI24\fR|\fI12\fR]"
+clock in the middle, 12 appends am/pm. (default: 24).
+.RS
+.PP
+Moves \-m to center when \-P is not given. Conflicts with \fB\-P middle\fR.
+.RE
+.TP
+.BR \-\-time\-color " \fIcolor\fR"
+\-\-time color, like \-M (default: blue)
+
 .SS Teletext
 .TP
 .BR \-\-teletext " \fIt42\fR|\fIts\fR"
@@ -151,6 +163,10 @@ Each mirrors a command-line option.
 \fBUNDERTHEC_MESSAGE_COLOR=\fI<color>\f1 like \-M
 .br
 \fBUNDERTHEC_MESSAGE_POSITION=\fI<pos>\f1 like \-P
+.br
+\fBUNDERTHEC_TIME=\fI<24|12>\f1 like \-\-time
+.br
+\fBUNDERTHEC_TIME_COLOR=\fI<color>\f1 like \-\-time\-color
 .br
 \fBUNDERTHEC_PACE=\fI<pace>\f1 like \-p
 .br

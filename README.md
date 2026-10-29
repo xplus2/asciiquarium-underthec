@@ -61,7 +61,7 @@ From time to time, it is recommended to feed the fish.
 ## Usage
 
 ```sh
-underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|4|7|8|8-bold|16] [-f N] [-m text|-] [-M color] [-P position] [-n text] [--no-castle]
+underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|4|7|8|8-bold|16] [-f N] [-m text|-] [-M color] [-P position] [--time [24|12]] [--time-color color] [-n text] [--no-castle]
           [-a definition] [teletext options...]
 underthec {-h|-v}
 ```
@@ -73,6 +73,8 @@ underthec {-h|-v}
 | `-m`  | `--message`          | `<text>`               | background `text`. `-` for stdin      |
 | `-M`  | `--message-color`    | `<color>`              | `-m`'s text color (see below)         |
 | `-P`  | `--message-position` | `<pos>`                | `-m`'s placement (see below)          |
+|       | `--time`             | `[24\|12]`             | clock in the middle (see below)       |
+|       | `--time-color`       | `<color>`              | `--time` color (default: blue)        |
 | `-p`  | `--pace`             | `<pace>`               | speed, 0.01-10 (default: 1)           |
 | `-u`  | `--uturn-chance`     | `<N>`                  | fish turn chance (default: 1 in 400)  |
 | `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|16>`  | fg colors (default: 16)               |
@@ -97,7 +99,7 @@ underthec {-h|-v}
 Both use the original lineup (ship, whale, monster, bigfish, shark) and the original shark and castle.
 Fixed at 10 fps. 
 
-Not combinable with `-a`, `-f`, `-u`, `-m`, `-M`, `-P`, `-n`.
+Not combinable with `-a`, `-f`, `-u`, `-m`, `-M`, `-P`, `-n`, `--time`, `--time-color`.
 Environment variables and saved settings in conflict with classic mode are ignored.
 
 ### Foreground colors `-C`|`--colors`
@@ -126,6 +128,14 @@ Capitalized first letter: bold.
 | `swim`    | top row, scrolls right to left, repeats                |
 | `event`   | like `swim`, but takes turns with ducks/swan/ship/etc  |
 
+### Time `--time`
+Shows the local time as large ASCII art where `-m` would sit with `-P middle`, behind everything else.
+`--time` or `--time 24`: 24 hours, `--time 12`: 12 hours with am/pm. Hours are not padded (`3 : 30 pm`).
+The color is set with `--time-color` (like `-M`, default: blue).
+
+Enabling the clock conflicts with an explicit `-P middle`.
+Without `-P`, a `-m` message is placed like `-P center`.
+
 ### Aquatic life `-a`/`--aquatic-life` 
 Define what's going on in your asciiquarium. It takes a comma-separated definition:
 
@@ -149,6 +159,8 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 | `UNDERTHEC_MESSAGE=<text>`                     | `-m`                 |
 | `UNDERTHEC_MESSAGE_COLOR=<color>`              | `-M`                 |
 | `UNDERTHEC_MESSAGE_POSITION=<pos>`             | `-P`                 |
+| `UNDERTHEC_TIME=24\|12`                        | `--time`             |
+| `UNDERTHEC_TIME_COLOR=<color>`                 | `--time-color`       |
 | `UNDERTHEC_PACE=<pace>`                        | `-p`                 |
 | `UNDERTHEC_FPS=<N>`                            | `-f`                 |
 | `UNDERTHEC_SCREENSAVER=0\|1`                   | `-s`                 |
