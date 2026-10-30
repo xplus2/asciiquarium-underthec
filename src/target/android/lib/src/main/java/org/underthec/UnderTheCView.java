@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.PowerManager;
+import android.util.Log;
 import android.view.Choreographer;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Callback, Choreographer.FrameCallback {
   private static final int MIN_FONT_PX = 6;
   private static final long SLACK_NANOS = 2_000_000L;
+  private static final String TAG = "underthec";
 
   private final Paint metrics = new Paint(Paint.ANTI_ALIAS_FLAG);
   private final GlyphRenderer renderer = new GlyphRenderer();
@@ -43,6 +45,8 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
   private long lastNanos;
   private boolean running;
   private boolean powerSave;
+  private final boolean software;
+  private boolean fallbackSaved;
   private final int powerSaveFps;
   private final float edgePx;
   private final float swipePx;
@@ -72,6 +76,7 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
     setSoundEffectsEnabled(false);
     float density = getResources().getDisplayMetrics().density;
     powerSaveFps = getResources().getInteger(R.integer.power_save_fps);
+    software = Options.software(Options.prefs(context));
     edgePx = 32 * density;
     touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
     swipePx = Math.max(touchSlop * 3f, 48 * density);
@@ -209,16 +214,35 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
 
   private void drawFrame() {
     SurfaceHolder holder = getHolder();
-    boolean hardware = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
-    Canvas canvas = hardware ? holder.getSurface().lockHardwareCanvas() : holder.lockCanvas();
-    if (canvas == null) return;
+    boolean hardware = !software && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
+    Canvas canvas = null;
     try {
+      canvas = hardware ? holder.getSurface().lockHardwareCanvas() : holder.lockCanvas();
+      if (canvas == null) return;
       canvas.drawColor(0xff000000);
       renderer.draw(canvas, cells, cols, rows, offX, offY);
+    } catch (RuntimeException e) {
+      renderFailed(e);
     } finally {
+      if (canvas != null) post(holder, canvas, hardware);
+    }
+  }
+
+  private void post(SurfaceHolder holder, Canvas canvas, boolean hardware) {
+    try {
       if (hardware) holder.getSurface().unlockCanvasAndPost(canvas);
       else holder.unlockCanvasAndPost(canvas);
+    } catch (RuntimeException e) {
+      renderFailed(e);
     }
+  }
+
+  /* surface stays hw-bound once locked hw: software applies to next view */
+  private void renderFailed(RuntimeException e) {
+    Log.w(TAG, "render failed", e);
+    if (software || fallbackSaved || !surfaceValid || !getHolder().getSurface().isValid()) return;
+    fallbackSaved = true;
+    Options.prefs(getContext()).edit().putString(Options.KEY_RENDERING, Options.RENDERING_SOFTWARE).apply();
   }
 
   @Override

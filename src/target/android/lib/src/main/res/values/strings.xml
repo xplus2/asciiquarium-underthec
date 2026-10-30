@@ -31,6 +31,13 @@
     <string name="fps">Frames per second</string>
     <string name="font_size">Font size (px)</string>
     <string name="colors">Colors</string>
+    <string name="rendering">Rendering (applies on next start)</string>
+    <string name="rendering_hardware">Hardware</string>
+    <string name="rendering_software">Software</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="no_exit_info">No exit records (needs Android 11 or newer)</string>
+    <string name="exit_head">%1$s %2$s status=%3$s importance=%4$s</string>
+    <string name="exit_detail">%1$s, rss %2$d MB</string>
     <string name="menu_pause">Pause / resume</string>
     <string name="menu_settings">Settings</string>
 </resources>

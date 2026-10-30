@@ -33,6 +33,11 @@ public final class Options {
       "4 (RGBW)", "7 (Teletext)", "8", "8-bold", "16 (ANSI)"
   };
 
+  static final String KEY_RENDERING = "rendering";
+  static final String RENDERING_HARDWARE = "hardware";
+  static final String RENDERING_SOFTWARE = "software";
+  static final String[] RENDERINGS = {RENDERING_HARDWARE, RENDERING_SOFTWARE};
+
   static final String DEFAULT_LIFE;
 
   static {
@@ -119,6 +124,10 @@ public final class Options {
 
   public static int fontSize(SharedPreferences p) {
     return p.getInt("font-size", 0);
+  }
+
+  static boolean software(SharedPreferences p) {
+    return RENDERING_SOFTWARE.equals(p.getString(KEY_RENDERING, RENDERING_HARDWARE));
   }
 
   static String validate(Context c, SharedPreferences p) {

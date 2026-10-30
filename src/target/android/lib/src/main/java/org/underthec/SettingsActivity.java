@@ -1,10 +1,13 @@
 package org.underthec;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.ApplicationExitInfo;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -19,7 +22,9 @@ import android.widget.TextView;
 
 import org.underthec.lib.R;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,6 +34,7 @@ public final class SettingsActivity extends Activity {
   private static final int CHOICE = 2;
   private static final int TEXT = 3;
   private static final int SUBMENU = 4;
+  private static final int INFO = 5;
 
   private static final String KEY_FISH_AUTO = "fish-auto";
   private static final String KEY_FONT_SIZE = "font-size";
@@ -157,6 +163,64 @@ public final class SettingsActivity extends Activity {
     return r;
   }
 
+  private Row info(String title, String detail) {
+    Row r = new Row();
+    r.type = INFO;
+    r.title = title;
+    r.defText = detail;
+    return r;
+  }
+
+  private List<Row> exitRows() {
+    List<Row> out = new ArrayList<>();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      ActivityManager am = getSystemService(ActivityManager.class);
+      List<ApplicationExitInfo> exits = am == null ? new ArrayList<>() : am.getHistoricalProcessExitReasons(null, 0, 3);
+      SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+      for (ApplicationExitInfo x : exits) {
+        String head = getString(R.string.exit_head, fmt.format(new Date(x.getTimestamp())), exitReason(x.getReason()),
+            String.valueOf(x.getStatus()), String.valueOf(x.getImportance()));
+        String desc = x.getDescription();
+        out.add(info(head, getString(R.string.exit_detail, desc == null ? "-" : desc, x.getRss() / 1024)));
+      }
+    }
+    if (out.isEmpty()) out.add(info(getString(R.string.no_exit_info), ""));
+    return out;
+  }
+
+  private static String exitReason(int reason) {
+    switch (reason) {
+      case ApplicationExitInfo.REASON_EXIT_SELF:
+        return "EXIT_SELF";
+      case ApplicationExitInfo.REASON_SIGNALED:
+        return "SIGNALED";
+      case ApplicationExitInfo.REASON_LOW_MEMORY:
+        return "LOW_MEMORY";
+      case ApplicationExitInfo.REASON_CRASH:
+        return "CRASH";
+      case ApplicationExitInfo.REASON_CRASH_NATIVE:
+        return "CRASH_NATIVE";
+      case ApplicationExitInfo.REASON_ANR:
+        return "ANR";
+      case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE:
+        return "INITIALIZATION_FAILURE";
+      case ApplicationExitInfo.REASON_PERMISSION_CHANGE:
+        return "PERMISSION_CHANGE";
+      case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE:
+        return "EXCESSIVE_RESOURCE_USAGE";
+      case ApplicationExitInfo.REASON_USER_REQUESTED:
+        return "USER_REQUESTED";
+      case ApplicationExitInfo.REASON_USER_STOPPED:
+        return "USER_STOPPED";
+      case ApplicationExitInfo.REASON_DEPENDENCY_DIED:
+        return "DEPENDENCY_DIED";
+      case ApplicationExitInfo.REASON_OTHER:
+        return "OTHER";
+      default:
+        return "REASON_" + reason;
+    }
+  }
+
   private void buildRows() {
     List<Row> life = new ArrayList<>();
     life.add(sw(KEY_FISH_AUTO, getString(R.string.fish_auto), NOT_CLASSIC));
@@ -203,6 +267,10 @@ public final class SettingsActivity extends Activity {
     rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, getResources().getInteger(R.integer.default_fps), 1, NOT_CLASSIC));
     rootRows.add(choice(KEY_CLASSIC, getString(R.string.classic), new String[] {"", "1.0", "1.1"},
         new String[] {getString(R.string.classic_off), "1.0", "1.1"}, "", ALWAYS));
+    rootRows.add(choice(Options.KEY_RENDERING, getString(R.string.rendering), Options.RENDERINGS,
+        new String[] {getString(R.string.rendering_hardware), getString(R.string.rendering_software)},
+        Options.RENDERING_HARDWARE, ALWAYS));
+    rootRows.add(submenu(getString(R.string.diagnostics), exitRows()));
   }
 
   private Options.Life life() {
@@ -331,6 +399,8 @@ public final class SettingsActivity extends Activity {
         break;
       case SUBMENU:
         show(r);
+        break;
+      case INFO:
         break;
       case STEP:
         askNumber(r);
@@ -465,6 +535,8 @@ public final class SettingsActivity extends Activity {
           return r.labels[choiceIndex(r)];
         case SUBMENU:
           return ">";
+        case INFO:
+          return "";
         default:
           String t = prefs.getString(r.key, r.defText);
           if (t == null || t.isEmpty()) return getString(R.string.default_value);
@@ -480,7 +552,7 @@ public final class SettingsActivity extends Activity {
       line.setPadding(dp(16), dp(12), dp(16), dp(12));
       TextView name = new TextView(SettingsActivity.this);
       name.setTextSize(18);
-      name.setText(r.title);
+      name.setText(r.type == INFO && !r.defText.isEmpty() ? r.title + "\n" + r.defText : r.title);
       TextView value = new TextView(SettingsActivity.this);
       value.setTextSize(18);
       value.setGravity(Gravity.END);
