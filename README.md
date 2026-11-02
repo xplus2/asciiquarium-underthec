@@ -10,23 +10,23 @@ See [doc/wasm.md](doc/wasm.md) for a list of available GET parameters.
 Release platforms:
 * Linux
   - Terminal: amd64, arm64, armel, armhf, i386, riscv64 (musl, static)
-  - [XScreensaver](doc/screensaver.md): amd64, arm64 (glibc 2.39+)
-  - [vlock plugin](doc/screensaver.md): amd64, arm64 (glibc 2.39+), armel, armhf, i386, riscv64 (musl)
-  - [KDE Plasma wallpaper](doc/screensaver.md) and lock screen: amd64, arm64 (glibc 2.39+)
+  - [XScreensaver](doc/screensaver.md#x11-screensaver): amd64, arm64 (glibc 2.39+)
+  - [vlock plugin](doc/screensaver.md#vlock-screen-locker-plugin): amd64, arm64 (glibc 2.39+), armel, armhf, i386, riscv64 (musl)
+  - [KDE Plasma wallpaper](doc/screensaver.md#kde-plasma-wallpaper--lock-screen) and lock screen: amd64, arm64 (glibc 2.39+)
 * Windows (1609+)
   - Terminal: amd64, arm64
-  - [Screensaver](doc/screensaver.md): amd64, arm64
+  - [Screensaver](doc/screensaver.md#windows-screensaver): amd64, arm64
 * macOS (26+)
   - Terminal: arm64
-  - [Screensaver](doc/screensaver.md): arm64
+  - [Screensaver](doc/screensaver.md#macos-screensaver): arm64
 * Android TV, phones and tablets (5+)
   - App: arm64-v8a, armeabi-v7a
-  - [Daydream screensaver](doc/screensaver.md): arm64-v8a, armeabi-v7a
+  - [Daydream screensaver](doc/screensaver.md#android-daydream): arm64-v8a, armeabi-v7a
 * Wear OS (3+)
   - App: arm64-v8a, armeabi-v7a
 * DOS (3.2+)
   - Terminal: 386+
-* [WebAssembly](doc/wasm.md): [demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC)
+* [WebAssembly](doc/wasm.md): [Live Demo](https://xplus2.github.io/asciiquarium-underthec/?n=UnderTheC)
 * [EBU Teletext](doc/teletext.md) 
   - text and mosaic, t42 and TS/PES
 
@@ -34,7 +34,7 @@ Release platforms:
 
 ## Build
 See [doc/build.md](doc/build.md) for detailed instructions.
-It's a walk in the waterpark, but if you prefer pre-built releases by GitHub workflows, look [here](https://github.com/xplus2/asciiquarium-underthec/releases).
+It's a walk in the water park, but if you prefer pre-built releases by GitHub workflows, look [here](https://github.com/xplus2/asciiquarium-underthec/releases).
 
 ### Dependencies
 
@@ -178,16 +178,16 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 
 ### Key bindings
 
-| Key | Alternative | Action                         |
-|-----|-------------|--------------------------------|
-| `f` |  SIGUSR1    | Feed: drop flakes (not in classic mode) |
-| `h` |             | Help                           |
-| `p` | `[space]`   | Pause / resume                 |
-| `r` |             | Redraw                         |
-| `s` |             | Open settings                  |
-| `t` |             | Toggle background transparency |
-| `v` |             | Cycle text modes (DOS only) |
-| `q` | `^C`        | Quit                           |
+| Key | Alternative | Action                                  |
+|-----|-------------|-----------------------------------------|
+| `f` | SIGUSR1     | Feed: drop flakes (not in classic mode) |
+| `h` |             | Help                                    |
+| `p` | `space`     | Pause / resume                          |
+| `r` |             | Redraw                                  |
+| `s` |             | Open settings                           |
+| `t` |             | Toggle background transparency          |
+| `v` |             | Cycle text modes (DOS only)             |
+| `q` | `^C`        | Quit                                    |
 
 In the settings dialog, the arrow keys are used to select a setting, 
 `+`, `-` or `[space]` make changes.
