@@ -40,6 +40,10 @@ struct aquatic_life {
 #define CLOCK_ROWS 5
 #define CLOCK_COLS 96
 
+struct tm;
+/* false: no time */
+typedef bool (*scene_local_time_fn)(void *ctx, struct tm *out);
+
 enum message_position {
   MSG_POS_MIDDLE,
   MSG_POS_CENTER,
@@ -64,6 +68,8 @@ struct scene {
   char *clock_rows[CLOCK_ROWS + 1];
   struct sprite_pair clock_frame;
   int clock_stamp;
+  scene_local_time_fn local_time; /* NULL: time() + localtime() */
+  void *local_time_ctx;
   bool castle;
   int castle_hidden_by;
   char *castle_name;
@@ -98,6 +104,8 @@ void scene_set_message_position(struct scene *sc, enum message_position pos);
 /* mode 0, 12 or 24. ignored in classic */
 void scene_set_time(struct scene *sc, int mode);
 void scene_set_time_color(struct scene *sc, struct attr attr);
+/* clock source override, fn NULL: default */
+void scene_set_local_time(struct scene *sc, scene_local_time_fn fn, void *ctx);
 void scene_set_uturn_chance(struct scene *sc, int one_in);
 void scene_set_castle(struct scene *sc, bool on);
 void scene_toggle_castle(struct scene *sc, int w, int h);

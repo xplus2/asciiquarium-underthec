@@ -108,10 +108,10 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
       handle = 0;
     }
     try {
-      handle = Native.create(opts, System.nanoTime() / 1e9);
+      handle = Native.create(opts, System.nanoTime() / 1e9, System.currentTimeMillis());
     } catch (IllegalArgumentException e) {
       Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-      handle = Native.create(new byte[0][], System.nanoTime() / 1e9);
+      handle = Native.create(new byte[0][], System.nanoTime() / 1e9, System.currentTimeMillis());
     }
     layoutGrid();
   }
@@ -205,7 +205,7 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
       long period = 1_000_000_000L / Math.max(1, fps);
       if (frameTimeNanos - lastNanos + SLACK_NANOS >= period) {
         lastNanos = frameTimeNanos;
-        Native.frame(handle, frameTimeNanos / 1e9, cells);
+        Native.frame(handle, frameTimeNanos / 1e9, System.currentTimeMillis(), cells);
         drawFrame();
       }
     }

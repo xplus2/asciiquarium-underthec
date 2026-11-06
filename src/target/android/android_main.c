@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
+#ifndef __LP64__
+#include <time64.h>
+#endif
 
 #include "../../app.h"
 #include "../../config.h"
@@ -13,9 +17,22 @@ struct handle {
   struct app app;
   jint *packed;
   size_t packed_cap;
+  int64_t wall_ms;
 };
 
 static struct handle *from_ptr(jlong ptr) { return (struct handle *)(intptr_t)ptr; }
+
+/* LP32 time_t 32-bit: wall time from Java */
+static bool local_time(void *ctx, struct tm *out) {
+  const struct handle *h = ctx;
+#ifdef __LP64__
+  time_t t = (time_t)(h->wall_ms / 1000);
+  return localtime_r(&t, out) != NULL;
+#else
+  time64_t t = h->wall_ms / 1000;
+  return localtime64_r(&t, out) != NULL;
+#endif
+}
 
 static char *dup_bytes(JNIEnv *env, jbyteArray arr) {
   jsize n = (*env)->GetArrayLength(env, arr);
@@ -39,7 +56,7 @@ static void throw_illegal(JNIEnv *env, const char *msg) {
 }
 
 /* opts: name0, value0, name1, value1... as utf-8 bytes */
-JNIEXPORT jlong JNICALL Java_org_underthec_Native_create(JNIEnv *env, jclass cls, jobjectArray opts, jdouble now) {
+JNIEXPORT jlong JNICALL Java_org_underthec_Native_create(JNIEnv *env, jclass cls, jobjectArray opts, jdouble now, jlong wall_ms) {
   (void)cls;
   struct config cfg;
   char err[256];
@@ -67,7 +84,9 @@ JNIEXPORT jlong JNICALL Java_org_underthec_Native_create(JNIEnv *env, jclass cls
     return 0;
   }
   struct handle *h = xcalloc(1, sizeof *h);
+  h->wall_ms = wall_ms;
   config_start(&cfg, &h->app, now);
+  scene_set_local_time(&h->app.scene, local_time, h);
   config_free(&cfg);
   return (jlong)(intptr_t)h;
 }
@@ -108,9 +127,10 @@ JNIEXPORT void JNICALL Java_org_underthec_Native_click(JNIEnv *env, jclass cls, 
   app_click(&from_ptr(ptr)->app, col, row);
 }
 
-JNIEXPORT void JNICALL Java_org_underthec_Native_frame(JNIEnv *env, jclass cls, jlong ptr, jdouble now, jintArray out) {
+JNIEXPORT void JNICALL Java_org_underthec_Native_frame(JNIEnv *env, jclass cls, jlong ptr, jdouble now, jlong wall_ms, jintArray out) {
   (void)cls;
   struct handle *h = from_ptr(ptr);
+  h->wall_ms = wall_ms;
   app_frame(&h->app, now);
   size_t n = (size_t)h->app.canvas.width * (size_t)h->app.canvas.height;
   for (size_t i = 0; i < n; i++) {

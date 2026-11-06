@@ -112,6 +112,8 @@ void scene_init(struct scene *sc, int classic_ver, struct aquatic_life aquatic) 
   sc->time_mode = 0;
   sc->time_attr = color_from_name("blue");
   sc->clock_stamp = -1;
+  sc->local_time = NULL;
+  sc->local_time_ctx = NULL;
   sc->uturn_chance = classic_ver != 0 ? 0 : 400;
   sc->feed_alerted = true;
 }
@@ -421,6 +423,11 @@ void scene_set_time(struct scene *sc, int mode) {
 
 void scene_set_time_color(struct scene *sc, struct attr attr) {
   sc->time_attr = attr;
+}
+
+void scene_set_local_time(struct scene *sc, scene_local_time_fn fn, void *ctx) {
+  sc->local_time = fn;
+  sc->local_time_ctx = ctx;
 }
 
 void scene_set_message_position(struct scene *sc, enum message_position pos) {

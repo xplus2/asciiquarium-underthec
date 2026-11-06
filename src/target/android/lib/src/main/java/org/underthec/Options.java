@@ -132,7 +132,7 @@ public final class Options {
 
   static String validate(Context c, SharedPreferences p) {
     try {
-      Native.destroy(Native.create(build(c, p), System.nanoTime() / 1e9));
+      Native.destroy(Native.create(build(c, p), System.nanoTime() / 1e9, System.currentTimeMillis()));
       return null;
     } catch (IllegalArgumentException e) {
       return e.getMessage();

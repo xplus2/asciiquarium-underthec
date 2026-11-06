@@ -12,6 +12,11 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
+# 32-bit glibc: 64-bit time_t. no-op on 64-bit and musl
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_compile_definitions(_FILE_OFFSET_BITS=64 _TIME_BITS=64)
+endif ()
+
 if (NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(CheckIPOSupported)
     check_ipo_supported(RESULT UNDERTHEC_IPO_OK LANGUAGES C)

@@ -149,6 +149,11 @@ else
 		if [ -n "$host" ]; then windres="${host}-windres"; else windres=windres; fi
 	else
 		srcs="$srcs src/target/terminal/term_common.c src/target/terminal/term_posix.c"
+		is_linux=0
+		case "$host" in
+		*linux*) is_linux=1 ;;
+		"") if [ "$(uname -s 2>/dev/null)" = "Linux" ]; then is_linux=1; fi ;;
+		esac
 		is_macos=0
 		if [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then is_macos=1; fi
 		if [ "$is_macos" != "1" ]; then
@@ -232,6 +237,9 @@ fi
 cflags="-std=c11 -Wall -Wextra -Isrc"
 if [ "$dos" = "1" ]; then cflags="-std=gnu11 -Wall -Wextra -Isrc -march=i386"; fi
 if [ "$android" = "1" ]; then cflags="$cflags -fPIC"; fi
+# 32-bit glibc: 64-bit time_t. no-op on 64-bit and musl
+time_defs=
+if [ "$is_linux" = "1" ]; then time_defs="-D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64"; cflags="$cflags $time_defs"; fi
 if [ "$have_x11" = "1" ]; then
 	cflags="$cflags $x11_cflags $xft_cflags"
 	if [ "$have_xft" = "1" ]; then cflags="$cflags -DHAVE_XFT"; fi
@@ -326,7 +334,7 @@ fi
 		echo "MOC = $qt_moc"
 		echo "PLASMA_INCS = -Isrc -Isrc/target/plasma $qt_cflags"
 		qt_sys=$(echo "$qt_cflags" | sed 's/-I/-isystem /g')
-		echo "PLASMA_CXXFLAGS = -std=c++17 -Wall -Wextra -Isrc -Isrc/target/plasma $qt_sys $([ "$debug" = "1" ] && echo "-g -O0" || echo "-O2")"
+		echo "PLASMA_CXXFLAGS = -std=c++17 -Wall -Wextra $time_defs -Isrc -Isrc/target/plasma $qt_sys $([ "$debug" = "1" ] && echo "-g -O0" || echo "-O2")"
 		echo "PLASMA_LDFLAGS = $qt_libs"
 		echo "PLASMA_QMLDIR = $qml_dir"
 		echo "PLASMA_PACKAGEDIR = $plasma_pkgdir"

@@ -129,14 +129,23 @@ static int ink_width(const struct scene *sc) {
   return w;
 }
 
-static bool clock_refresh(struct scene *sc) {
+static bool local_now(const struct scene *sc, struct tm *out) {
+  if (sc->local_time != NULL) return sc->local_time(sc->local_time_ctx, out);
   time_t now = time(NULL);
-  struct tm *tm = localtime(&now);
+  const struct tm *tm = localtime(&now);
   if (tm == NULL) return false;
-  int stamp = tm->tm_hour * 60 + tm->tm_min;
+  *out = *tm;
+  return true;
+}
+
+static bool clock_refresh(struct scene *sc) {
+  struct tm tm;
+  if (!local_now(sc, &tm)) return false;
+  int stamp = tm.tm_hour * 60 + tm.tm_min;
   if (stamp == sc->clock_stamp) return false;
   int seq[SEQ_MAX];
-  render(sc->clock_buf, seq, clock_sequence(sc->time_mode, tm, seq));
+  int n = clock_sequence(sc->time_mode, &tm, seq);
+  render(sc->clock_buf, seq, n);
   for (int row = 0; row < CLOCK_ROWS; row++) sc->clock_rows[row] = sc->clock_buf[row];
   sc->clock_rows[CLOCK_ROWS] = NULL;
   sc->clock_frame.shape = (ascii_rows)sc->clock_rows;

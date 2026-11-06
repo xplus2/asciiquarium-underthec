@@ -8,7 +8,7 @@ final class Native {
   private Native() {
   }
 
-  static native long create(byte[][] opts, double now);
+  static native long create(byte[][] opts, double now, long wallMs);
 
   static native void destroy(long h);
 
@@ -18,7 +18,7 @@ final class Native {
 
   static native void click(long h, int col, int row);
 
-  static native void frame(long h, double now, int[] out);
+  static native void frame(long h, double now, long wallMs, int[] out);
 
   static native int width(long h);
 
