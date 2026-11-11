@@ -13,7 +13,7 @@ Release platforms:
   - [XScreensaver](doc/screensaver.md#x11-screensaver): amd64, arm64 (glibc 2.39+)
   - [vlock plugin](doc/screensaver.md#vlock-screen-locker-plugin): amd64, arm64 (glibc 2.39+), armel, armhf, i386, riscv64 (musl)
   - [KDE Plasma wallpaper](doc/screensaver.md#kde-plasma-wallpaper--lock-screen) and lock screen: amd64, arm64 (glibc 2.39+)
-* Windows (1609+)
+* Windows (1607+)
   - Terminal: amd64, arm64
   - [Screensaver](doc/screensaver.md#windows-screensaver): amd64, arm64
 * macOS (26+)
