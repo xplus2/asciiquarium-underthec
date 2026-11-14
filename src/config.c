@@ -33,7 +33,7 @@ void config_free(struct config *cfg) {
 
 enum opt_id {
   OPT_CLASSIC, OPT_AQUATIC, OPT_FISH, OPT_MESSAGE, OPT_MESSAGE_COLOR, OPT_MESSAGE_POSITION,
-  OPT_TIME, OPT_TIME_COLOR, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_COUNT
+  OPT_TIME, OPT_TIME_COLOR, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_AUTOFEED, OPT_FPS, OPT_COLORS, OPT_COUNT
 };
 
 struct opt_def {
@@ -56,6 +56,7 @@ static const struct opt_def opt_defs[OPT_COUNT] = {
   [OPT_NO_CASTLE]        = {"no-castle", "UNDERTHEC_NO_CASTLE", false},
   [OPT_PACE]             = {"pace", "UNDERTHEC_PACE", false},
   [OPT_UTURN]            = {"uturn-chance", "UNDERTHEC_UTURN_CHANCE", true},
+  [OPT_AUTOFEED]         = {"autofeed", "UNDERTHEC_AUTOFEED", false},
   [OPT_FPS]              = {"fps", "UNDERTHEC_FPS", true},
   [OPT_COLORS]           = {"colors", "UNDERTHEC_COLORS", false},
 };
@@ -134,6 +135,9 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
     case OPT_UTURN:
       ok = opts_parse_uturn_chance(value, &cfg->uturn_chance, eb, sizeof eb);
       break;
+    case OPT_AUTOFEED:
+      ok = opts_parse_autofeed(value, &cfg->autofeed, eb, sizeof eb);
+      break;
     case OPT_FPS:
       ok = opts_parse_fps(value, &cfg->fps, eb, sizeof eb);
       break;
@@ -189,6 +193,7 @@ void config_start(const struct config *cfg, struct app *app, double now) {
   if (cfg->time_color != NULL) scene_set_time_color(&app->scene, color_from_name(cfg->time_color));
   scene_set_time(&app->scene, cfg->time_mode);
   scene_set_uturn_chance(&app->scene, cfg->uturn_chance);
+  app->autofeed = cfg->autofeed;
   scene_set_castle(&app->scene, !cfg->no_castle);
   if (cfg->castle_name != NULL) scene_set_castle_name(&app->scene, cfg->castle_name);
   if (cfg->message != NULL) {

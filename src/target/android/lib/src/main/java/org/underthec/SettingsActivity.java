@@ -264,6 +264,7 @@ public final class SettingsActivity extends Activity {
     rootRows.add(clockMenu);
     rootRows.add(step("pace", getString(R.string.pace), 1, 1000, 5, 100, 100, ALWAYS));
     rootRows.add(step("uturn-chance", getString(R.string.uturn_chance), 0, 999, 10, 400, 1, NOT_CLASSIC));
+    rootRows.add(step("autofeed", getString(R.string.autofeed), 0, 99999, 60, 0, 1, NOT_CLASSIC));
     rootRows.add(step("fps", getString(R.string.fps), 1, 240, 1, getResources().getInteger(R.integer.default_fps), 1, NOT_CLASSIC));
     rootRows.add(choice(KEY_CLASSIC, getString(R.string.classic), new String[] {"", "1.0", "1.1"},
         new String[] {getString(R.string.classic_off), "1.0", "1.1"}, "", ALWAYS));

@@ -22,6 +22,7 @@ Kirigami.FormLayout {
     property string cfg_CastleName
     property double cfg_Pace
     property int cfg_UturnChance
+    property int cfg_Autofeed
     property int cfg_Fps
     property int cfg_FontSize
     property string cfg_Colors
@@ -180,6 +181,17 @@ Kirigami.FormLayout {
         to: 999
         value: root.cfg_UturnChance
         onValueModified: root.cfg_UturnChance = value
+    }
+
+    QQC2.SpinBox {
+        Kirigami.FormData.label: i18n("Autofeed (mean seconds, 0 = off):")
+        enabled: root.freeLife
+        from: 0
+        to: 99999
+        stepSize: 60
+        editable: true
+        value: root.cfg_Autofeed
+        onValueModified: root.cfg_Autofeed = value
     }
 
     QQC2.SpinBox {

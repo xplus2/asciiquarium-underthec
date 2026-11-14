@@ -109,6 +109,7 @@ public final class Options {
     add(o, "no-castle", p.getString("no-castle", "0"));
     add(o, "pace", p.getString("pace", "1.00"));
     add(o, "uturn-chance", p.getString("uturn-chance", "400"));
+    add(o, "autofeed", p.getString("autofeed", "0"));
     add(o, "fps", p.getString("fps", String.valueOf(c.getResources().getInteger(R.integer.default_fps))));
     add(o, "colors", p.getString("colors", "16"));
     byte[][] out = new byte[o.size()][];

@@ -25,6 +25,7 @@ struct app {
   double pace;
   int fps;
   int colors_mode;
+  int autofeed; /* mean secs, 0=off */
   double last;
 };
 

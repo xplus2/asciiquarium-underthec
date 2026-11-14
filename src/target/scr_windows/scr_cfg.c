@@ -9,16 +9,16 @@
 
 #define REG_PATH L"Software\\underthec\\Screensaver"
 
-enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_COUNT };
+enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_AUTOFEED, OPT_COUNT };
 
 /* long CLI names */
 static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color",
+  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color", "autofeed",
 };
 
 /* dialog names in errors */
 static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color",
+  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color", "Autofeed",
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
@@ -171,6 +171,7 @@ static void update_enabled(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_TIME_COLOR), free_mode && combo_sel(dlg, IDC_TIME) != 0);
   EnableWindow(GetDlgItem(dlg, IDC_FPS), free_mode);
   EnableWindow(GetDlgItem(dlg, IDC_UTURN), free_mode);
+  EnableWindow(GetDlgItem(dlg, IDC_AUTOFEED), free_mode);
   castle_update_enabled(dlg);
 }
 
@@ -230,6 +231,8 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   item_set_text(dlg, IDC_FPS, buf);
   { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->uturn_chance, 0); buf[p] = '\0'; }
   item_set_text(dlg, IDC_UTURN, buf);
+  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->autofeed, 0); buf[p] = '\0'; }
+  item_set_text(dlg, IDC_AUTOFEED, buf);
   SendDlgItemMessageW(dlg, IDC_COLORS, CB_SETCURSEL, (WPARAM)colors_index(cfg->colors_mode), 0);
   update_enabled(dlg);
 }
@@ -280,6 +283,11 @@ static bool apply(HWND dlg) {
   vals[OPT_PACE] = item_text(dlg, IDC_PACE);
   vals[OPT_UTURN] = item_text(dlg, IDC_UTURN);
   vals[OPT_FPS] = item_text(dlg, IDC_FPS);
+  vals[OPT_AUTOFEED] = item_text(dlg, IDC_AUTOFEED);
+  if (vals[OPT_AUTOFEED][0] == '\0') {
+    free(vals[OPT_AUTOFEED]);
+    vals[OPT_AUTOFEED] = NULL;
+  }
   vals[OPT_COLORS] = opts_strdup(colors_items[combo_sel(dlg, IDC_COLORS)]);
 
   char err[256];

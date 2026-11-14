@@ -1,7 +1,7 @@
 <screensaver name="underthec" _label="Under The C">
   <_description>
 Under The C - a C-port of Asciiquarium.
-Classic modes ignore aquatic-life, message, castle name, U-turn chance and FPS.
+Classic modes ignore aquatic-life, message, castle name, U-turn chance, autofeed and FPS.
   </_description>
   <hgroup>
     <select id="mode">
@@ -80,6 +80,10 @@ Classic modes ignore aquatic-life, message, castle name, U-turn chance and FPS.
   <hgroup>
     <_label>U-turn chance (1 in N, 0=never)</_label>
     <number id="uturn-chance" type="slider" arg="--uturn-chance %" low="0" high="2000" default="200"/>
+  </hgroup>
+  <hgroup>
+    <_label>Autofeed (mean seconds, 0=off)</_label>
+    <number id="autofeed" type="slider" arg="--autofeed %" low="0" high="3600" default="0"/>
   </hgroup>
   <hgroup>
     <_label>Frames per second</_label>

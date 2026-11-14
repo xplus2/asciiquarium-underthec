@@ -200,6 +200,18 @@ bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t err
   return true;
 }
 
+bool opts_parse_autofeed(const char *val, int *out, char *errbuf, size_t errbuf_len) {
+  if (val[0] == '\0') {
+    *out = AUTOFEED_DEFAULT;
+    return true;
+  }
+  if (!opts_parse_int_range(val, 0, AUTOFEED_MAX, out)) {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid autofeed '", val, "', expected 0-99999"}, 3);
+    return false;
+  }
+  return true;
+}
+
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   if (!opts_parse_int_range(val, 1, 240, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fps '", val, "', expected 1-240"}, 3);

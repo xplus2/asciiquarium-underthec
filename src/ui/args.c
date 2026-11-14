@@ -202,6 +202,11 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
       i++;
       if (i < argc && (strcmp(argv[i], "24") == 0 || strcmp(argv[i], "12") == 0)) fmt = argv[i++];
       if (!config_set(cfg, "time", fmt, a, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
+    } else if (strcmp(a, "-A") == 0 || strcmp(a, "--autofeed") == 0) {
+      const char *secs = "";
+      i++;
+      if (i < argc && argv[i][0] >= '0' && argv[i][0] <= '9') secs = argv[i++];
+      if (!config_set(cfg, "autofeed", secs, a, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
     } else if (strcmp(a, "-s") == 0 || strcmp(a, "--screensaver") == 0) {
       out->screensaver = true;
       s_given = true;

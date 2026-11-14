@@ -4,7 +4,7 @@ underthec
 .SH SYNOPSIS
 .B underthec
 [\fB\-c\fR [\fI1.0\fR|\fI1.1\fR]] [\fB\-s\fR] [\fB\-t\fR] [\fB\-p\fR \fIpace\fR]
-[\fB\-u\fR \fIN\fR] [\fB\-C\fR \fI1\fR|\fI2\fR|\fI4\fR|\fI7\fR|\fI8\fR|\fI8\-bold\fR|\fI16\fR]
+[\fB\-u\fR \fIN\fR] [\fB\-A\fR [\fIsecs\fR]] [\fB\-C\fR \fI1\fR|\fI2\fR|\fI4\fR|\fI7\fR|\fI8\fR|\fI8\-bold\fR|\fI16\fR]
 [\fB\-f\fR \fIN\fR] [\fB\-m\fR \fItext\fR|\fB\-\fR] [\fB\-M\fR \fIcolor\fR]
 [\fB\-P\fR \fIposition\fR] [\fB\-\-time\fR [\fI24\fR|\fI12\fR]] [\fB\-\-time\-color\fR \fIcolor\fR] [\fB\-n\fR \fItext\fR] [\fB\-\-no\-castle\fR]
 [\fB\-a\fR \fIdefinition\fR] [\fIteletext options\fR]
@@ -36,6 +36,10 @@ speed multiplier, 0.01\-10 (default: 1)
 .TP
 .BR \-u ", " \-\-uturn\-chance " \fIN\fR"
 fish turn per N ticks (default: 400, 0 = never)
+.TP
+.BR \-A ", " \-\-autofeed " [\fIsecs\fR]"
+feed at a random position, on average every \fIsecs\fR seconds (default: 600, 0 = off).
+No new flakes while some are above the fish. No effect in classic modes.
 .TP
 .BR \-C ", " \-\-colors " \fInum\fR|\fIname\fR"
 foreground colors (default: 16)
@@ -175,6 +179,8 @@ Each mirrors a command-line option.
 \fBUNDERTHEC_SCREENSAVER=\fI0|1\f1 like \-s
 .br
 \fBUNDERTHEC_UTURN_CHANCE=\fI<N>\f1 like \-u
+.br
+\fBUNDERTHEC_AUTOFEED=\fI<secs>\f1 like \-A
 .br
 \fBUNDERTHEC_COLORS=\fI<1|1\-*|2|2\-*|4|7|8|8\-bold|16>\f1 like \-C
 .br

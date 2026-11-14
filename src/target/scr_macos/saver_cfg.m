@@ -7,16 +7,16 @@
 #include "../../opts.h"
 #include "../../version.h"
 
-enum saver_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_COUNT };
+enum saver_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_AUTOFEED, OPT_COUNT };
 
 /* long CLI names */
 static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color",
+  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color", "autofeed",
 };
 
 /* sheet names in errors */
 static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color",
+  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color", "Autofeed",
 };
 
 static const char *const classic_items[] = {"off", "1.0", "1.1"};
@@ -80,6 +80,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   NSTextField *_castleName;
   NSTextField *_pace;
   NSTextField *_uturn;
+  NSTextField *_autofeed;
   NSTextField *_fps;
   NSPopUpButton *_colors;
 }
@@ -191,6 +192,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   _castleName = [self field];
   _pace = [self field];
   _uturn = [self field];
+  _autofeed = [self field];
   _fps = [self field];
   _colors = [self popupWith:colors_labels count:COUNT(colors_labels)];
 
@@ -205,6 +207,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
     @[[NSTextField labelWithString:@"Castle"], [self rowOf:@[_castle, _castleName]]],
     @[[NSTextField labelWithString:@"Pace"], _pace],
     @[[NSTextField labelWithString:@"U-turn chance"], _uturn],
+    @[[NSTextField labelWithString:@"Autofeed, avg secs"], _autofeed],
     @[[NSTextField labelWithString:@"FPS"], _fps],
     @[[NSTextField labelWithString:@"Colors"], _colors],
   ];
@@ -256,6 +259,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   [self setText:_castleName to:cfg->castle_name];
   _pace.stringValue = [NSString stringWithFormat:@"%g", cfg->pace];
   _uturn.stringValue = [NSString stringWithFormat:@"%d", cfg->uturn_chance];
+  _autofeed.stringValue = [NSString stringWithFormat:@"%d", cfg->autofeed];
   _fps.stringValue = [NSString stringWithFormat:@"%d", cfg->fps];
   [_colors selectItemAtIndex:colors_index(cfg->colors_mode)];
   [self updateEnabled];
@@ -275,6 +279,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   _time.enabled = freeLife;
   _timeColor.enabled = freeLife && _time.indexOfSelectedItem != 0;
   _uturn.enabled = freeLife;
+  _autofeed.enabled = freeLife;
   _fps.enabled = freeLife;
   _castleName.enabled = freeLife && _castle.state == NSControlStateValueOn;
 }
@@ -315,6 +320,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   vals[OPT_NO_CASTLE] = _castle.state == NSControlStateValueOn ? @"0" : @"1";
   vals[OPT_PACE] = _pace.stringValue;
   vals[OPT_UTURN] = _uturn.stringValue;
+  if (_autofeed.stringValue.length > 0) vals[OPT_AUTOFEED] = _autofeed.stringValue;
   vals[OPT_FPS] = _fps.stringValue;
   vals[OPT_COLORS] = @(colors_items[_colors.indexOfSelectedItem]);
   return vals;

@@ -17,10 +17,15 @@ with the same values as on the command line:
 | `time-color`       |       | `?time-color=red`     |
 | `pace`             | `p`   | `?p=2`                |
 | `uturn-chance`     | `u`   | `?u=50`               |
+| `autofeed`         | `A`   | `?autofeed`, `?A=120` |
 | `colors`           | `C`   | `?colors=16`          |
 | `fps`              | `f`   | `?f=30`               |
 | `castle-name`      | `n`   | `?n=MyCastle`         |
 | `no-castle`        |       | `?no-castle`          |
+| `noicon`           |       | `?noicon`             |
+
+`noicon` hides the settings and help icons (e.g. for digital signage).
+`autofeed` without a value feeds about every 600 seconds on average.
 
 An invalid value shows the error instead of the aquarium.
 With `classic`, conflicting params (`a`, `m`, `M`, `P`, `u`, `f`, `n`, `time`, `time-color`) are ignored.

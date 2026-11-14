@@ -22,6 +22,7 @@
 #define IDC_COLORS 1014
 #define IDC_TIME 1015
 #define IDC_TIME_COLOR 1016
+#define IDC_AUTOFEED 1017
 
 /* creature features */
 #define IDC_FLAG0 1100

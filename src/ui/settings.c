@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 
-enum field_kind { FIELD_NONE, FIELD_CLASSIC, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE };
+enum field_kind { FIELD_NONE, FIELD_CLASSIC, FIELD_FPS, FIELD_PACE, FIELD_UTURN, FIELD_COLORS, FIELD_FISH, FIELD_SPECIES, FIELD_CASTLE, FIELD_AUTOFEED };
 
 static bool is_checkbox_kind(enum field_kind k) { return k == FIELD_SPECIES || k == FIELD_CASTLE; }
 
@@ -35,7 +35,7 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 {{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "turtle", SP(turtle)}},
 {{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_SPECIES, "whale", SP(whale)}},
 {{FIELD_CASTLE, "castle", 0},                 {FIELD_NONE, NULL, 0}},
-{{FIELD_CLASSIC, "classic", 0},               {FIELD_NONE, NULL, 0}},
+{{FIELD_CLASSIC, "classic", 0},               {FIELD_AUTOFEED, "feed", 0}},
 };
 
 #undef SP
@@ -55,6 +55,7 @@ static const struct grid_cell grid[GRID_ROWS][2] = {
 #define PLUS1_FISH_X 25
 /* "[x] " before species label */
 #define CHECK_PREFIX 4
+#define AUTOFEED_STEP 60
 
 static const struct attr BOX_ATTR = {.col = COL_WHITE, .bold = false, .bg = COL_BLACK, .bg_bold = true};
 static const struct attr DIS_ATTR = {.col = COL_BLACK, .bold = false, .bg = COL_BLACK, .bg_bold = true};
@@ -62,7 +63,7 @@ static const struct attr HL_ATTR = {.col = COL_YELLOW, .bold = false, .bg = COL_
 
 static bool kind_disabled(const struct settings_ui *ui, enum field_kind k) {
   if (ui->scene->classic_ver == 0) return false;
-  return k == FIELD_FPS || k == FIELD_UTURN || k == FIELD_FISH || k == FIELD_SPECIES;
+  return k == FIELD_FPS || k == FIELD_UTURN || k == FIELD_FISH || k == FIELD_SPECIES || k == FIELD_AUTOFEED;
 }
 
 static bool cell_selectable(const struct settings_ui *ui, int row, int col) {
@@ -126,11 +127,12 @@ static int logical_for_draw_row(int dr) {
   return -1;
 }
 
-void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, struct scene *scene) {
+void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, int *autofeed, struct scene *scene) {
   ui->open = false;
   ui->fps = fps;
   ui->pace = pace;
   ui->colors_mode = colors_mode;
+  ui->autofeed = autofeed;
   ui->scene = scene;
   ui->sel_row = 0;
   ui->sel_col = 0;
@@ -188,6 +190,9 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
     }
     case FIELD_UTURN:
       scene_set_uturn_chance(ui->scene, clampi(ui->scene->uturn_chance + dir, 0, 999));
+      break;
+    case FIELD_AUTOFEED:
+      *ui->autofeed = clampi(*ui->autofeed + dir * AUTOFEED_STEP, 0, AUTOFEED_MAX);
       break;
     case FIELD_COLORS: {
       int idx = (colors_mode_index(*ui->colors_mode) + dir + COLORS_MODES_N) % COLORS_MODES_N;
@@ -289,7 +294,7 @@ struct adj_field {
   int value_w;
 };
 
-static const struct adj_field CLASSIC_ROW[2] = {{FIELD_CLASSIC, "classic", 7, 3}, {FIELD_NONE, NULL, 0, 0}};
+static const struct adj_field CLASSIC_ROW[2] = {{FIELD_CLASSIC, "classic", 7, 3}, {FIELD_AUTOFEED, "feed", 6, 5}};
 
 static const struct adj_field TOP_ROWS[TOP_ROW_COUNT][2] = {
   {{FIELD_COLORS, "colors", 7, 17}, {FIELD_NONE, NULL, 0, 0}},
@@ -308,6 +313,10 @@ static void format_adj_value(const struct settings_ui *ui, enum field_kind kind,
     case FIELD_FPS: opts_append_int_bounded(out, out_cap - 1, &p, *ui->fps, value_w); break;
     case FIELD_PACE: opts_append_float_bounded(out, out_cap - 1, &p, *ui->pace, value_w, 2); break;
     case FIELD_UTURN: opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->uturn_chance, value_w); break;
+    case FIELD_AUTOFEED:
+      if (*ui->autofeed == 0) opts_append_bounded(out, out_cap - 1, &p, "  off");
+      else opts_append_int_bounded(out, out_cap - 1, &p, *ui->autofeed, value_w);
+      break;
     case FIELD_FISH:
       if (ui->scene->aquatic.fish_count < 0) opts_append_bounded_w(out, out_cap - 1, &p, "auto", value_w);
       else opts_append_int_bounded(out, out_cap - 1, &p, ui->scene->aquatic.fish_count, value_w);

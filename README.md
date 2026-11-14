@@ -61,7 +61,7 @@ From time to time, it is recommended to feed the fish.
 ## Usage
 
 ```sh
-underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-C 1|2|4|7|8|8-bold|16] [-f N] [-m text|-] [-M color] [-P position] [--time [24|12]] [--time-color color] [-n text] [--no-castle]
+underthec [-c [1.0|1.1]] [-s] [-t] [-p pace] [-u N] [-A [secs]] [-C 1|2|4|7|8|8-bold|16] [-f N] [-m text|-] [-M color] [-P position] [--time [24|12]] [--time-color color] [-n text] [--no-castle]
           [-a definition] [teletext options...]
 underthec {-h|-v}
 ```
@@ -77,6 +77,7 @@ underthec {-h|-v}
 |       | `--time-color`       | `<color>`              | `--time` color (default: blue)        |
 | `-p`  | `--pace`             | `<pace>`               | speed, 0.01-10 (default: 1)           |
 | `-u`  | `--uturn-chance`     | `<N>`                  | fish turn chance (default: 1 in 400)  |
+| `-A`  | `--autofeed`         | `[secs]`               | auto feeding (default, if set: 600s)  |
 | `-C`  | `--colors`           | `<1\|2\|4\|7\|8\|16>`  | fg colors (default: 16)               |
 | `-f`  | `--fps`              | `<N>`                  | render fps, 1-240 (default: 30)       |
 | `-s`  | `--screensaver`      |                        | (terminal) exit on any keypress       |
@@ -165,6 +166,7 @@ If both an env var and its cmdline option are given, the cmdline option wins.
 | `UNDERTHEC_FPS=<N>`                            | `-f`                 |
 | `UNDERTHEC_SCREENSAVER=0\|1`                   | `-s`                 |
 | `UNDERTHEC_UTURN_CHANCE=<N>`                   | `-u`                 |
+| `UNDERTHEC_AUTOFEED=<secs>`                    | `-A`                 |
 | `UNDERTHEC_COLORS=<1\|2\|4\|7\|8\|8-bold\|16>` | `-C`                 |
 | `UNDERTHEC_TRANSPARENT=0\|1`                   | `-t`                 |
 | `UNDERTHEC_TELETEXT=t42\|ts`                   | `--teletext`         |

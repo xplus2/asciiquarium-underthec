@@ -1,4 +1,5 @@
 #include "app.h"
+#include "rng.h"
 
 #include <string.h>
 
@@ -26,8 +27,9 @@ void app_init(struct app *a, int classic_ver, struct aquatic_life aquatic, doubl
   a->pace = pace;
   a->fps = classic_ver != 0 ? CLASSIC_FPS : fps;
   a->colors_mode = colors_mode;
+  a->autofeed = 0;
   a->last = now;
-  settings_ui_init(&a->settings, &a->fps, &a->pace, &a->colors_mode, &a->scene);
+  settings_ui_init(&a->settings, &a->fps, &a->pace, &a->colors_mode, &a->autofeed, &a->scene);
   help_ui_init(&a->help, &a->scene);
 }
 
@@ -104,6 +106,7 @@ void app_frame(struct app *a, double now) {
       scene_tick(&a->scene, a->w, a->h);
       a->tick_accum -= 1.0;
     }
+    if (a->autofeed > 0 && rng_double(a->autofeed) < dt) app_feed(a, FEED_COL_AUTO);
   }
   canvas_clear(&a->canvas);
   if (too_small(a)) {

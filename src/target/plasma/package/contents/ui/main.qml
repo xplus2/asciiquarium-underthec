@@ -23,6 +23,7 @@ WallpaperItem {
         o["no-castle"] = cfg.CastleEnabled ? "0" : "1";
         o["pace"] = cfg.Pace.toFixed(2);
         o["uturn-chance"] = String(cfg.UturnChance);
+        o["autofeed"] = String(cfg.Autofeed);
         o["fps"] = String(cfg.Fps);
         o["colors"] = cfg.Colors;
         return o;

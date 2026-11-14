@@ -28,6 +28,7 @@
     <string name="castle_name">Castle name</string>
     <string name="pace">Pace</string>
     <string name="uturn_chance">U-turn chance</string>
+    <string name="autofeed">Autofeed, mean seconds (0 = off)</string>
     <string name="fps">Frames per second</string>
     <string name="font_size">Font size (px)</string>
     <string name="colors">Colors</string>

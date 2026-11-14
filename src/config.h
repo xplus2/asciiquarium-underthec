@@ -20,6 +20,7 @@ struct config {
   char *time_color;
   double pace;
   int uturn_chance;
+  int autofeed; /* mean secs, 0=off */
   int fps;
   int colors_mode;
   unsigned set_mask; /* by config_set */

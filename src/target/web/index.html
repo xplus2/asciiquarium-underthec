@@ -55,6 +55,7 @@ const OPTIONS = [
   ["time-color",       null],
   ["pace",             "p"],
   ["uturn-chance",     "u"],
+  ["autofeed",         "A"],
   ["colors",           "C"],
   ["fps",              "f"],
   ["castle-name",      "n"],
@@ -195,10 +196,11 @@ underthec().then((M) => {
     showError(e);
     return;
   }
+  const noIcon = new URLSearchParams(window.location.search).has("noicon");
   function syncIcons() {
-    const open = !!M._web_settings_open() || !!M._web_help_open();
-    gear.hidden = open;
-    question.hidden = open;
+    const hide = noIcon || !!M._web_settings_open() || !!M._web_help_open();
+    gear.hidden = hide;
+    question.hidden = hide;
   }
   layout(M);
   syncIcons();
