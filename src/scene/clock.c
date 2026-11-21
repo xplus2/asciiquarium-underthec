@@ -149,7 +149,7 @@ static bool local_now(const struct scene *sc, struct tm *out) {
 }
 
 static bool clock_refresh(struct scene *sc) {
-  struct tm tm;
+  struct tm tm = {0};
   if (!local_now(sc, &tm)) return false;
   int stamp = tm.tm_hour * 60 + tm.tm_min;
   if (stamp == sc->clock_stamp) return false;
