@@ -369,41 +369,46 @@ bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *er
   return true;
 }
 
+/* r past ESC */
+static const char *skip_escape(const char *r) {
+  if (*r == '[') {
+    r++;
+    while (*r && (unsigned char)*r < 0x40) r++;
+  } else if (*r == ']') {
+    r++;
+    while (*r && *r != '\a' && !(*r == 0x1B && r[1] == '\\')) r++;
+    if (*r == 0x1B) r++;
+  }
+  return *r ? r + 1 : r;
+}
+
+static const char *copy_utf8(char **w, const char *r, const char *end) {
+  unsigned cp;
+  int n = utf8_decode_strict(r, (size_t)(end - r), &cp);
+  if (n < 0) {
+    *(*w)++ = '?';
+    return r + 1;
+  }
+  if (cp <= 0x9F) return r + n; /* C1 control */
+  memcpy(*w, r, (size_t)n);
+  *w += n;
+  return r + n;
+}
+
 static void opts_sanitize_row(char *row) {
   char *w = row;
   const char *end = row + strlen(row);
   for (const char *r = row; *r;) {
     unsigned char c = (unsigned char)*r;
     if (c == 0x1B) {
-      r++;
-      if (*r == '[') {
-        r++;
-        while (*r && (unsigned char)*r < 0x40) r++;
-        if (*r) r++;
-      } else if (*r == ']') {
-        r++;
-        while (*r && *r != '\a' && !(*r == 0x1B && r[1] == '\\')) r++;
-        if (*r == 0x1B) r++;
-        if (*r) r++;
-      } else if (*r) {
-        r++;
-      }
+      r = skip_escape(r + 1);
     } else if (c == '\t') {
       *w++ = ' ';
       r++;
     } else if (c < 0x20 || c == 0x7F) {
       r++;
     } else if (c >= 0x80) {
-      unsigned cp;
-      int n = utf8_decode_strict(r, (size_t)(end - r), &cp);
-      if (n < 0) {
-        *w++ = '?';
-        r++;
-      } else if (cp <= 0x9F) {
-        r += n; /* C1 control */
-      } else {
-        for (int k = 0; k < n; k++) *w++ = *r++;
-      }
+      r = copy_utf8(&w, r, end);
     } else {
       *w++ = *r++;
     }

@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "scene_internal.h"
 
 #include <string.h>
@@ -6,6 +7,7 @@
 #define HARDBLANK '$'
 #define GLYPH_COUNT 15
 #define SEQ_MAX 12
+#define SMUSH_CLASSES 6
 
 enum glyph { G_COLON = 10, G_SPACE = 11, G_A = 12, G_M = 13, G_P = 14 };
 
@@ -33,13 +35,13 @@ static bool in_set(const char *set, char ch) {
 }
 
 static char smush_pair(char l, char r) {
-  static const char *const classes[] = {"|", "/\\", "[]", "{}", "()", "<>"};
+  static const char *const classes[SMUSH_CLASSES] = {"|", "/\\", "[]", "{}", "()", "<>"};
   if (l == HARDBLANK || r == HARDBLANK) return '\0';
   if (l == r) return l;
   if (l == '_' && in_set("|/\\[]{}()<>", r)) return r;
   if (r == '_' && in_set("|/\\[]{}()<>", l)) return l;
-  for (size_t i = 0; i < sizeof classes / sizeof *classes; i++) {
-    for (size_t j = i + 1; j < sizeof classes / sizeof *classes; j++) {
+  for (size_t i = 0; i < SMUSH_CLASSES; i++) {
+    for (size_t j = i + 1; j < SMUSH_CLASSES; j++) {
       if (in_set(classes[i], l) && in_set(classes[j], r)) return r;
       if (in_set(classes[j], l) && in_set(classes[i], r)) return l;
     }
@@ -73,6 +75,15 @@ static int smush_amount(const char buf[][CLOCK_COLS], int len, const char *const
   return best;
 }
 
+static void append_row(char *line, const char *grow, int len, int amt, int lw, int rw) {
+  for (int k = 0; k < amt; k++) {
+    int col = len - amt + k;
+    if (col < 0) col = 0;
+    line[col] = smush_cells(line[col], grow[k], lw, rw);
+  }
+  memcpy(line + strlen(line), grow + amt, (size_t)(rw - amt) + 1);
+}
+
 static void render(char buf[][CLOCK_COLS], const int *seq, int count) {
   memset(buf, 0, (size_t)CLOCK_ROWS * CLOCK_COLS);
   int len = 0;
@@ -81,14 +92,7 @@ static void render(char buf[][CLOCK_COLS], const int *seq, int count) {
     const char *const *g = glyphs[seq[i]];
     int w = (int)strlen(g[0]);
     int amt = smush_amount(buf, len, g, prev_w, w);
-    for (int row = 0; row < CLOCK_ROWS; row++) {
-      for (int k = 0; k < amt; k++) {
-        int col = len - amt + k;
-        if (col < 0) col = 0;
-        buf[row][col] = smush_cells(buf[row][col], g[row][k], prev_w, w);
-      }
-      memcpy(buf[row] + strlen(buf[row]), g[row] + amt, (size_t)(w - amt) + 1);
-    }
+    for (int row = 0; row < CLOCK_ROWS; row++) append_row(buf[row], g[row], len, amt, prev_w, w);
     len = (int)strlen(buf[0]);
     prev_w = w;
   }
@@ -132,10 +136,16 @@ static int ink_width(const struct scene *sc) {
 static bool local_now(const struct scene *sc, struct tm *out) {
   if (sc->local_time != NULL) return sc->local_time(sc->local_time_ctx, out);
   time_t now = time(NULL);
+#if defined(_WIN32)
+  return localtime_s(out, &now) == 0;
+#elif defined(__DJGPP__)
   const struct tm *tm = localtime(&now);
   if (tm == NULL) return false;
   *out = *tm;
   return true;
+#else
+  return localtime_r(&now, out) != NULL;
+#endif
 }
 
 static bool clock_refresh(struct scene *sc) {

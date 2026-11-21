@@ -1,6 +1,6 @@
-# Asciiquarium - Under The C
+# ASCIIquarium - Under The C
 
-Asciiquarium is an aquarium/sea animation in ASCII art.
+ASCIIquarium is an aquarium/sea animation in ASCII art.
 This is a C-port of [Asciiquarium v1.1](https://github.com/cmatsuoka/asciiquarium),
 see "Credits" below for the original authors.
 

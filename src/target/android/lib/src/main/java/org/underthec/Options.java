@@ -21,7 +21,8 @@ public final class Options {
       "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"
   };
   static final String[] TIME_FORMATS = {"", "24", "12"};
-  static final String[] POSITIONS = {"middle", "center", "marquee", "swim", "event"};
+  static final String DEFAULT_POSITION = "middle";
+  static final String[] POSITIONS = {DEFAULT_POSITION, "center", "marquee", "swim", "event"};
   static final String[] COLORS = {
       "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
       "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
@@ -101,8 +102,8 @@ public final class Options {
     add(o, "message", p.getString("message", ""));
     add(o, "message-color", p.getString("message-color", ""));
     String time = p.getString("time", "");
-    String position = p.getString("message-position", "middle");
-    if (time.isEmpty() || !position.equals("middle")) add(o, "message-position", position);
+    String position = p.getString("message-position", DEFAULT_POSITION);
+    if (time.isEmpty() || !position.equals(DEFAULT_POSITION)) add(o, "message-position", position);
     add(o, "time", time);
     add(o, "time-color", p.getString("time-color", ""));
     add(o, "castle-name", p.getString("castle-name", ""));

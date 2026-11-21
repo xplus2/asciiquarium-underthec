@@ -213,7 +213,9 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
     if (strcmp(cfg->message_color, color_items[i]) == 0) color = (int)i;
   SendDlgItemMessageW(dlg, IDC_MSG_COLOR, CB_SETCURSEL, (WPARAM)color, 0);
   SendDlgItemMessageW(dlg, IDC_MSG_POS, CB_SETCURSEL, (WPARAM)cfg->message_position, 0);
-  int time_sel = cfg->time_mode == 24 ? 1 : cfg->time_mode == 12 ? 2 : 0;
+  int time_sel = 0;
+  if (cfg->time_mode == 24) time_sel = 1;
+  else if (cfg->time_mode == 12) time_sel = 2;
   SendDlgItemMessageW(dlg, IDC_TIME, CB_SETCURSEL, (WPARAM)time_sel, 0);
   int time_color = 0;
   for (size_t i = 1; cfg->time_color != NULL && i < COUNT(color_items); i++)
