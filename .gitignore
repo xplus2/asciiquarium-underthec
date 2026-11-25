@@ -33,6 +33,8 @@ src/*.o
 /src/target/androidtv/.gradle/
 /src/target/androidwear/.gradle/
 /src/target/android/local.properties
+/src/target/androidtv/local.properties
+/src/target/androidwear/local.properties
 /src/target/android/lib/build/
 /src/target/android/lib/.cxx/
 /src/target/android/mobile/build/

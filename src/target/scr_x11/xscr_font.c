@@ -1,36 +1,26 @@
 #include "xscr_font.h"
 
-#include "../../entity/priv.h"
 #include "../../opts.h"
 #include "../../xalloc.h"
 
-#include <locale.h>
 #include <string.h>
 
 #ifdef HAVE_XFT
 #include <X11/Xft/Xft.h>
 #else
+#include "../../utf8.h"
+
 #include <X11/Xlib.h>
+#include <locale.h>
 #endif
 
 /* [enum color][bold] */
-static const unsigned char palette_rgb[9][2][3] = {
-{{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}},
-{{0x00, 0x00, 0x00}, {0x80, 0x80, 0x80}},
-{{0xc0, 0x00, 0x00}, {0xff, 0x55, 0x55}},
-{{0x00, 0xc0, 0x00}, {0x55, 0xff, 0x55}},
-{{0xc0, 0xc0, 0x00}, {0xff, 0xff, 0x55}},
-{{0x00, 0x00, 0xc0}, {0x55, 0x55, 0xff}},
-{{0xc0, 0x00, 0xc0}, {0xff, 0x55, 0xff}},
-{{0x00, 0xc0, 0xc0}, {0x55, 0xff, 0xff}},
-{{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}},
-};
-
 struct xscr_font {
   Display *dpy;
   Visual *visual;
   Colormap cmap;
   unsigned long pixel[9][2];
+  bool allocated[9][2];
   int cell_w;
   int cell_h;
   int ascent;
@@ -41,7 +31,6 @@ struct xscr_font {
 #else
   XFontSet fontset[2];
   XFontStruct *basic;
-  bool allocated[9][2];
 #endif
 };
 
@@ -73,19 +62,20 @@ static void fonts_free(struct xscr_font *f) {
 
 static void palette_load(struct xscr_font *f) {
   for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) {
+    uint32_t rgb = color_rgb((enum color)c, b);
     XRenderColor rc = {
-        .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
-        .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
-        .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
+        .red = (unsigned short)(((rgb >> 16) & 0xff) * 0x101),
+        .green = (unsigned short)(((rgb >> 8) & 0xff) * 0x101),
+        .blue = (unsigned short)((rgb & 0xff) * 0x101),
         .alpha = 0xffff,
     };
-    XftColorAllocValue(f->dpy, f->visual, f->cmap, &rc, &f->xcolor[c][b]);
-    f->pixel[c][b] = f->xcolor[c][b].pixel;
+    f->allocated[c][b] = XftColorAllocValue(f->dpy, f->visual, f->cmap, &rc, &f->xcolor[c][b]) != 0;
+    f->pixel[c][b] = f->allocated[c][b] ? f->xcolor[c][b].pixel : WhitePixel(f->dpy, DefaultScreen(f->dpy));
   }
 }
 
 static void palette_free(struct xscr_font *f) {
-  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) XftColorFree(f->dpy, f->visual, f->cmap, &f->xcolor[c][b]);
+  for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) if (f->allocated[c][b]) XftColorFree(f->dpy, f->visual, f->cmap, &f->xcolor[c][b]);
 }
 
 void xscr_font_retarget(struct xscr_font *f, Drawable d) {
@@ -123,8 +113,6 @@ static void build_xlfd(char *out, size_t out_cap, const char *weight, int font_p
 
 static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, size_t err_len) {
   (void)screen;
-  (void)err;
-  (void)err_len;
   setlocale(LC_CTYPE, "");
   char normal[256];
   char bold[256];
@@ -140,7 +128,10 @@ static bool fonts_load(struct xscr_font *f, int screen, int font_px, char *err, 
     if (f->fontset[1] != NULL) XFreeFontSet(f->dpy, f->fontset[1]);
     f->fontset[0] = f->fontset[1] = NULL;
     f->basic = XLoadQueryFont(f->dpy, "fixed");
-    if (f->basic == NULL) return false;
+    if (f->basic == NULL) {
+      opts_set_errbuf(err, err_len, (const char *[]){"no usable X11 font, not even 'fixed'"}, 1);
+      return false;
+    }
     f->cell_w = XTextWidth(f->basic, "M", 1);
     f->cell_h = f->basic->ascent + f->basic->descent;
     f->ascent = f->basic->ascent;
@@ -163,15 +154,17 @@ static void fonts_free(struct xscr_font *f) {
 
 static void palette_load(struct xscr_font *f) {
   for (int c = 0; c < 9; c++) for (int b = 0; b < 2; b++) {
+    uint32_t rgb = color_rgb((enum color)c, b);
     XColor xc = {
-        .red = (unsigned short)(palette_rgb[c][b][0] * 0x101),
-        .green = (unsigned short)(palette_rgb[c][b][1] * 0x101),
-        .blue = (unsigned short)(palette_rgb[c][b][2] * 0x101),
+        .red = (unsigned short)(((rgb >> 16) & 0xff) * 0x101),
+        .green = (unsigned short)(((rgb >> 8) & 0xff) * 0x101),
+        .blue = (unsigned short)((rgb & 0xff) * 0x101),
         .flags = DoRed | DoGreen | DoBlue,
     };
     f->allocated[c][b] = XAllocColor(f->dpy, f->cmap, &xc) != 0;
     if (f->allocated[c][b]) f->pixel[c][b] = xc.pixel;
-    else f->pixel[c][b] = b ? WhitePixel(f->dpy, DefaultScreen(f->dpy)) : BlackPixel(f->dpy, DefaultScreen(f->dpy));
+    else if (c == COL_BLACK && !b) f->pixel[c][b] = BlackPixel(f->dpy, DefaultScreen(f->dpy));
+    else f->pixel[c][b] = WhitePixel(f->dpy, DefaultScreen(f->dpy)); /* fg stays visible on black */
   }
 }
 
@@ -243,4 +236,7 @@ int xscr_font_cell_w(const struct xscr_font *f) { return f->cell_w; }
 int xscr_font_cell_h(const struct xscr_font *f) { return f->cell_h; }
 int xscr_font_ascent(const struct xscr_font *f) { return f->ascent; }
 
-unsigned long xscr_font_pixel(const struct xscr_font *f, int col, bool bold) { return f->pixel[col][bold ? 1 : 0]; }
+unsigned long xscr_font_pixel(const struct xscr_font *f, int col, bool bold) {
+  int b = bold ? 1 : 0;
+  return f->allocated[col][b] ? f->pixel[col][b] : BlackPixel(f->dpy, DefaultScreen(f->dpy));
+}

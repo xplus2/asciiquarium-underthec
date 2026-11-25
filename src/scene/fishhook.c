@@ -14,7 +14,7 @@ static int fishhook_body_height(void) {
 }
 
 #define FISHHOOK_TIP_ROW 3
-/* fishhook_image row: barb, not the wire attachment /|
+/* fishhook_image row: barb, not wire attachment /|
    definitely not "Barb Wire (1996)" */
 static const char *const fishhook_tip_row[] = { "/|", NULL };
 
@@ -88,7 +88,7 @@ void spawn_fishhook(struct scene *sc, int w, int h) {
   e->physical = true;
   e->trim_edges = true;
   e->sentinel = '?';
-  e->splat_x = 0.0;
+  e->hook_depth = 0.0;
   e->death_action = DEATH_RANDOM_OBJECT;
   e->default_attr = color_from_name("WHITE");
   e->fishhook_wait = -1.0;
@@ -101,27 +101,21 @@ void fishhook_tick(struct scene *sc, int term_h) {
     if (hook->marked_dead || hook->type != ENT_FISHHOOK) continue;
     if (hook->physical) {
       double resting = 0.75 * term_h - fishhook_body_height();
-      if (hook->splat_x < resting) {
-        hook->splat_x += 1.0;
-        update_fishhook_shape(hook, (int)hook->splat_x);
+      if (hook->hook_depth < resting) {
+        hook->hook_depth += 1.0;
+        update_fishhook_shape(hook, (int)hook->hook_depth);
       } else if (hook->fishhook_wait < 0.0) {
         hook->fishhook_wait = rng_double(10.0) + 5.0; /* avoid stuck hook when nothing bites */
       } else {
-        hook->fishhook_wait -= 0.1;
+        hook->fishhook_wait -= TICK_SECONDS;
         if (hook->fishhook_wait <= 0.0) hook->physical = false; /* retract */
       }
-      struct sprite_pair barb_pair = { fishhook_tip_row, NULL };
-      struct entity barb = *hook;
-      barb.frames = &barb_pair;
-      barb.frame_count = 1;
-      barb.frame_cur = 0;
-      barb.wh_valid = false;
-      barb.y = hook->y + hook->splat_x + FISHHOOK_TIP_ROW;
+      double barb_y = hook->y + hook->hook_depth + FISHHOOK_TIP_ROW;
       for (int j = 0; j < sc->entities.count; j++) {
         struct entity *candidate = &sc->entities.items[j];
         if (candidate->marked_dead) continue;
         if (candidate->type != ENT_FISH) continue;
-        if (!entity_glyph_overlap(&barb, candidate)) continue;
+        if (!entity_rows_overlap(fishhook_tip_row, hook->x, barb_y, hook, candidate)) continue;
         hook->physical = false;
         candidate->physical = false;
         candidate->vx = 0;
@@ -132,9 +126,9 @@ void fishhook_tick(struct scene *sc, int term_h) {
         candidate->z = Z_HOOKED;
         break;
       }
-    } else if (hook->splat_x > 0.0) {
-      hook->splat_x -= 1.0;
-      update_fishhook_shape(hook, (int)hook->splat_x);
+    } else if (hook->hook_depth > 0.0) {
+      hook->hook_depth -= 1.0;
+      update_fishhook_shape(hook, (int)hook->hook_depth);
     } else {
       /* rope gone, hook leaves */
       hook->y -= 1.0;

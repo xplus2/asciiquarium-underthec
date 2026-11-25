@@ -7,7 +7,7 @@
 
 struct xscr_font;
 
-/* wa.visual/wa.colormap of the target window */
+/* wa.visual/wa.colormap of target window */
 struct xscr_font *xscr_font_create(Display *dpy, int screen, Visual *visual, Colormap cmap, int font_px, char *err, size_t err_len);
 void xscr_font_destroy(struct xscr_font *f);
 

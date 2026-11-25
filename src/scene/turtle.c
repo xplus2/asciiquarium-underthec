@@ -3,19 +3,11 @@
 #include "rng.h"
 
 #include "art/turtle.h"
-#include <string.h>
-
-static void map_turtle_colors(const char *in, char *out, void *ctx) {
-  char shell = *(const char *)ctx;
-  size_t len = strlen(in);
-  for (size_t j = 0; j < len; j++) out[j] = (in[j] == '2') ? shell : in[j];
-  out[len] = '\0';
-}
 
 static void randomize_turtle_mask(struct entity *e, ascii_rows tmpl) {
   static const char shell_letters[3] = {'g', 'r', 'R'};
-  char shell = shell_letters[rng_int(3)];
-  e->owned_mask = entity_build_transformed_rows(tmpl, map_turtle_colors, &shell);
+  const char pick[10] = {[2] = shell_letters[rng_int(3)]};
+  e->owned_mask = entity_build_digit_rows(tmpl, pick);
 }
 
 static int live_turtle_count(const struct scene *sc) {
@@ -37,10 +29,7 @@ void spawn_turtle(struct scene *sc, int w, int h) {
   e->frames = &turtle[dir];
   e->frame_count = 1;
   randomize_turtle_mask(e, turtle[dir].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 2) : (double)(1 - width);
+  swim_place(e, w, h, dir, 2);
   finish_creature_spawn(e, ENT_TURTLE, Z_TURTLE, speed, 0, DEATH_NONE, color_from_name("WHITE"));
 }
 

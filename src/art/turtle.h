@@ -35,7 +35,7 @@ static const char *const turtle_mask_1[] = {
   NULL
 };
 
-/* 2: dark green, dark red or bold red shell, never blue. nobody likes the blue shell. */
+/* 2: dark green, dark red or bold red shell, never blue. nobody likes blue shells. */
 static const struct sprite_pair turtle[2] = {
 { turtle_image_0, turtle_mask_0 },
 { turtle_image_1, turtle_mask_1 },

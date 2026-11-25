@@ -2,20 +2,31 @@
 #define UNDERTHEC_ENTITY_PRIV_H
 
 #include "entity.h"
+#include "../utf8.h"
 
-static inline int round_to_int(double v) {
-  return (int)(v >= 0.0 ? v + 0.5 : v - 0.5);
+/* [start, end): B inside leading/trailing spaces */
+static inline void row_trim(const char *s, int len, int *start, int *end) {
+  int a = 0;
+  while (a < len && s[a] == ' ') a++;
+  int b = len;
+  while (b > a && s[b - 1] == ' ') b--;
+  *start = a;
+  *end = b;
 }
 
-int utf8_seq_len(unsigned char lead);
-/* 1 on broken continuation */
-int utf8_valid_len(const char *s);
-unsigned utf8_decode(const char *s, int seq_len);
-int utf8_char_width(const char *s, int seq_len);
-int utf8_col_width(const char *s);
-int utf8_byte_offset(const char *s, int col);
+/* shape row with trim bounds, built once per row */
+struct row_view {
+  const char *s;
+  int bytes;
+  int cols;
+  int start;
+  int end;
+};
 
-bool cell_transparent(const struct entity *e, const char *srow, int len, int col);
+void row_view_init(struct row_view *v, const struct entity *e, const char *srow);
+int row_view_offset(const struct row_view *v, int col);
+/* off: B offset */
+bool row_view_transparent_at(const struct row_view *v, const struct entity *e, int off);
 
 void tick_seaweed_growth(struct entity *e);
 void tick_seaweed_debris(struct entity *e, int term_h);

@@ -11,6 +11,7 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
 public final class MainActivity extends Activity {
+  /* APP_KEY_* in app.h */
   private static final int KEY_UP = -2;
   private static final int KEY_DOWN = -3;
   private static final int KEY_LEFT = -4;
@@ -93,9 +94,12 @@ public final class MainActivity extends Activity {
           longPress = false;
         }
         return true;
+      case KeyEvent.KEYCODE_DPAD_UP:
+        if (view.dialogOpen()) break;
+        if (e.getRepeatCount() == 0) openSettings();
+        return true;
       case KeyEvent.KEYCODE_MENU:
       case KeyEvent.KEYCODE_SETTINGS:
-      case KeyEvent.KEYCODE_DPAD_UP:
         if (e.getRepeatCount() == 0) openSettings();
         return true;
       default:

@@ -29,37 +29,53 @@ bool color_supported(void) {
   return color_ok;
 }
 
+/* lowercase normal, uppercase bold. rest default */
+static const struct attr mask_letter_attr[256] = {
+  ['c'] = {.col = COL_CYAN},    ['C'] = {.col = COL_CYAN, .bold = true},
+  ['r'] = {.col = COL_RED},     ['R'] = {.col = COL_RED, .bold = true},
+  ['y'] = {.col = COL_YELLOW},  ['Y'] = {.col = COL_YELLOW, .bold = true},
+  ['b'] = {.col = COL_BLUE},    ['B'] = {.col = COL_BLUE, .bold = true},
+  ['g'] = {.col = COL_GREEN},   ['G'] = {.col = COL_GREEN, .bold = true},
+  ['m'] = {.col = COL_MAGENTA}, ['M'] = {.col = COL_MAGENTA, .bold = true},
+  ['w'] = {.col = COL_WHITE},   ['W'] = {.col = COL_WHITE, .bold = true},
+  ['k'] = {.col = COL_BLACK},   ['K'] = {.col = COL_BLACK, .bold = true},
+};
+
+/* [enum color][bold] */
+static const uint32_t palette_rgb[9][2] = {
+  {0xc0c0c0, 0xffffff}, {0x000000, 0x808080}, {0xc00000, 0xff5555},
+  {0x00c000, 0x55ff55}, {0xc0c000, 0xffff55}, {0x0000c0, 0x5555ff},
+  {0xc000c0, 0xff55ff}, {0x00c0c0, 0x55ffff}, {0xc0c0c0, 0xffffff},
+};
+
+uint32_t color_rgb(enum color col, bool bold) {
+  return palette_rgb[col][bold ? 1 : 0];
+}
+
 struct attr color_from_mask_letter(char c) {
-  static struct attr table[256];
-  static bool table_ready = false;
-  if (!table_ready) {
-    static const char letters[] = "cCrRyYbBgGmMwWkK";
-    static const enum color cols[8] = {COL_CYAN, COL_RED, COL_YELLOW, COL_BLUE, COL_GREEN, COL_MAGENTA, COL_WHITE, COL_BLACK};
-    for (int i = 0; i < 256; i++) table[i] = (struct attr){.col = COL_DEFAULT, .bold = false};
-    for (int i = 0; letters[i] != '\0'; i++) table[(unsigned char)letters[i]] = (struct attr){.col = cols[i / 2], .bold = (i % 2) == 1};
-    table_ready = true;
-  }
-  return table[(unsigned char)c];
+  return mask_letter_attr[(unsigned char)c];
 }
 
 static const char *const color_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
 static const enum color color_name_cols[8] = {COL_BLACK, COL_RED, COL_GREEN, COL_YELLOW, COL_BLUE, COL_MAGENTA, COL_CYAN, COL_WHITE};
 
-struct attr color_from_name(const char *name) {
-  if (name == NULL || name[0] == '\0') return (struct attr){.col = COL_DEFAULT, .bold = false};
-  bool bold = (name[0] >= 'A' && name[0] <= 'Z');
-  for (size_t i = 0; i < sizeof(color_names) / sizeof(color_names[0]); i++) {
-    if (strcasecmp(name, color_names[i]) == 0) return (struct attr){.col = color_name_cols[i], .bold = bold};
+/* -1: unknown */
+static int color_name_index(const char *name) {
+  if (name == NULL || name[0] == '\0') return -1;
+  for (int i = 0; i < (int)(sizeof(color_names) / sizeof(color_names[0])); i++) {
+    if (strcasecmp(name, color_names[i]) == 0) return i;
   }
-  return (struct attr){.col = COL_DEFAULT, .bold = false};
+  return -1;
+}
+
+struct attr color_from_name(const char *name) {
+  int i = color_name_index(name);
+  if (i < 0) return (struct attr){.col = COL_DEFAULT, .bold = false};
+  return (struct attr){.col = color_name_cols[i], .bold = name[0] >= 'A' && name[0] <= 'Z'};
 }
 
 bool color_name_valid(const char *name) {
-  if (name == NULL || name[0] == '\0') return false;
-  for (size_t i = 0; i < sizeof(color_names) / sizeof(color_names[0]); i++) {
-    if (strcasecmp(name, color_names[i]) == 0) return true;
-  }
-  return false;
+  return color_name_index(name) >= 0;
 }
 
 const char *const color_accent_names[COLOR_ACCENT_COUNT] = {"green", "red", "blue", "yellow", "magenta", "cyan", "white"};
@@ -144,15 +160,17 @@ void color_reduce(int colors_mode, enum color *col, bool *bold) {
   }
 }
 
-void color_randomize_mask(const char *in, char *out) {
+void color_roll_pick(char pick[10]) {
   static const char letters[] = {'c','C','r','R','y','Y','b','B','g','G','m','M'};
-  char pick[10];
+  pick[0] = '\0';
   for (int digit = 1; digit <= 9; digit++) pick[digit] = letters[rng_int((int)(sizeof(letters) / sizeof(letters[0])))];
+}
+
+void color_map_digits(const char *in, char *out, const char pick[10]) {
   size_t len = strlen(in);
   for (size_t i = 0; i < len; i++) {
     unsigned char c = (unsigned char)in[i];
-    if (c >= '1' && c <= '9') out[i] = pick[c - '0'];
-    else out[i] = in[i];
+    out[i] = c >= '0' && c <= '9' && pick[c - '0'] != '\0' ? pick[c - '0'] : in[i];
   }
   out[len] = '\0';
 }

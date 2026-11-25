@@ -18,7 +18,8 @@ final class Native {
 
   static native void click(long h, int col, int row);
 
-  static native void frame(long h, double now, long wallMs, int[] out);
+  /* false: canvas unchanged, out untouched. force: full repack */
+  static native boolean frame(long h, double now, long wallMs, int[] out, boolean force);
 
   static native int width(long h);
 
@@ -27,4 +28,13 @@ final class Native {
   static native int fps(long h);
 
   static native boolean dialogOpen(long h);
+
+  /* 0xRRGGBB, [color * 2 + bold] */
+  static native int[] palette();
+
+  /* aquatic-life names, settings order */
+  static native String[] creatures();
+
+  /* option name/value pairs: core defaults */
+  static native String[] defaults();
 }

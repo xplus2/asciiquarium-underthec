@@ -71,78 +71,87 @@ void entity_collide_all(struct entity_list *list, uint64_t present) {
   }
 }
 
-bool cell_transparent(const struct entity *e, const char *srow, int len, int col) {
-  char ch = srow[col];
-  if (e->sentinel != 0 && ch == e->sentinel) return true;
-  if (e->trim_edges && ch == ' ') {
-    int start = 0;
-    while (start < len && srow[start] == ' ') start++;
-    int end = len;
-    while (end > start && srow[end - 1] == ' ') end--;
-    if (col < start || col >= end) return true;
-  }
-  return false;
-}
-
-struct row_view {
-  const char *s;
-  int bytes;
-  int cols;
-  int start;
-  int end;
-};
-
-static void row_view_init(struct row_view *v, const struct entity *e, const char *srow) {
+void row_view_init(struct row_view *v, const struct entity *e, const char *srow) {
   v->s = srow;
   v->bytes = (int)strlen(srow);
   v->cols = utf8_col_width(srow);
   v->start = 0;
   v->end = v->bytes;
-  if (!e->trim_edges) return;
-  while (v->start < v->bytes && srow[v->start] == ' ') v->start++;
-  while (v->end > v->start && srow[v->end - 1] == ' ') v->end--;
+  if (e->trim_edges) row_trim(srow, v->bytes, &v->start, &v->end);
 }
 
-static bool row_view_transparent(const struct row_view *v, const struct entity *e, int col) {
-  int off = v->bytes == v->cols ? col : utf8_byte_offset(v->s, col);
+int row_view_offset(const struct row_view *v, int col) {
+  return v->bytes == v->cols ? col : utf8_byte_offset(v->s, col);
+}
+
+bool row_view_transparent_at(const struct row_view *v, const struct entity *e, int off) {
   char ch = v->s[off];
   if (e->sentinel != 0 && ch == e->sentinel) return true;
   return e->trim_edges && ch == ' ' && (off < v->start || off >= v->end);
 }
 
-bool entity_glyph_overlap(struct entity *a, struct entity *b) {
-  ascii_rows arows = entity_shape(a);
-  ascii_rows brows = entity_shape(b);
-  if (arows == NULL || brows == NULL) return false;
-  int aw = entity_width(a);
-  int ah = entity_height(a);
-  int bw = entity_width(b);
-  int bh = entity_height(b);
-  int ax = round_to_int(a->x);
-  int ay = round_to_int(a->y);
-  int bx = round_to_int(b->x);
-  int by = round_to_int(b->y);
-  int x0 = ax > bx ? ax : bx;
-  int x1 = (ax + aw) < (bx + bw) ? (ax + aw) : (bx + bw);
-  int y0 = ay > by ? ay : by;
-  int y1 = (ay + ah) < (by + bh) ? (ay + ah) : (by + bh);
+/* placed rows, style: trim_edges + sentinel source */
+struct glyph_box {
+  ascii_rows rows;
+  int x;
+  int y;
+  int w;
+  int h;
+  const struct entity *style;
+};
+
+static bool boxes_overlap(const struct glyph_box *a, const struct glyph_box *b) {
+  int x0 = a->x > b->x ? a->x : b->x;
+  int x1 = (a->x + a->w) < (b->x + b->w) ? (a->x + a->w) : (b->x + b->w);
+  int y0 = a->y > b->y ? a->y : b->y;
+  int y1 = (a->y + a->h) < (b->y + b->h) ? (a->y + a->h) : (b->y + b->h);
   for (int wy = y0; wy < y1; wy++) {
-    int arow = wy - ay;
-    int brow = wy - by;
-    if (arow < 0 || arow >= ah || brow < 0 || brow >= bh) continue;
-    if (arows[arow] == NULL || brows[brow] == NULL) continue;
+    int arow = wy - a->y;
+    int brow = wy - b->y;
+    if (arow < 0 || arow >= a->h || brow < 0 || brow >= b->h) continue;
+    if (a->rows[arow] == NULL || b->rows[brow] == NULL) continue;
     struct row_view av;
     struct row_view bv;
-    row_view_init(&av, a, arows[arow]);
-    row_view_init(&bv, b, brows[brow]);
+    row_view_init(&av, a->style, a->rows[arow]);
+    row_view_init(&bv, b->style, b->rows[brow]);
     for (int wx = x0; wx < x1; wx++) {
-      int acol = wx - ax;
-      int bcol = wx - bx;
+      int acol = wx - a->x;
+      int bcol = wx - b->x;
       if (acol < 0 || acol >= av.cols || bcol < 0 || bcol >= bv.cols) continue;
-      if (row_view_transparent(&av, a, acol)) continue;
-      if (row_view_transparent(&bv, b, bcol)) continue;
+      if (row_view_transparent_at(&av, a->style, row_view_offset(&av, acol))) continue;
+      if (row_view_transparent_at(&bv, b->style, row_view_offset(&bv, bcol))) continue;
       return true;
     }
   }
   return false;
+}
+
+/* false: no shape */
+static bool entity_box(struct glyph_box *g, struct entity *e) {
+  g->rows = entity_shape(e);
+  if (g->rows == NULL) return false;
+  g->x = round_to_int(e->x);
+  g->y = round_to_int(e->y);
+  g->w = entity_width(e);
+  g->h = entity_height(e);
+  g->style = e;
+  return true;
+}
+
+bool entity_glyph_overlap(struct entity *a, struct entity *b) {
+  struct glyph_box ga;
+  struct glyph_box gb;
+  if (!entity_box(&ga, a) || !entity_box(&gb, b)) return false;
+  return boxes_overlap(&ga, &gb);
+}
+
+bool entity_rows_overlap(ascii_rows rows, double x, double y, const struct entity *style, struct entity *b) {
+  struct glyph_box ga = {rows, round_to_int(x), round_to_int(y), 0, 0, style};
+  for (; rows[ga.h] != NULL; ga.h++) {
+    int len = utf8_col_width(rows[ga.h]);
+    if (len > ga.w) ga.w = len;
+  }
+  struct glyph_box gb;
+  if (!entity_box(&gb, b)) return false;
+  return boxes_overlap(&ga, &gb);
 }

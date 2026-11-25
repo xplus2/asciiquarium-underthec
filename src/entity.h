@@ -7,8 +7,17 @@
 #include "canvas.h"
 #include "sprite.h"
 
+static inline int round_to_int(double v) {
+  return (int)(v >= 0.0 ? v + 0.5 : v - 0.5);
+}
+
 #define TICKS_PER_SECOND 10
 #define DIE_SECONDS(s) ((int)((s) * TICKS_PER_SECOND + 0.5))
+#define TICK_SECONDS (1.0 / TICKS_PER_SECOND)
+#define WATER_SURFACE_ROW 5
+/* seaweed grow/split timers, secs */
+#define SEAWEED_TIMER_MIN_S 90.0
+#define SEAWEED_TIMER_MAX_S 270.0
 
 enum entity_type {
   ENT_WATERLINE,           ENT_CASTLE,   ENT_SEAWEED,  ENT_FISH,        ENT_BUBBLE,
@@ -22,8 +31,8 @@ enum entity_type {
 };
 
 enum death_action {
-  DEATH_NONE,  DEATH_ADD_FISH,           DEATH_ADD_SEAWEED,       DEATH_ADD_KAIJU,   DEATH_RANDOM_OBJECT,
-  DEATH_SHARK, DEATH_ADD_KAIJU_COOLDOWN, DEATH_ADD_RANDOM_OBJECT, DEATH_ADD_MESSAGE, DEATH_ADD_TURTLE
+  DEATH_NONE,               DEATH_ADD_FISH,          DEATH_ADD_SEAWEED, DEATH_ADD_KAIJU, DEATH_RANDOM_OBJECT,
+  DEATH_ADD_KAIJU_COOLDOWN, DEATH_ADD_RANDOM_OBJECT, DEATH_ADD_MESSAGE, DEATH_ADD_TURTLE
 };
 
 enum turn_state {
@@ -68,6 +77,11 @@ struct entity {
   double splat_y;
   int splat_z;
   double fishhook_wait;
+  double hook_depth; /* fishhook line rows */
+  int tile_len; /* waterline tile cols */
+  double laser_eye_x;
+  int laser_target_id;
+  int laser_len;
 
   enum turn_state turn_state;
   int turn_step;
@@ -93,7 +107,6 @@ struct entity {
   bool seaweed_capped;
   bool seaweed_static;
   double seaweed_split_timer;
-  bool seaweed_landed;
   int seaweed_full_collapse_in;
   bool seaweed_full_collapse;
   char ***owned_mask_frames;
@@ -116,20 +129,23 @@ void entity_list_clear(struct entity_list *list);
 struct entity *entity_spawn(struct entity_list *list);
 struct entity *entity_find_first(struct entity_list *list, enum entity_type type);
 struct entity *entity_find_by_id(struct entity_list *list, int id);
+/* random pick per entity, kept in color_pick */
 void entity_randomize_mask(struct entity *e, ascii_rows mask_template);
 typedef void (*row_transform_fn)(const char *in, char *out, void *ctx);
 char **entity_build_transformed_rows(ascii_rows tmpl, row_transform_fn fn, void *ctx);
+/* rows through color_map_digits */
+char **entity_build_digit_rows(ascii_rows tmpl, const char pick[10]);
 void entity_free_owned_rows(char **rows);
 void entity_clear_owned_mask_frames(struct entity *e);
 void entity_set_owned_shape_frames(struct entity *e, char ***rows, int frame_count, double frame_interval_ticks);
 void entity_set_owned_shape_frame_masks(struct entity *e, char ***mask_rows);
 void entity_set_owned_single_row(struct entity *e, char *row, double frame_interval_ticks);
+/* single owned row: set first glyph byte */
+void entity_set_owned_lead(struct entity *e, char c);
 void entity_clear_owned(struct entity *e);
 ascii_rows entity_shape(const struct entity *e);
 ascii_rows entity_mask(const struct entity *e);
 int entity_width(struct entity *e);
-int entity_utf8_display_width(const char *s);
-int entity_utf8_byte_offset(const char *s, int col);
 int entity_height(struct entity *e);
 void entity_shape_changed(struct entity *e);
 #define ENT_BIT(t) ((uint64_t)1 << (t))
@@ -138,6 +154,8 @@ uint64_t entity_tick_all(struct entity_list *list, int term_w, int term_h);
 void entity_collide_all(struct entity_list *list, uint64_t present);
 void entity_collide_shutdown(void);
 bool entity_glyph_overlap(struct entity *a, struct entity *b);
+/* rows placed at x,y, trim/sentinel from style */
+bool entity_rows_overlap(ascii_rows rows, double x, double y, const struct entity *style, struct entity *b);
 typedef void (*entity_death_fn)(const struct entity *dead, void *ctx);
 void entity_reap(struct entity_list *list, entity_death_fn fn, void *ctx);
 void entity_draw_all(const struct entity_list *list, struct canvas *c, double alpha);

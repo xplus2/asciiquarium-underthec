@@ -48,18 +48,18 @@ static void sort_draw_order(const struct entity_list *list, int *order) {
 }
 
 static int band_newest_col(const struct entity *e, const char *srow) {
-  int len = (int)strlen(srow);
-  int cols = utf8_col_width(srow);
+  struct row_view v;
+  row_view_init(&v, e, srow);
   int l = e->hide_x0;
   int r = e->hide_x1 - 1;
   for (; l <= r; l++, r--) {
     int pair[2] = {l, r};
     for (int k = 0; k < (l == r ? 1 : 2); k++) {
       int col = pair[k];
-      if (col >= cols) continue;
-      int off = utf8_byte_offset(srow, col);
+      if (col >= v.cols) continue;
+      int off = row_view_offset(&v, col);
       if (strchr(" _`'", srow[off]) != NULL) continue;
-      if (!cell_transparent(e, srow, len, off)) return col;
+      if (!row_view_transparent_at(&v, e, off)) return col;
     }
   }
   return -1;
@@ -102,14 +102,9 @@ void entity_draw_all(const struct entity_list *list, struct canvas *c, double al
       int byte_len = (int)strlen(srow);
       const char *mrow = (mrows != NULL && row < mask_height) ? mrows[row] : NULL;
       int mlen = mrow != NULL ? (int)strlen(mrow) : 0;
-      /* trim bounds per row, not per column */
       int trim_start = 0;
       int trim_end = byte_len;
-      if (e->trim_edges) {
-        while (trim_start < byte_len && srow[trim_start] == ' ') trim_start++;
-        trim_end = byte_len;
-        while (trim_end > trim_start && srow[trim_end - 1] == ' ') trim_end--;
-      }
+      if (e->trim_edges) row_trim(srow, byte_len, &trim_start, &trim_end);
       int col = 0;
       for (int byte_idx = 0; byte_idx < byte_len; ) {
         unsigned char ch = (unsigned char)srow[byte_idx];

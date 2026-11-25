@@ -1,5 +1,4 @@
 #include "scene_internal.h"
-#include "../entity/priv.h"
 #include "color.h"
 #include "rng.h"
 #include "xalloc.h"
@@ -84,21 +83,22 @@ static void feed_tick_flakes(struct scene *sc, int floor_row) {
     if (crossed_surface) e->y = WATER_SURFACE_ROW;
     bool at_floor = e->y >= floor_row;
     if (at_floor) {
-      e->owned_shape_rows[0][0][0] = '_';
+      entity_set_owned_lead(e, '_');
       e->die_after = DIE_SECONDS(FLAKE_BOTTOM_LINGER);
     } else if (crossed_surface) {
-      e->owned_shape_rows[0][0][0] = '_';
+      entity_set_owned_lead(e, '_');
       e->frame_timer = 0.0;
     } else {
       e->frame_timer += 1.0;
       if (e->frame_timer >= FLAKE_CHAR_INTERVAL) {
         e->frame_timer -= FLAKE_CHAR_INTERVAL;
-        e->owned_shape_rows[0][0][0] = flake_pick_char();
+        entity_set_owned_lead(e, flake_pick_char());
       }
     }
   }
 }
 
+/* scratch: flake columns, then flake indices. sized to entity count */
 static int *g_cols_buf = NULL;
 static int g_cols_cap = 0;
 
@@ -108,13 +108,17 @@ void feed_shutdown(void) {
   g_cols_cap = 0;
 }
 
-static void feed_alert_fish(struct scene *sc) {
-  if (sc->feed_alerted) return;
+static int *scratch(const struct scene *sc) {
   if (sc->entities.count > g_cols_cap) {
     g_cols_buf = xrealloc(g_cols_buf, (size_t)sc->entities.count * sizeof(*g_cols_buf));
     g_cols_cap = sc->entities.count;
   }
-  int *cols = g_cols_buf;
+  return g_cols_buf;
+}
+
+static void feed_alert_fish(struct scene *sc) {
+  if (sc->feed_alerted) return;
+  int *cols = scratch(sc);
   int col_count = 0;
   bool any_in_main = false;
   for (int i = 0; i < sc->entities.count; i++) {
@@ -172,35 +176,46 @@ static bool shape_col_has_ink(ascii_rows rows, int h, int c) {
   return false;
 }
 
-static bool fish_mouth_touch(struct entity *fish, const struct entity *flake) {
+/* first two inked cols from front. ret count */
+static int fish_front_cols(struct entity *fish, int out[2]) {
   ascii_rows rows = entity_shape(fish);
   int w = entity_width(fish);
   int h = entity_height(fish);
-  if (rows == NULL || w <= 0 || h <= 0) return false;
-  int front_cols[2];
+  if (rows == NULL || w <= 0 || h <= 0) return 0;
   int found = 0;
   for (int i = 0; i < w && found < 2; i++) {
     int c = fish->vx >= 0.0 ? w - 1 - i : i;
-    if (shape_col_has_ink(rows, h, c)) front_cols[found++] = c;
+    if (shape_col_has_ink(rows, h, c)) out[found++] = c;
   }
-  if (found == 0) return false;
-  int fx = round_to_int(fish->x);
-  int fy = round_to_int(fish->y);
-  int flake_row = round_to_int(flake->y) - fy;
-  if (flake_row < 0 || flake_row >= h) return false;
-  int flake_col = round_to_int(flake->x) - fx;
+  return found;
+}
+
+static bool fish_mouth_touch(struct entity *fish, const int front_cols[2], int found, const struct entity *flake) {
+  int flake_row = round_to_int(flake->y) - round_to_int(fish->y);
+  if (flake_row < 0 || flake_row >= entity_height(fish)) return false;
+  int flake_col = round_to_int(flake->x) - round_to_int(fish->x);
   for (int k = 0; k < found; k++) if (front_cols[k] == flake_col) return true;
   return false;
 }
 
 static void feed_check_touches(struct scene *sc) {
+  int *flakes = scratch(sc);
+  int flake_count = 0;
+  for (int j = 0; j < sc->entities.count; j++) {
+    const struct entity *e = &sc->entities.items[j];
+    if (!e->marked_dead && e->type == ENT_FLAKE) flakes[flake_count++] = j;
+  }
+  if (flake_count == 0) return;
   for (int i = 0; i < sc->entities.count; i++) {
     struct entity *fish = &sc->entities.items[i];
     if (fish->marked_dead || fish->type != ENT_FISH || !fish->feed_heading) continue;
-    for (int j = 0; j < sc->entities.count; j++) {
-      struct entity *flake = &sc->entities.items[j];
-      if (flake->marked_dead || flake->type != ENT_FLAKE) continue;
-      if (fish_mouth_touch(fish, flake)) {
+    int front_cols[2];
+    int found = fish_front_cols(fish, front_cols);
+    if (found == 0) continue;
+    for (int k = 0; k < flake_count; k++) {
+      struct entity *flake = &sc->entities.items[flakes[k]];
+      if (flake->marked_dead) continue;
+      if (fish_mouth_touch(fish, front_cols, found, flake)) {
         flake->marked_dead = true;
         fish_set_vx(sc, fish, fish->feed_resume_vx);
         fish->feed_heading = false;
@@ -212,16 +227,18 @@ static void feed_check_touches(struct scene *sc) {
 }
 
 static void feed_release_waiting_fish(struct scene *sc) {
+  bool any_flake = false;
+  double top_flake_y = 0.0;
+  for (int j = 0; j < sc->entities.count; j++) {
+    const struct entity *flake = &sc->entities.items[j];
+    if (flake->marked_dead || flake->type != ENT_FLAKE) continue;
+    if (!any_flake || flake->y < top_flake_y) top_flake_y = flake->y;
+    any_flake = true;
+  }
   for (int i = 0; i < sc->entities.count; i++) {
     struct entity *fish = &sc->entities.items[i];
     if (fish->marked_dead || fish->type != ENT_FISH || !fish->feed_heading) continue;
-    bool any_above = false;
-    for (int j = 0; j < sc->entities.count; j++) {
-      const struct entity *flake = &sc->entities.items[j];
-      if (flake->marked_dead || flake->type != ENT_FLAKE) continue;
-      if (flake->y <= fish->y) { any_above = true; break; }
-    }
-    if (!any_above) {
+    if (!any_flake || top_flake_y > fish->y) {
       fish_set_vx(sc, fish, fish->feed_resume_vx);
       fish->feed_heading = false;
       fish->feed_wait = false;

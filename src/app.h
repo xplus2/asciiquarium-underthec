@@ -8,6 +8,12 @@
 #include "scene.h"
 #include "ui/settings.h"
 
+/* app_key arrows. web index.html + androidtv MainActivity mirror these */
+#define APP_KEY_UP    (-2)
+#define APP_KEY_DOWN  (-3)
+#define APP_KEY_LEFT  (-4)
+#define APP_KEY_RIGHT (-5)
+
 #define APP_MIN_ROWS 15
 #define APP_MIN_COLS 20
 
@@ -43,7 +49,13 @@ void app_feed(struct app *a, int col);
 /* dialog hits, otherwise: feed */
 void app_click(struct app *a, int x, int y);
 
+/* cells fitting w x h px, >= 1 each, centered offsets */
+void app_grid_fit(int w, int h, int cell_w, int cell_h, int *cols, int *rows, int *off_x, int *off_y);
+
 /* tick, canvas redraw */
 void app_frame(struct app *a, double now);
+
+/* advances *deadline by 1 frame, resyncs when >1 frame late. ret secs to wait, >= 0 */
+double app_frame_wait(const struct app *a, double *deadline, double now);
 
 #endif

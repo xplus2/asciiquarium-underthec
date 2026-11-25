@@ -73,6 +73,16 @@ static bool fail(char *err, size_t err_len, const char *msg, const char *shown) 
   return false;
 }
 
+static bool set_color(char **dst, const char *value, char *eb, size_t eb_len) {
+  if (!color_name_valid(value)) {
+    opts_set_errbuf(eb, eb_len, (const char *[]){"invalid color '", value, "'"}, 3);
+    return false;
+  }
+  free(*dst);
+  *dst = opts_strdup(value);
+  return true;
+}
+
 bool config_set(struct config *cfg, const char *name, const char *value, const char *shown, char *err, size_t err_len) {
   char eb[128];
   bool ok = true;
@@ -95,13 +105,7 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
       cfg->message = opts_strdup(value);
       break;
     case OPT_MESSAGE_COLOR:
-      ok = color_name_valid(value);
-      if (!ok) {
-        opts_set_errbuf(eb, sizeof eb, (const char *[]){"invalid color '", value, "'"}, 3);
-        break;
-      }
-      free(cfg->message_color);
-      cfg->message_color = opts_strdup(value);
+      ok = set_color(&cfg->message_color, value, eb, sizeof eb);
       break;
     case OPT_MESSAGE_POSITION:
       ok = opts_parse_message_position(value, &cfg->message_position, eb, sizeof eb);
@@ -110,13 +114,7 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
       ok = opts_parse_time(value, &cfg->time_mode, eb, sizeof eb);
       break;
     case OPT_TIME_COLOR:
-      ok = color_name_valid(value);
-      if (!ok) {
-        opts_set_errbuf(eb, sizeof eb, (const char *[]){"invalid color '", value, "'"}, 3);
-        break;
-      }
-      free(cfg->time_color);
-      cfg->time_color = opts_strdup(value);
+      ok = set_color(&cfg->time_color, value, eb, sizeof eb);
       break;
     case OPT_CASTLE_NAME: {
       char name_buf[CASTLE_NAME_MAX_BYTES + 1];
@@ -169,9 +167,13 @@ bool config_apply_env(struct config *cfg, char *err, size_t err_len) {
 }
 
 bool config_check(struct config *cfg, char *err, size_t err_len) {
-  (void)err;
-  (void)err_len;
-  if (cfg->classic_ver == 0) return true;
+  if (cfg->classic_ver == 0) {
+    if (cfg->time_mode != 0 && config_is_set(cfg, "message-position") && cfg->message_position == MSG_POS_MIDDLE) {
+      opts_set_errbuf(err, err_len, (const char *[]){"time and message-position middle are mutually exclusive"}, 1);
+      return false;
+    }
+    return true;
+  }
   cfg->aquatic = scene_aquatic_classic();
   cfg->fps = CLASSIC_FPS;
   cfg->uturn_chance = 0;

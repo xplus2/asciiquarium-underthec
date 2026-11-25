@@ -1,4 +1,6 @@
-#include "priv.h"
+#include "utf8.h"
+
+#include <stdbool.h>
 
 int utf8_seq_len(unsigned char lead) {
   if ((lead & 0x80) == 0x00) return 1;
@@ -21,6 +23,40 @@ unsigned utf8_decode(const char *s, int seq_len) {
     cp = (cp << 6) | (unsigned)((unsigned char)s[k] & 0x3F);
   }
   return cp;
+}
+
+int utf8_decode_strict(const char *s, size_t len, unsigned *cp_out) {
+  unsigned char b0 = (unsigned char)s[0];
+  if (b0 < 0x80) {
+    *cp_out = b0;
+    return 1;
+  }
+  int n;
+  unsigned cp;
+  if ((b0 & 0xE0) == 0xC0) {
+    if (b0 < 0xC2) return -1;
+    n = 2;
+    cp = b0 & 0x1F;
+  } else if ((b0 & 0xF0) == 0xE0) {
+    n = 3;
+    cp = b0 & 0x0F;
+  } else if ((b0 & 0xF8) == 0xF0) {
+    if (b0 > 0xF4) return -1;
+    n = 4;
+    cp = b0 & 0x07;
+  } else {
+    return -1;
+  }
+  if (len < (size_t)n) return -1;
+  for (int k = 1; k < n; k++) {
+    unsigned char c = (unsigned char)s[k];
+    if ((c & 0xC0) != 0x80) return -1;
+    cp = (cp << 6) | (unsigned)(c & 0x3F);
+  }
+  if (n == 3 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) return -1;
+  if (n == 4 && (cp < 0x10000 || cp > 0x10FFFF)) return -1;
+  *cp_out = cp;
+  return n;
 }
 
 int utf8_valid_len(const char *s) {
@@ -104,12 +140,4 @@ int utf8_byte_offset(const char *s, int col) {
     i += seq_len;
   }
   return i;
-}
-
-int entity_utf8_display_width(const char *s) {
-  return utf8_col_width(s);
-}
-
-int entity_utf8_byte_offset(const char *s, int col) {
-  return utf8_byte_offset(s, col);
 }

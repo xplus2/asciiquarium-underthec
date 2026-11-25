@@ -13,6 +13,8 @@ void opts_append_bounded_w(char *dst, size_t dst_cap, size_t *pos, const char *s
 void opts_append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c);
 void opts_append_int_bounded(char *dst, size_t dst_cap, size_t *pos, long v, int width);
 void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v, int width, int decimals);
+/* NUL-terminated */
+void opts_format_int(char *out, size_t out_cap, long v);
 void opts_set_errbuf(char *errbuf, size_t errbuf_len, const char *const *parts, size_t count);
 char *opts_strdup(const char *s);
 
@@ -28,7 +30,13 @@ bool opts_parse_classic(const char *val, int *out_ver, char *errbuf, size_t errb
 /* "" or 24 = 24, 12 */
 bool opts_parse_time(const char *val, int *out, char *errbuf, size_t errbuf_len);
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len);
+const char *opts_message_position_name(enum message_position pos);
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len);
+#define OPTS_FPS_MIN 1
+#define OPTS_FPS_MAX 240
+#define OPTS_COUNT_MAX 999 /* fish count, uturn chance */
+#define OPTS_PACE_MIN 0.01
+#define OPTS_PACE_MAX 10.0
 #define AUTOFEED_DEFAULT 600
 #define AUTOFEED_MAX 99999
 /* mean secs, "" = AUTOFEED_DEFAULT, 0 = off */
@@ -36,6 +44,8 @@ bool opts_parse_autofeed(const char *val, int *out, char *errbuf, size_t errbuf_
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len);
 /* 1,2,4,7,8,8-bold,16 */
 bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len);
+/* inverse of opts_parse_colors */
+void opts_format_colors(int mode, char *out, size_t out_cap);
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len);
 /* out_cap incl NUL, printable ASCII (0x20-0x7E) */
 bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);

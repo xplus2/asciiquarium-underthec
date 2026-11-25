@@ -1,6 +1,7 @@
 #include "scr.h"
 #include "scr_res.h"
 #include "../../opts.h"
+#include "../../ui/opt_table.h"
 #include "../../version.h"
 #include "../../xalloc.h"
 
@@ -9,52 +10,7 @@
 
 #define REG_PATH L"Software\\underthec\\Screensaver"
 
-enum reg_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_AUTOFEED, OPT_COUNT };
-
-/* long CLI names */
-static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color", "autofeed",
-};
-
-/* dialog names in errors */
-static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color", "Autofeed",
-};
-
-static const char *const classic_items[] = {"off", "1.0", "1.1"};
-static const char *const time_items[] = {"off", "24", "12"};
-static const char *const time_labels[] = {"Off", "24 hours", "12 hours (am/pm)"};
-static const char *const colors_items[] = {
-  "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
-  "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
-  "4", "7", "8", "8-bold", "16",
-};
-static const char *const colors_labels[] = {
-  " 1", " 1-green", " 1-red", " 1-blue", " 1-yellow", " 1-magenta", " 1-cyan", " 1-white",
-  " 2", " 2-green", " 2-red", " 2-blue", " 2-yellow", " 2-magenta", " 2-cyan", " 2-white",
-  " 4 (RGBW)", " 7 (Teletext)", " 8", " 8-bold", "16 (ANSI)",
-};
-static const char *const color_items[] = {
-  "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-  "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
-};
-static const char *const color_labels[] = {
-  "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-  "Black (bold)", "Red (bold)", "Green (bold)", "Yellow (bold)", "Blue (bold)", "Magenta (bold)", "Cyan (bold)", "White (bold)",
-};
-/* enum message_position order */
-static const char *const position_items[] = {"middle", "center", "marquee", "swim", "event"};
-
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
-
-static int colors_index(int mode) {
-  char eb[128];
-  for (size_t i = 0; i < COUNT(colors_items); i++) {
-    int parsed;
-    if (opts_parse_colors(colors_items[i], &parsed, eb, sizeof eb) && parsed == mode) return (int)i;
-  }
-  return (int)COUNT(colors_items) - 1;
-}
 
 _Static_assert(SCENE_AQUATIC_FLAG_COUNT == SCR_FLAG_SLOTS, "dialog checkboxes out of sync with creatures");
 
@@ -96,10 +52,10 @@ bool scr_config_load(struct config *cfg, char *err, size_t err_len) {
   HKEY key;
   if (RegOpenKeyExW(HKEY_CURRENT_USER, REG_PATH, 0, KEY_READ, &key) != ERROR_SUCCESS) return true;
   bool ok = true;
-  for (size_t i = 0; i < OPT_COUNT && ok; i++) {
-    char *val = reg_read(key, opt_names[i]);
+  for (size_t i = 0; i < OT_COUNT && ok; i++) {
+    char *val = reg_read(key, ot_names[i]);
     if (val == NULL) continue;
-    ok = config_set(cfg, opt_names[i], val, opt_names[i], err, err_len);
+    ok = config_set(cfg, ot_names[i], val, ot_names[i], err, err_len);
     free(val);
   }
   RegCloseKey(key);
@@ -107,12 +63,12 @@ bool scr_config_load(struct config *cfg, char *err, size_t err_len) {
 }
 
 /* NULL val: delete */
-static bool config_save(char *const vals[OPT_COUNT]) {
+static bool config_save(char *const vals[OT_COUNT]) {
   HKEY key;
   if (RegCreateKeyExW(HKEY_CURRENT_USER, REG_PATH, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL) != ERROR_SUCCESS) return false;
   bool ok = true;
-  for (size_t i = 0; i < OPT_COUNT; i++) {
-    WCHAR *wname = wide_from_utf8(opt_names[i]);
+  for (size_t i = 0; i < OT_COUNT; i++) {
+    WCHAR *wname = wide_from_utf8(ot_names[i]);
     if (vals[i] == NULL) {
       RegDeleteValueW(key, wname);
     } else {
@@ -145,6 +101,19 @@ static void item_set_text(HWND dlg, int id, const char *s) {
 
 static void combo_fill(HWND dlg, int id, const char *const *items, size_t count) {
   for (size_t i = 0; i < count; i++) SendDlgItemMessageA(dlg, id, CB_ADDSTRING, 0, (LPARAM)items[i]);
+}
+
+/* one-digit modes padded to align with "16" */
+static void colors_combo_fill(HWND dlg, int id) {
+  for (size_t i = 0; i < OT_COLORS_N; i++) {
+    const char *label = ot_colors_labels[i];
+    char buf[24];
+    size_t p = 0;
+    if (label[1] < '0' || label[1] > '9') opts_append_char_bounded(buf, sizeof buf - 1, &p, ' ');
+    opts_append_bounded(buf, sizeof buf - 1, &p, label);
+    buf[p] = '\0';
+    SendDlgItemMessageA(dlg, id, CB_ADDSTRING, 0, (LPARAM)buf);
+  }
 }
 
 static int combo_sel(HWND dlg, int id) {
@@ -199,7 +168,7 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   SendDlgItemMessageW(dlg, IDC_CLASSIC, CB_SETCURSEL, (WPARAM)cfg->classic_ver, 0);
   bool fish_auto = cfg->aquatic.fish_count < 0;
   CheckDlgButton(dlg, IDC_FISH_AUTO, fish_auto ? BST_CHECKED : BST_UNCHECKED);
-  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, fish_auto ? 0 : cfg->aquatic.fish_count, 0); buf[p] = '\0'; }
+  opts_format_int(buf, sizeof buf, fish_auto ? 0 : cfg->aquatic.fish_count);
   item_set_text(dlg, IDC_FISH, fish_auto ? "" : buf);
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) {
     bool on = *scene_aquatic_flag(&cfg->aquatic, i);
@@ -209,8 +178,8 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   item_set_text(dlg, IDC_MESSAGE, msg);
   free(msg);
   int color = 0;
-  for (size_t i = 1; cfg->message_color != NULL && i < COUNT(color_items); i++)
-    if (strcmp(cfg->message_color, color_items[i]) == 0) color = (int)i;
+  for (size_t i = 1; cfg->message_color != NULL && i < COUNT(ot_color_items); i++)
+    if (strcmp(cfg->message_color, ot_color_items[i]) == 0) color = (int)i;
   SendDlgItemMessageW(dlg, IDC_MSG_COLOR, CB_SETCURSEL, (WPARAM)color, 0);
   SendDlgItemMessageW(dlg, IDC_MSG_POS, CB_SETCURSEL, (WPARAM)cfg->message_position, 0);
   int time_sel = 0;
@@ -218,8 +187,8 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   else if (cfg->time_mode == 12) time_sel = 2;
   SendDlgItemMessageW(dlg, IDC_TIME, CB_SETCURSEL, (WPARAM)time_sel, 0);
   int time_color = 0;
-  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(color_items); i++)
-    if (strcmp(cfg->time_color, color_items[i]) == 0) time_color = (int)i;
+  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(ot_color_items); i++)
+    if (strcmp(cfg->time_color, ot_color_items[i]) == 0) time_color = (int)i;
   SendDlgItemMessageW(dlg, IDC_TIME_COLOR, CB_SETCURSEL, (WPARAM)time_color, 0);
   CheckDlgButton(dlg, IDC_CASTLE_ENABLED, cfg->no_castle ? BST_UNCHECKED : BST_CHECKED);
   item_set_text(dlg, IDC_CASTLE_NAME, cfg->castle_name != NULL ? cfg->castle_name : "");
@@ -229,13 +198,13 @@ static void controls_from_config(HWND dlg, struct config *cfg) {
   while (end[-1] == '0') *--end = '\0';
   if (end[-1] == '.') end[-1] = '\0';
   item_set_text(dlg, IDC_PACE, buf);
-  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->fps, 0); buf[p] = '\0'; }
+  opts_format_int(buf, sizeof buf, cfg->fps);
   item_set_text(dlg, IDC_FPS, buf);
-  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->uturn_chance, 0); buf[p] = '\0'; }
+  opts_format_int(buf, sizeof buf, cfg->uturn_chance);
   item_set_text(dlg, IDC_UTURN, buf);
-  { size_t p = 0; opts_append_int_bounded(buf, sizeof buf - 1, &p, cfg->autofeed, 0); buf[p] = '\0'; }
+  opts_format_int(buf, sizeof buf, cfg->autofeed);
   item_set_text(dlg, IDC_AUTOFEED, buf);
-  SendDlgItemMessageW(dlg, IDC_COLORS, CB_SETCURSEL, (WPARAM)colors_index(cfg->colors_mode), 0);
+  SendDlgItemMessageW(dlg, IDC_COLORS, CB_SETCURSEL, (WPARAM)ot_colors_index(cfg->colors_mode), 0);
   update_enabled(dlg);
 }
 
@@ -258,47 +227,47 @@ static char *aquatic_definition(HWND dlg) {
 }
 
 static bool apply(HWND dlg) {
-  char *vals[OPT_COUNT] = {0};
+  char *vals[OT_COUNT] = {0};
   int classic = combo_sel(dlg, IDC_CLASSIC);
-  if (classic > 0) vals[OPT_CLASSIC] = opts_strdup(classic_items[classic]);
-  else vals[OPT_AQUATIC] = aquatic_definition(dlg);
-  vals[OPT_MESSAGE] = item_text(dlg, IDC_MESSAGE);
-  strip_cr(vals[OPT_MESSAGE]);
-  if (vals[OPT_MESSAGE][0] == '\0') {
-    free(vals[OPT_MESSAGE]);
-    vals[OPT_MESSAGE] = NULL;
+  if (classic > 0) vals[OT_CLASSIC] = opts_strdup(ot_classic_items[classic]);
+  else vals[OT_AQUATIC] = aquatic_definition(dlg);
+  vals[OT_MESSAGE] = item_text(dlg, IDC_MESSAGE);
+  strip_cr(vals[OT_MESSAGE]);
+  if (vals[OT_MESSAGE][0] == '\0') {
+    free(vals[OT_MESSAGE]);
+    vals[OT_MESSAGE] = NULL;
   }
   int color = combo_sel(dlg, IDC_MSG_COLOR);
-  if (color > 0) vals[OPT_COLOR] = opts_strdup(color_items[color]);
+  if (color > 0) vals[OT_COLOR] = opts_strdup(ot_color_items[color]);
   int time_sel = combo_sel(dlg, IDC_TIME);
   int position = combo_sel(dlg, IDC_MSG_POS);
-  if (time_sel > 0) vals[OPT_TIME] = opts_strdup(time_items[time_sel]);
+  if (time_sel > 0) vals[OT_TIME] = opts_strdup(ot_time_items[time_sel]);
   int time_color = combo_sel(dlg, IDC_TIME_COLOR);
-  if (time_sel > 0 && time_color > 0) vals[OPT_TIME_COLOR] = opts_strdup(color_items[time_color]);
-  if (time_sel == 0 || position != 0) vals[OPT_POSITION] = opts_strdup(position_items[position]);
-  vals[OPT_CASTLE_NAME] = item_text(dlg, IDC_CASTLE_NAME);
-  if (vals[OPT_CASTLE_NAME][0] == '\0') {
-    free(vals[OPT_CASTLE_NAME]);
-    vals[OPT_CASTLE_NAME] = NULL;
+  if (time_sel > 0 && time_color > 0) vals[OT_TIME_COLOR] = opts_strdup(ot_color_items[time_color]);
+  if (time_sel == 0 || position != 0) vals[OT_POSITION] = opts_strdup(ot_position_items[position]);
+  vals[OT_CASTLE_NAME] = item_text(dlg, IDC_CASTLE_NAME);
+  if (vals[OT_CASTLE_NAME][0] == '\0') {
+    free(vals[OT_CASTLE_NAME]);
+    vals[OT_CASTLE_NAME] = NULL;
   }
-  vals[OPT_NO_CASTLE] = opts_strdup(checked(dlg, IDC_CASTLE_ENABLED) ? "0" : "1");
-  vals[OPT_PACE] = item_text(dlg, IDC_PACE);
-  vals[OPT_UTURN] = item_text(dlg, IDC_UTURN);
-  vals[OPT_FPS] = item_text(dlg, IDC_FPS);
-  vals[OPT_AUTOFEED] = item_text(dlg, IDC_AUTOFEED);
-  if (vals[OPT_AUTOFEED][0] == '\0') {
-    free(vals[OPT_AUTOFEED]);
-    vals[OPT_AUTOFEED] = NULL;
+  vals[OT_NO_CASTLE] = opts_strdup(checked(dlg, IDC_CASTLE_ENABLED) ? "0" : "1");
+  vals[OT_PACE] = item_text(dlg, IDC_PACE);
+  vals[OT_UTURN] = item_text(dlg, IDC_UTURN);
+  vals[OT_FPS] = item_text(dlg, IDC_FPS);
+  vals[OT_AUTOFEED] = item_text(dlg, IDC_AUTOFEED);
+  if (vals[OT_AUTOFEED][0] == '\0') {
+    free(vals[OT_AUTOFEED]);
+    vals[OT_AUTOFEED] = NULL;
   }
-  vals[OPT_COLORS] = opts_strdup(colors_items[combo_sel(dlg, IDC_COLORS)]);
+  vals[OT_COLORS] = opts_strdup(ot_colors_items[combo_sel(dlg, IDC_COLORS)]);
 
   char err[256];
   struct config cfg;
   config_init(&cfg);
   bool ok = true;
-  for (size_t i = 0; i < OPT_COUNT; i++) {
+  for (size_t i = 0; i < OT_COUNT; i++) {
     if (vals[i] == NULL) continue;
-    ok = config_set(&cfg, opt_names[i], vals[i], opt_labels[i], err, sizeof err);
+    ok = config_set(&cfg, ot_names[i], vals[i], ot_labels[i], err, sizeof err);
     if (!ok) break;
   }
   if (ok) ok = config_check(&cfg, err, sizeof err);
@@ -311,7 +280,7 @@ static bool apply(HWND dlg) {
     MessageBoxW(dlg, L"Could not save settings to the registry.", TOOL_DISPLAY_NAME_W, MB_OK | MB_ICONERROR);
     ok = false;
   }
-  for (size_t i = 0; i < OPT_COUNT; i++) free(vals[i]);
+  for (size_t i = 0; i < OT_COUNT; i++) free(vals[i]);
   return ok;
 }
 
@@ -337,12 +306,12 @@ static void message_font_set(HWND dlg, UINT dpi) {
 }
 
 static void init_dialog(HWND dlg) {
-  combo_fill(dlg, IDC_CLASSIC, classic_items, COUNT(classic_items));
-  combo_fill(dlg, IDC_MSG_COLOR, color_labels, COUNT(color_labels));
-  combo_fill(dlg, IDC_MSG_POS, position_items, COUNT(position_items));
-  combo_fill(dlg, IDC_TIME, time_labels, COUNT(time_labels));
-  combo_fill(dlg, IDC_TIME_COLOR, color_labels, COUNT(color_labels));
-  combo_fill(dlg, IDC_COLORS, colors_labels, COUNT(colors_labels));
+  combo_fill(dlg, IDC_CLASSIC, ot_classic_items, COUNT(ot_classic_items));
+  combo_fill(dlg, IDC_MSG_COLOR, ot_color_labels, COUNT(ot_color_labels));
+  combo_fill(dlg, IDC_MSG_POS, ot_position_items, COUNT(ot_position_items));
+  combo_fill(dlg, IDC_TIME, ot_time_labels, COUNT(ot_time_labels));
+  combo_fill(dlg, IDC_TIME_COLOR, ot_color_labels, COUNT(ot_color_labels));
+  colors_combo_fill(dlg, IDC_COLORS);
   for (size_t i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) item_set_text(dlg, IDC_FLAG0 + (int)i, scene_aquatic_flag_name(i));
   message_font_set(dlg, window_dpi(dlg));
   item_set_text(dlg, IDC_VERSION, TOOL_DISPLAY_NAME " v" TOOL_VERSION);

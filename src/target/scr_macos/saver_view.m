@@ -1,28 +1,13 @@
 #import <ScreenSaver/ScreenSaver.h>
 
-#include <string.h>
-#include <time.h>
-
 #import "saver.h"
 #include "../../app.h"
 #include "../../color.h"
+#include "../../monotime.h"
 
 #define RUN_MAX 512
 #define MIN_FONT_PX 10
 #define MIN_FONT_PX_PREVIEW 5
-
-/* enum color, bold */
-static const unsigned char palette_rgb[9][2][3] = {
-  {{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}}, {{0x00, 0x00, 0x00}, {0x80, 0x80, 0x80}},
-  {{0xc0, 0x00, 0x00}, {0xff, 0x55, 0x55}}, {{0x00, 0xc0, 0x00}, {0x55, 0xff, 0x55}},
-  {{0xc0, 0xc0, 0x00}, {0xff, 0xff, 0x55}}, {{0x00, 0x00, 0xc0}, {0x55, 0x55, 0xff}},
-  {{0xc0, 0x00, 0xc0}, {0xff, 0x55, 0xff}}, {{0x00, 0xc0, 0xc0}, {0x55, 0xff, 0xff}},
-  {{0xc0, 0xc0, 0xc0}, {0xff, 0xff, 0xff}},
-};
-
-static double now_seconds(void) {
-  return (double)clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1e9;
-}
 
 @interface UnderTheCView : ScreenSaverView {
   struct app _app;
@@ -93,9 +78,10 @@ static double now_seconds(void) {
   NSMutableArray<NSDictionary *> *attrs = [NSMutableArray arrayWithCapacity:18];
   for (int c = 0; c < 9; c++) {
     for (int b = 0; b < 2; b++) {
-      NSColor *color = [NSColor colorWithSRGBRed:palette_rgb[c][b][0] / 255.0
-                                           green:palette_rgb[c][b][1] / 255.0
-                                            blue:palette_rgb[c][b][2] / 255.0
+      uint32_t rgb = color_rgb((enum color)c, b);
+      NSColor *color = [NSColor colorWithSRGBRed:((rgb >> 16) & 0xff) / 255.0
+                                           green:((rgb >> 8) & 0xff) / 255.0
+                                            blue:(rgb & 0xff) / 255.0
                                            alpha:1.0];
       [colors addObject:color];
       [attrs addObject:@{NSFontAttributeName : fonts[b], NSForegroundColorAttributeName : color}];
@@ -163,7 +149,7 @@ static double now_seconds(void) {
     config_free(&cfg);
     config_init(&cfg);
   }
-  config_start(&cfg, &_app, now_seconds());
+  config_start(&cfg, &_app, monotime_now());
   _started = true;
   [self setAnimationTimeInterval:1.0 / (double)cfg.fps];
   config_free(&cfg);
@@ -180,7 +166,7 @@ static double now_seconds(void) {
 
 - (void)animateOneFrame {
   if (!_started) return;
-  app_frame(&_app, now_seconds());
+  app_frame(&_app, monotime_now());
   if (_backing == NULL || _attrs == nil) return;
   struct canvas *c = &_app.canvas;
   if (!canvas_diff(c)) return;
@@ -189,43 +175,29 @@ static double now_seconds(void) {
   for (int row = 0; row < c->height; row++)
     if (c->row_hi[row] >= c->row_lo[row]) [self drawSpan:row lo:c->row_lo[row] hi:c->row_hi[row]];
   [NSGraphicsContext restoreGraphicsState];
-  [self setNeedsDisplay:YES];
+  for (int row = 0; row < c->height; row++) {
+    if (c->row_hi[row] < c->row_lo[row]) continue;
+    [self setNeedsDisplayInRect:NSMakeRect(_offX + c->row_lo[row] * _cellW, _offY + row * _cellH, (c->row_hi[row] - c->row_lo[row] + 1) * _cellW, _cellH)];
+  }
 }
 
 - (NSColor *)colorFor:(int)col bold:(bool)bold {
   return _colors[(NSUInteger)col * 2 + (bold ? 1 : 0)];
 }
 
-/* runs of same fg attr in cols lo..hi */
-- (void)drawRow:(int)row lo:(int)lo hi:(int)hi {
-  const struct canvas *c = &_app.canvas;
-  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
-  CGFloat y = _offY + row * _cellH;
+- (void)drawRunRow:(int)row col0:(int)col0 col1:(int)col1 attr:(const struct cell *)attr {
   char text[RUN_MAX];
-  int n = 0;
-  CGFloat run_x = _offX;
-  const struct cell *run_attr = NULL;
-  for (int col = lo; col <= hi + 1; col++) {
-    const struct cell *cell = col <= hi ? &line[col] : NULL;
-    if (cell != NULL && cell->cont) continue;
-    size_t len = cell != NULL ? strlen(cell->glyph) : 0;
-    bool same = cell != NULL && run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold && n + (int)len <= RUN_MAX;
-    if (same) {
-      memcpy(text + n, cell->glyph, len);
-      n += (int)len;
-      continue;
-    }
-    if (run_attr != NULL) {
-      NSString *s = [[NSString alloc] initWithBytes:text length:(NSUInteger)n encoding:NSUTF8StringEncoding];
-      [s drawAtPoint:NSMakePoint(run_x, y) withAttributes:_attrs[(NSUInteger)run_attr->col * 2 + (run_attr->bold ? 1 : 0)]];
-    }
-    n = 0;
-    run_attr = cell;
-    if (cell == NULL) break;
-    run_x = _offX + col * _cellW;
-    memcpy(text, cell->glyph, len);
-    n = (int)len;
-  }
+  int n = canvas_run_utf8(&_app.canvas, row, col0, col1, text, RUN_MAX);
+  NSString *s = [[NSString alloc] initWithBytes:text length:(NSUInteger)n encoding:NSUTF8StringEncoding];
+  [s drawAtPoint:NSMakePoint(_offX + col0 * _cellW, _offY + row * _cellH) withAttributes:_attrs[(NSUInteger)attr->col * 2 + (attr->bold ? 1 : 0)]];
+}
+
+static void draw_run(void *ctx, int row, int col0, int col1, const struct cell *attr) {
+  [(__bridge UnderTheCView *)ctx drawRunRow:row col0:col0 col1:col1 attr:attr];
+}
+
+- (void)drawRow:(int)row lo:(int)lo hi:(int)hi {
+  canvas_row_runs(&_app.canvas, row, lo, hi, RUN_MAX / 4, draw_run, (__bridge void *)self);
 }
 
 - (void)drawSpan:(int)row lo:(int)lo hi:(int)hi {

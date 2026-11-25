@@ -18,9 +18,15 @@ static int err_requires_arg(const char *prog, const char *opt) {
   return 2;
 }
 
-static int err_env_bad(const char *prog, const char *name, const char *errbuf) {
-  write_parts(stderr, (const char *[]){prog, ": ", errbuf, " for ", name, "\n"}, 6);
-  return 2;
+static bool bad_value(const char *prog, const char *errbuf, const char *shown, int *exit_code) {
+  write_parts(stderr, (const char *[]){prog, ": ", errbuf, " for ", shown, "\n"}, 6);
+  *exit_code = 2;
+  return false;
+}
+
+/* NULL when given on cmdline */
+static const char *env_unless(bool given, const char *name) {
+  return given ? NULL : getenv(name);
 }
 
 static bool parse_teletext_mode(const char *val, enum tt_mode *out, char *errbuf, size_t errbuf_len) {
@@ -46,48 +52,6 @@ static bool parse_teletext_glyphs(const char *val, enum tt_glyphs *out, char *er
 static bool parse_ttl(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   if (!opts_parse_int_range(val, 1, 255, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid ttl '", val, "', expected 1-255"}, 3);
-    return false;
-  }
-  return true;
-}
-
-/* shared opt + env fallback table: (val, dest, errbuf, errbuf_len) -> ok */
-typedef bool (*opt_parser_fn)(const char *val, void *out, char *errbuf, size_t errbuf_len);
-
-static bool w_bool(const char *val, void *out, char *errbuf, size_t errbuf_len) {
-  return opts_parse_bool(val, out, errbuf, errbuf_len);
-}
-static bool w_ttl(const char *val, void *out, char *errbuf, size_t errbuf_len) {
-  return parse_ttl(val, out, errbuf, errbuf_len);
-}
-
-/* buffer-out parsers (val, buf, cap, errbuf, errbuf_len) wrapped behind opt_parser_fn */
-struct buf_arg {
-  char *buf;
-  size_t cap;
-  bool (*parse)(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len);
-};
-
-static bool w_buf(const char *val, void *out, char *errbuf, size_t errbuf_len) {
-  struct buf_arg *ba = out;
-  return ba->parse(val, ba->buf, ba->cap, errbuf, errbuf_len);
-}
-
-struct cli_opt {
-  const char *short_opt;
-  const char *long_opt;
-  opt_parser_fn parse;
-  void *out;
-  bool *given;
-};
-
-static bool apply_env(bool given, const char *env_name, const char *prog, opt_parser_fn parse, void *out, int *exit_code) {
-  if (given) return true;
-  const char *env_val = getenv(env_name);
-  if (env_val == NULL) return true;
-  char errbuf[128];
-  if (!parse(env_val, out, errbuf, sizeof errbuf)) {
-    *exit_code = err_env_bad(prog, env_name, errbuf);
     return false;
   }
   return true;
@@ -148,6 +112,8 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
   const char *teletext_arg = NULL;
   const char *glyphs_arg = NULL;
   char err[256];
+  char eb[128];
+  const char *v;
 
   config_init(cfg);
   out->screensaver = false;
@@ -156,13 +122,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
   out->iface_arg = NULL;
   out->mcast_ttl = 1;
   { size_t p = 0; opts_append_bounded(out->teletext_caption, sizeof(out->teletext_caption) - 1, &p, TT_TITLE); out->teletext_caption[p] = '\0'; }
-
-  struct buf_arg teletext_caption_arg = { out->teletext_caption, sizeof(out->teletext_caption), opts_parse_teletext_caption };
-
-  struct cli_opt table[] = {
-    {NULL, "--ttl", w_ttl, &out->mcast_ttl, &ttl_given},
-    {NULL, "--teletext-caption", w_buf, &teletext_caption_arg, &teletext_caption_given},
-  };
 
   int i = 1;
   while (i < argc) {
@@ -177,22 +136,17 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
       break;
     }
     if (matched) continue;
-    for (size_t k = 0; k < sizeof(table) / sizeof(table[0]); k++) {
-      if (!opt_hit(a, table[k].short_opt, table[k].long_opt)) continue;
+    if (strcmp(a, "--ttl") == 0) {
       if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
-      char errbuf[128];
-      if (!table[k].parse(argv[i + 1], table[k].out, errbuf, sizeof errbuf)) {
-        write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, " for ", a, "\n"}, 6);
-        *exit_code = 2;
-        return false;
-      }
-      *table[k].given = true;
+      if (!parse_ttl(argv[i + 1], &out->mcast_ttl, eb, sizeof eb)) return bad_value(argv[0], eb, a, exit_code);
+      ttl_given = true;
       i += 2;
-      matched = true;
-      break;
-    }
-    if (matched) continue;
-    if (strcmp(a, "-c") == 0 || strcmp(a, "--classic") == 0) {
+    } else if (strcmp(a, "--teletext-caption") == 0) {
+      if (i + 1 >= argc) { *exit_code = err_requires_arg(argv[0], a); return false; }
+      if (!opts_parse_teletext_caption(argv[i + 1], out->teletext_caption, sizeof out->teletext_caption, eb, sizeof eb)) return bad_value(argv[0], eb, a, exit_code);
+      teletext_caption_given = true;
+      i += 2;
+    } else if (strcmp(a, "-c") == 0 || strcmp(a, "--classic") == 0) {
       const char *ver = "";
       i++;
       if (i < argc && (strcmp(argv[i], "1.0") == 0 || strcmp(argv[i], "1.1") == 0)) ver = argv[i++];
@@ -264,14 +218,17 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
   }
 
   if (!config_apply_env(cfg, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
-  if (!apply_env(t_given, "UNDERTHEC_TRANSPARENT", argv[0], w_bool, &out->transparent, exit_code)) return false;
-  if (!apply_env(s_given, "UNDERTHEC_SCREENSAVER", argv[0], w_bool, &out->screensaver, exit_code)) return false;
+  if ((v = env_unless(t_given, "UNDERTHEC_TRANSPARENT")) != NULL && !opts_parse_bool(v, &out->transparent, eb, sizeof eb)) return bad_value(argv[0], eb, "UNDERTHEC_TRANSPARENT", exit_code);
+  if ((v = env_unless(s_given, "UNDERTHEC_SCREENSAVER")) != NULL && !opts_parse_bool(v, &out->screensaver, eb, sizeof eb)) return bad_value(argv[0], eb, "UNDERTHEC_SCREENSAVER", exit_code);
   if (teletext_arg == NULL) teletext_arg = getenv("UNDERTHEC_TELETEXT");
   if (glyphs_arg == NULL) glyphs_arg = getenv("UNDERTHEC_TELETEXT_MODE");
   if (out->mcast_arg == NULL) out->mcast_arg = getenv("UNDERTHEC_MCAST");
   if (out->iface_arg == NULL) out->iface_arg = getenv("UNDERTHEC_MCAST_IFACE");
-  if (!apply_env(ttl_given, "UNDERTHEC_MCAST_TTL", argv[0], w_ttl, &out->mcast_ttl, exit_code)) return false;
-  if (!apply_env(teletext_caption_given, "UNDERTHEC_TELETEXT_CAPTION", argv[0], w_buf, &teletext_caption_arg, exit_code)) return false;
+  if ((v = env_unless(ttl_given, "UNDERTHEC_MCAST_TTL")) != NULL && !parse_ttl(v, &out->mcast_ttl, eb, sizeof eb)) return bad_value(argv[0], eb, "UNDERTHEC_MCAST_TTL", exit_code);
+  if ((v = env_unless(teletext_caption_given, "UNDERTHEC_TELETEXT_CAPTION")) != NULL &&
+      !opts_parse_teletext_caption(v, out->teletext_caption, sizeof out->teletext_caption, eb, sizeof eb)) {
+    return bad_value(argv[0], eb, "UNDERTHEC_TELETEXT_CAPTION", exit_code);
+  }
 
   if (cfg->classic_ver != 0) {
     for (size_t k = 0; k < sizeof(classic_conflicts) / sizeof(classic_conflicts[0]); k++) {
@@ -280,11 +237,6 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
       *exit_code = 2;
       return false;
     }
-  }
-  if (cfg->time_mode != 0 && config_is_set(cfg, "message-position") && cfg->message_position == MSG_POS_MIDDLE) {
-    write_parts(stderr, (const char *[]){argv[0], ": --time and -P/--message-position middle are mutually exclusive\n"}, 2);
-    *exit_code = 2;
-    return false;
   }
   if (!config_check(cfg, err, sizeof err)) return cfg_error(argv[0], err, exit_code);
 
@@ -298,14 +250,13 @@ bool args_parse(int argc, char **argv, struct cli_args *out, struct config *cfg,
     return false;
   }
   if (out->teletext_requested || out->mcast_requested) {
-    char errbuf[128];
-    if (out->teletext_requested && !parse_teletext_mode(teletext_arg, &out->tt_mode, errbuf, sizeof errbuf)) {
-      write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, "\n"}, 4);
+    if (out->teletext_requested && !parse_teletext_mode(teletext_arg, &out->tt_mode, eb, sizeof eb)) {
+      write_parts(stderr, (const char *[]){argv[0], ": ", eb, "\n"}, 4);
       *exit_code = 2;
       return false;
     }
-    if (glyphs_arg != NULL && !parse_teletext_glyphs(glyphs_arg, &out->tt_glyphs, errbuf, sizeof errbuf)) {
-      write_parts(stderr, (const char *[]){argv[0], ": ", errbuf, "\n"}, 4);
+    if (glyphs_arg != NULL && !parse_teletext_glyphs(glyphs_arg, &out->tt_glyphs, eb, sizeof eb)) {
+      write_parts(stderr, (const char *[]){argv[0], ": ", eb, "\n"}, 4);
       *exit_code = 2;
       return false;
     }

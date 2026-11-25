@@ -238,14 +238,14 @@ public final class SettingsActivity extends Activity {
     for (int i = 9; i < colorLabels.length; i++) colorLabels[i] = getString(R.string.bold_suffix, colorLabels[i]);
     msg.add(choice("message-color", getString(R.string.message_color), Options.MESSAGE_COLORS, colorLabels, "", NOT_CLASSIC));
     msg.add(choice("message-position", getString(R.string.message_position), Options.POSITIONS,
-        Options.POSITIONS, "middle", NOT_CLASSIC));
+        Options.POSITIONS, Options.DEFAULT_POSITION, NOT_CLASSIC));
 
     List<Row> clock = new ArrayList<>();
     clock.add(choice("time", getString(R.string.time_format), Options.TIME_FORMATS,
         new String[] {getString(R.string.off), getString(R.string.time_24), getString(R.string.time_12)}, "", NOT_CLASSIC));
     clock.add(choice("time-color", getString(R.string.time_color), Options.MESSAGE_COLORS, colorLabels, "", NOT_CLASSIC));
 
-    rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, "16", ALWAYS));
+    rootRows.add(choice("colors", getString(R.string.colors), Options.COLORS, Options.COLORS_LABELS, Options.def("colors"), ALWAYS));
     String[] sizes = new String[24];
     String[] sizeLabels = new String[24];
     sizes[0] = "0";

@@ -63,14 +63,10 @@ const OPTIONS = [
 const FONT_PX = 16;
 const FONT = FONT_PX + "px monospace";
 const FONT_BOLD = "bold " + FONT;
-/* index: enum color. [normal, bold]. bg: [40-47, 100-107] */
-const PALETTE = [
-  ["#c0c0c0", "#ffffff"], ["#000000", "#808080"], ["#c00000", "#ff5555"],
-  ["#00c000", "#55ff55"], ["#c0c000", "#ffff55"], ["#0000c0", "#5555ff"],
-  ["#c000c0", "#ff55ff"], ["#00c0c0", "#55ffff"], ["#c0c0c0", "#ffffff"],
-];
+/* index: enum color. [normal, bold]. filled from wasm */
+let PALETTE = [];
 
-/* TERM_KEY_* in term.h */
+/* APP_KEY_* in app.h */
 const KEYS = { ArrowUp: -2, ArrowDown: -3, ArrowLeft: -4, ArrowRight: -5, Escape: 27 };
 
 const canvas = document.getElementById("tank");
@@ -193,6 +189,7 @@ function showError(msg) {
 }
 
 underthec().then((M) => {
+  PALETTE = Array.from({ length: 9 }, (_, c) => [0, 1].map((b) => "#" + (M._web_palette(c, b) >>> 0).toString(16).padStart(6, "0")));
   const e = applyOptions(M);
   if (e) {
     showError(e);

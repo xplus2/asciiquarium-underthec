@@ -3,12 +3,8 @@
 
 #include <stdbool.h>
 
+#include "../../app.h"
 #include "../../canvas.h"
-
-#define TERM_KEY_UP    (-2)
-#define TERM_KEY_DOWN  (-3)
-#define TERM_KEY_LEFT  (-4)
-#define TERM_KEY_RIGHT (-5)
 
 /* 0 on success. raw mode, alt screen, hide cursor */
 int term_init(void);
@@ -26,7 +22,7 @@ void term_set_transparent(bool on);
 int term_poll_key(int timeout_ms);
 
 /* write changes only */
-void term_present(const struct canvas *c);
+void term_present(struct canvas *c);
 
 /* force full repaint on next present */
 void term_invalidate(void);

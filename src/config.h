@@ -34,7 +34,7 @@ bool config_set(struct config *cfg, const char *name, const char *value, const c
 bool config_is_set(const struct config *cfg, const char *name);
 /* UNDERTHEC_* for options not set yet. classic skips disabled opts */
 bool config_apply_env(struct config *cfg, char *err, size_t err_len);
-/* cross options. classic wins: disabled options reset */
+/* cross options. classic wins: disabled options reset. false: err set */
 bool config_check(struct config *cfg, char *err, size_t err_len);
 /* rng, app init */
 void config_start(const struct config *cfg, struct app *app, double now);

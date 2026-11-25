@@ -118,15 +118,15 @@ if [ "$emcc" = "1" ] || [ "$android" = "1" ]; then
 	static=0
 fi
 
-srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/entity/utf8.c src/entity/list.c src/entity/shape.c src/entity/tick.c src/entity/seaweed.c src/entity/collide.c src/entity/draw.c src/ui/help.c src/ui/settings.c src/scene/scene.c src/scene/effects.c src/scene/creatures.c src/scene/environment.c src/scene/kaiju.c src/scene/fishhook.c src/scene/feed.c src/scene/turtle.c src/scene/clock.c"
+core_srcs="src/app.c src/opts.c src/canvas.c src/color.c src/rng.c src/monotime.c src/utf8.c src/entity/list.c src/entity/shape.c src/entity/tick.c src/entity/seaweed.c src/entity/collide.c src/entity/draw.c src/ui/help.c src/ui/settings.c src/ui/opt_table.c src/scene/scene.c src/scene/effects.c src/scene/creatures.c src/scene/environment.c src/scene/kaiju.c src/scene/fishhook.c src/scene/feed.c src/scene/turtle.c src/scene/clock.c src/config.c"
 
+# per target: files on top of core_srcs
 if [ "$emcc" = "1" ]; then
-	srcs="$srcs src/config.c src/target/web/web_main.c"
+	srcs="src/target/web/web_main.c"
 elif [ "$android" = "1" ]; then
-	srcs="$srcs src/config.c src/target/android/android_main.c"
+	srcs="src/target/android/android_main.c"
 else
-	core_srcs="$srcs"
-	srcs="$srcs src/config.c src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
+	srcs="src/main.c src/ui/args.c src/ui/cli_help.c src/target/teletext/tt_render.c src/target/teletext/tt_t42.c src/target/teletext/tt_ts.c src/target/teletext/tt_net.c"
 	windows=0
 	dos=0
 	case "$host" in
@@ -143,9 +143,10 @@ else
 		target=underthc.exe
 	elif [ "$windows" = "1" ]; then
 		srcs="$srcs src/target/terminal/term_common.c src/target/terminal/term_windows.c"
+		target=underthec.exe
 		rc="src/target/windows/underthec.rc"
 		term_ldflags="-lshell32"
-		scr_srcs="$core_srcs src/config.c src/target/scr_windows/scr_main.c src/target/scr_windows/scr_cfg.c"
+		scr_srcs="src/target/scr_windows/scr_main.c src/target/scr_windows/scr_cfg.c"
 		if [ -n "$host" ]; then windres="${host}-windres"; else windres=windres; fi
 	else
 		srcs="$srcs src/target/terminal/term_common.c src/target/terminal/term_posix.c"
@@ -157,9 +158,9 @@ else
 		is_macos=0
 		if [ -z "$host" ] && [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then is_macos=1; fi
 		if [ "$is_macos" != "1" ]; then
-			vlock_srcs="$core_srcs src/config.c src/target/terminal/term_common.c src/target/terminal/term_posix.c src/target/vlock/vlock_module.c"
+			vlock_srcs="src/target/terminal/term_common.c src/target/terminal/term_posix.c src/target/vlock/vlock_module.c"
 		else
-			saver_srcs="$core_srcs src/config.c src/target/scr_macos/saver_view.m src/target/scr_macos/saver_cfg.m"
+			saver_srcs="src/target/scr_macos/saver_view.m src/target/scr_macos/saver_cfg.m"
 		fi
 	fi
 fi
@@ -240,18 +241,16 @@ if [ "$android" = "1" ]; then cflags="$cflags -fPIC"; fi
 # 32-bit glibc: 64-bit time_t. no-op on 64-bit and musl
 time_defs=
 if [ "$is_linux" = "1" ]; then time_defs="-D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64"; cflags="$cflags $time_defs"; fi
-if [ "$have_x11" = "1" ]; then
-	cflags="$cflags $x11_cflags $xft_cflags"
-	if [ "$have_xft" = "1" ]; then cflags="$cflags -DHAVE_XFT"; fi
-fi
+xscr_cflags="$x11_cflags $xft_cflags"
+if [ "$have_xft" = "1" ]; then xscr_cflags="$xscr_cflags -DHAVE_XFT"; fi
 ldflags=""
 
 if [ "$debug" = "1" ]; then
 	cflags="$cflags -g -O0"
 else
-	cflags="$cflags -O2"
+	cflags="$cflags -O3 -DNDEBUG"
 	if [ "$emcc" = "1" ]; then
-		ldflags="$ldflags -O2"
+		ldflags="$ldflags -O3"
 	elif [ "$android" = "1" ]; then
 		ldflags="$ldflags -s"
 	elif [ "$dos" = "1" ]; then
@@ -264,17 +263,19 @@ fi
 
 if [ "$emcc" = "1" ]; then
 	ldflags="$ldflags -sMODULARIZE=1 -sEXPORT_NAME=underthec -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=1"
-	ldflags="$ldflags -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open"
+	ldflags="$ldflags -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open,_web_palette"
 	ldflags="$ldflags -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall"
 elif [ "$android" = "1" ]; then
 	ldflags="$ldflags -shared -llog"
 elif [ "$static" = "1" ] && [ "$dos" != "1" ]; then
-	case "$(uname -s 2>/dev/null)" in
-	Darwin) : ;; # macOS does not support fully static libSystem binaries
-	*) ldflags="$ldflags -static" ;;
-	esac
 	case "$host" in
 	*mingw*) ldflags="$ldflags -static" ;;
+	*)
+		case "$(uname -s 2>/dev/null)" in
+		Darwin) : ;; # macOS does not support fully static libSystem binaries
+		*) ldflags="$ldflags -static" ;;
+		esac
+		;;
 	esac
 fi
 
@@ -283,7 +284,8 @@ fi
 	echo "CFLAGS = $cflags"
 	echo "LDFLAGS = $ldflags"
 	echo "PREFIX = $prefix"
-	echo "SRCS = $srcs"
+	echo "CORE_SRCS = $core_srcs"
+	echo 'SRCS = $(CORE_SRCS) '"$srcs"
 	if [ -n "$target" ]; then
 		echo "TARGET = $target"
 	fi
@@ -303,38 +305,39 @@ fi
 	fi
 	if [ -n "$scr_srcs" ]; then
 		echo 'SCR_TARGET = $(BUILDDIR)/underthec.scr'
-		echo "SCR_SRCS = $scr_srcs"
+		echo 'SCR_SRCS = $(CORE_SRCS) '"$scr_srcs"
 		echo "SCR_RC = src/target/scr_windows/scr.rc"
 		echo "WINDRES = $windres"
 		echo "SCR_LDFLAGS = -mwindows -lgdi32 -ladvapi32"
 	fi
 	if [ "$have_x11" = "1" ]; then
-		echo 'XSCR_TARGET = $(BUILDDIR)/underthec-xscr'
-		echo "XSCR_SRCS = $core_srcs src/config.c src/target/scr_x11/xscr_main.c src/target/scr_x11/xscr_font.c"
+		echo 'XSCR_TARGET = $(BUILDDIR)/underthec_xscr'
+		echo 'XSCR_SRCS = $(CORE_SRCS) src/target/scr_x11/xscr_main.c src/target/scr_x11/xscr_font.c'
+		echo "XSCR_CFLAGS = $xscr_cflags"
 		echo "XSCR_LDFLAGS = $x11_libs $xft_libs"
 		echo "XSCR_BINDIR = $xscr_bindir"
 		echo "XSCR_CONFIGDIR = $xscr_configdir"
 	fi
 	if [ -n "$saver_srcs" ]; then
 		echo 'SAVER_TARGET = $(BUILDDIR)/underthec.saver/Contents/MacOS/underthec'
-		echo "SAVER_SRCS = $saver_srcs"
+		echo 'SAVER_SRCS = $(CORE_SRCS) '"$saver_srcs"
 		echo "SAVER_VERSION = $ver_str"
 		echo "SAVER_DIR = $saver_dir"
 	fi
 	if [ -n "$vlock_srcs" ]; then
 		echo 'VLOCK_TARGET = $(BUILDDIR)/underthec.so'
-		echo "VLOCK_SRCS = $vlock_srcs"
+		echo 'VLOCK_SRCS = $(CORE_SRCS) '"$vlock_srcs"
 		echo "VLOCK_MODULEDIR = $vlock_moduledir"
 	fi
 	if [ "$have_qt" = "1" ]; then
 		echo 'PLASMA_TARGET = $(BUILDDIR)/plasma_wallpaper/qml/org/underthec/libunderthec_qml.so'
-		echo "PLASMA_C_SRCS = $core_srcs src/config.c"
+		echo 'PLASMA_C_SRCS = $(CORE_SRCS)'
 		echo "PLASMA_CXX_SRCS = src/target/plasma/plasma_item.cpp src/target/plasma/plasma_plugin.cpp"
 		echo "CXX = $cxx"
 		echo "MOC = $qt_moc"
 		echo "PLASMA_INCS = -Isrc -Isrc/target/plasma $qt_cflags"
 		qt_sys=$(echo "$qt_cflags" | sed 's/-I/-isystem /g')
-		echo "PLASMA_CXXFLAGS = -std=c++17 -Wall -Wextra $time_defs -Isrc -Isrc/target/plasma $qt_sys $([ "$debug" = "1" ] && echo "-g -O0" || echo "-O2")"
+		echo "PLASMA_CXXFLAGS = -std=c++17 -Wall -Wextra $time_defs -Isrc -Isrc/target/plasma $qt_sys $([ "$debug" = "1" ] && echo "-g -O0" || echo "-O3 -DNDEBUG")"
 		echo "PLASMA_LDFLAGS = $qt_libs"
 		echo "PLASMA_QMLDIR = $qml_dir"
 		echo "PLASMA_PACKAGEDIR = $plasma_pkgdir"

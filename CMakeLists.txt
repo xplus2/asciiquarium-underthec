@@ -12,6 +12,10 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
+if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX,OBJC>:-Wall;-Wextra>")
+endif ()
+
 # 32-bit glibc: 64-bit time_t. no-op on 64-bit and musl
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_compile_definitions(_FILE_OFFSET_BITS=64 _TIME_BITS=64)
@@ -49,7 +53,8 @@ set(UNDERTHEC_CORE_SOURCES
         src/canvas.c
         src/color.c
         src/rng.c
-        src/entity/utf8.c
+        src/monotime.c
+        src/utf8.c
         src/entity/list.c
         src/entity/shape.c
         src/entity/tick.c
@@ -58,6 +63,7 @@ set(UNDERTHEC_CORE_SOURCES
         src/entity/draw.c
         src/ui/help.c
         src/ui/settings.c
+        src/ui/opt_table.c
         src/scene/scene.c
         src/scene/effects.c
         src/scene/creatures.c
@@ -67,26 +73,27 @@ set(UNDERTHEC_CORE_SOURCES
         src/scene/feed.c
         src/scene/turtle.c
         src/scene/clock.c
+        src/config.c
 )
-set(UNDERTHEC_SOURCES ${UNDERTHEC_CORE_SOURCES})
 
 if (ANDROID)
     add_library(underthec_android SHARED
             ${UNDERTHEC_CORE_SOURCES}
-            src/config.c
             src/target/android/android_main.c
     )
     target_include_directories(underthec_android PRIVATE src)
     target_link_libraries(underthec_android PRIVATE log)
-    target_compile_options(underthec_android PRIVATE -Wall -Wextra)
     return()
 endif ()
 
+# compiled once, linked by targets without own IPO setting
+add_library(underthec_core OBJECT ${UNDERTHEC_CORE_SOURCES})
+target_include_directories(underthec_core PUBLIC src)
+
 if (EMSCRIPTEN)
-    list(APPEND UNDERTHEC_SOURCES src/config.c src/target/web/web_main.c)
+    set(UNDERTHEC_SOURCES src/target/web/web_main.c)
 else ()
-    list(APPEND UNDERTHEC_SOURCES
-            src/config.c
+    set(UNDERTHEC_SOURCES
             src/main.c
             src/ui/args.c
             src/ui/cli_help.c
@@ -107,7 +114,7 @@ else ()
 endif ()
 
 add_executable(underthec ${UNDERTHEC_SOURCES})
-target_include_directories(underthec PRIVATE src)
+target_link_libraries(underthec PRIVATE underthec_core)
 
 if (UNDERTHEC_DOS)
     set_target_properties(underthec PROPERTIES OUTPUT_NAME underthc)
@@ -115,10 +122,6 @@ endif ()
 
 if (WIN32 AND NOT EMSCRIPTEN)
     target_link_libraries(underthec PRIVATE shell32)
-endif ()
-
-if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(underthec PRIVATE -Wall -Wextra)
 endif ()
 
 if (EMSCRIPTEN)
@@ -131,7 +134,7 @@ if (EMSCRIPTEN)
             -sEXPORT_NAME=underthec
             -sENVIRONMENT=web
             -sALLOW_MEMORY_GROWTH=1
-            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open
+            -sEXPORTED_FUNCTIONS=_web_opt,_web_init,_web_fps,_web_resize,_web_key,_web_click,_web_frame,_web_width,_web_height,_web_settings_open,_web_help_open,_web_palette
             -sEXPORTED_RUNTIME_METHODS=HEAPU32,ccall
     )
     add_custom_command(TARGET underthec POST_BUILD
@@ -150,19 +153,13 @@ endif ()
 if (WIN32 AND NOT EMSCRIPTEN)
     enable_language(RC)
     add_executable(underthec_scr WIN32
-            ${UNDERTHEC_CORE_SOURCES}
-            src/config.c
             src/target/scr_windows/scr_main.c
             src/target/scr_windows/scr_cfg.c
             src/target/scr_windows/scr.rc
     )
     set_source_files_properties(src/target/scr_windows/scr.rc PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/src/target/scr_windows/scr.manifest;${CMAKE_SOURCE_DIR}/src/target/windows/scr.ico")
-    target_include_directories(underthec_scr PRIVATE src)
     set_target_properties(underthec_scr PROPERTIES OUTPUT_NAME underthec SUFFIX ".scr")
-    target_link_libraries(underthec_scr PRIVATE gdi32 advapi32)
-    if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(underthec_scr PRIVATE $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra>)
-    endif ()
+    target_link_libraries(underthec_scr PRIVATE underthec_core gdi32 advapi32)
     if (UNDERTHEC_STATIC)
         target_link_options(underthec_scr PRIVATE -static)
     endif ()
@@ -173,13 +170,11 @@ if (NOT WIN32 AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
     find_package(X11)
     if (X11_FOUND)
         add_executable(underthec_xscr
-                ${UNDERTHEC_CORE_SOURCES}
-                src/config.c
                 src/target/scr_x11/xscr_main.c
                 src/target/scr_x11/xscr_font.c
         )
-        target_include_directories(underthec_xscr PRIVATE src ${X11_INCLUDE_DIR})
-        target_link_libraries(underthec_xscr PRIVATE ${X11_LIBRARIES})
+        target_include_directories(underthec_xscr PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(underthec_xscr PRIVATE underthec_core ${X11_LIBRARIES})
         if (X11_Xft_FOUND)
             find_package(Freetype)
             if (FREETYPE_FOUND)
@@ -189,9 +184,6 @@ if (NOT WIN32 AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
             else ()
                 message(STATUS "Xft found but freetype2 dev headers are missing, building without xft")
             endif ()
-        endif ()
-        if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-            target_compile_options(underthec_xscr PRIVATE -Wall -Wextra)
         endif ()
         if (UNDERTHEC_STATIC)
             message(STATUS "UNDERTHEC_STATIC has no effect on the xscreensaver build (X11/Xft are not static)")
@@ -206,21 +198,18 @@ endif ()
 if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
     set(UNDERTHEC_VLOCK_MODULEDIR "/usr/lib/vlock/modules" CACHE PATH "install dir for the vlock plugin module")
     add_library(underthec_vlock MODULE
-            ${UNDERTHEC_CORE_SOURCES}
-            src/config.c
             src/target/terminal/term_common.c
             src/target/terminal/term_posix.c
             src/target/vlock/vlock_module.c
     )
-    target_include_directories(underthec_vlock PRIVATE src)
+    target_link_libraries(underthec_vlock PRIVATE underthec_core)
+    # core objects linked into module
+    set_target_properties(underthec_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
     set_target_properties(underthec_vlock PROPERTIES
             OUTPUT_NAME underthec
             PREFIX ""
             POSITION_INDEPENDENT_CODE ON
     )
-    if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(underthec_vlock PRIVATE -Wall -Wextra)
-    endif ()
     install(TARGETS underthec_vlock LIBRARY DESTINATION ${UNDERTHEC_VLOCK_MODULEDIR})
 endif ()
 
@@ -240,7 +229,6 @@ if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
             set(CMAKE_CXX_STANDARD_REQUIRED ON)
             add_library(plasma_wallpaper MODULE
                     ${UNDERTHEC_CORE_SOURCES}
-                    src/config.c
                     src/target/plasma/plasma_item.cpp
                     src/target/plasma/plasma_plugin.cpp
             )
@@ -253,9 +241,6 @@ if (NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN AND NOT UNDERTHEC_DOS)
                     INTERPROCEDURAL_OPTIMIZATION OFF
                     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plasma_wallpaper/qml/org/underthec
             )
-            if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-                target_compile_options(plasma_wallpaper PRIVATE -Wall -Wextra)
-            endif ()
             add_custom_command(TARGET plasma_wallpaper POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/target/plasma/qmldir ${CMAKE_BINARY_DIR}/plasma_wallpaper/qml/org/underthec/qmldir
                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/target/plasma/package ${CMAKE_BINARY_DIR}/plasma_wallpaper/package
@@ -279,14 +264,13 @@ if (APPLE AND NOT EMSCRIPTEN)
         configure_file(src/target/scr_macos/Info.plist.in ${CMAKE_BINARY_DIR}/macos_saver/Info.plist @ONLY)
         add_library(macos_saver MODULE
                 ${UNDERTHEC_CORE_SOURCES}
-                src/config.c
                 src/target/scr_macos/saver_view.m
                 src/target/scr_macos/saver_cfg.m
                 ${UNDERTHEC_SAVER_THUMBS}
         )
         target_include_directories(macos_saver PRIVATE src)
         target_link_libraries(macos_saver PRIVATE "-framework Cocoa" "-framework ScreenSaver")
-        target_compile_options(macos_saver PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>)
+        target_compile_options(macos_saver PRIVATE $<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>)
         set_target_properties(macos_saver PROPERTIES
                 BUNDLE TRUE
                 BUNDLE_EXTENSION saver

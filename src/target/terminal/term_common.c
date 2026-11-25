@@ -1,34 +1,24 @@
 #include "../../color.h"
-#include "../../xalloc.h"
 #include "term.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-static struct canvas prev;
-static bool prev_valid = false;
+static bool force_full = true;
+static int last_w = -1;
+static int last_h = -1;
 static bool transparent = false;
 
-static int *row_min = NULL;
-static int *row_max = NULL;
-static int row_bounds_cap = 0;
-
 void term_common_shutdown(void) {
-  canvas_free(&prev);
-  prev_valid = false;
-  free(row_min);
-  free(row_max);
-  row_min = NULL;
-  row_max = NULL;
-  row_bounds_cap = 0;
+  force_full = true;
+  last_w = -1;
+  last_h = -1;
 }
 
-void term_invalidate(void) { prev_valid = false; }
+void term_invalidate(void) { force_full = true; }
 
 void term_set_transparent(bool on) {
   transparent = on;
-  prev_valid = false; /* repaint bg */
+  force_full = true; /* repaint bg */
 }
 
 static const char *const sgr_table[2][2][9] = {
@@ -87,76 +77,41 @@ static void write_cursor_pos(int row, int col) {
   fwrite(buf, 1, (size_t)(p - buf), stdout);
 }
 
-static bool cells_equal(const struct cell *a, const struct cell *b) {
-  return a->cont == b->cont && a->col == b->col && a->bold == b->bold &&
-         a->bg == b->bg && a->bg_bold == b->bg_bold && strcmp(a->glyph, b->glyph) == 0;
-}
-
-void term_present(const struct canvas *c) {
+void term_present(struct canvas *c) {
   bool mono = !term_has_color();
-  bool full = !prev_valid || prev.width != c->width || prev.height != c->height;
-  if (!prev_valid || prev.width != c->width || prev.height != c->height) {
-    canvas_resize(&prev, c->width, c->height);
-    memset(prev.cells, 0, (size_t)prev.width * (size_t)prev.height * sizeof(*prev.cells));
+  if (force_full || c->width != last_w || c->height != last_h) {
+    canvas_diff_invalidate(c);
     fputs("\x1b[2J", stdout);
-    prev_valid = true;
+    force_full = false;
+    last_w = c->width;
+    last_h = c->height;
   }
-
-  if (c->height > row_bounds_cap) {
-    row_min = xrealloc(row_min, (size_t)c->height * sizeof(*row_min));
-    row_max = xrealloc(row_max, (size_t)c->height * sizeof(*row_max));
-    row_bounds_cap = c->height;
-  }
-  for (int y = 0; y < c->height; y++) {
-    row_min[y] = full ? 0 : c->width;
-    row_max[y] = full ? c->width - 1 : -1;
-  }
-  for (int i = 0; !full && i < c->touched_count; i++) {
-    int idx = c->touched[i];
-    int y = idx / c->width;
-    int x = idx % c->width;
-    if (x < row_min[y]) row_min[y] = x;
-    if (x > row_max[y]) row_max[y] = x;
+  if (!canvas_diff(c)) {
+    fflush(stdout);
+    return;
   }
   for (int y = 0; y < c->height; y++) {
-    if (row_max[y] < row_min[y]) continue;
-    int row_end = row_max[y] + 1;
-    int x = row_min[y];
-    while (x < row_end) {
-      const struct cell *cur = &c->cells[(size_t)y * (size_t)c->width + (size_t)x];
-      struct cell *old = &prev.cells[(size_t)y * (size_t)c->width + (size_t)x];
-      if (cells_equal(cur, old)) {
+    int base = y * c->width;
+    const struct cell *line = &c->cells[base];
+    int x = c->row_lo[y];
+    while (x <= c->row_hi[y]) {
+      if (!canvas_cell_changed(c, base + x)) {
         x++;
         continue;
       }
-      int start = (cur->cont && x > 0) ? x - 1 : x;
+      /* run of changed cells, starts on wide lead */
+      int start = line[x].cont && x > 0 ? x - 1 : x;
       write_cursor_pos(y + 1, start + 1);
-      x = start;
-      enum color last_col = COL_DEFAULT;
-      bool last_bold = false;
-      enum color last_bg = COL_DEFAULT;
-      bool last_bg_bold = false;
-      bool first = true;
-      while (x < row_end) {
-        cur = &c->cells[(size_t)y * (size_t)c->width + (size_t)x];
-        old = &prev.cells[(size_t)y * (size_t)c->width + (size_t)x];
-        if (cur->cont) {
-          *old = *cur;
-          x++;
-          continue;
-        }
-        if (x != start && cells_equal(cur, old)) break;
-        if (first || cur->col != last_col || cur->bold != last_bold || cur->bg != last_bg || cur->bg_bold != last_bg_bold) {
+      const struct cell *last = NULL;
+      for (x = start; x <= c->row_hi[y]; x++) {
+        const struct cell *cur = &line[x];
+        if (cur->cont) continue;
+        if (x != start && !canvas_cell_changed(c, base + x)) break;
+        if (last == NULL || cur->col != last->col || cur->bold != last->bold || cur->bg != last->bg || cur->bg_bold != last->bg_bold) {
           write_sgr(cur->col, cur->bold, cur->bg, cur->bg_bold, mono);
-          last_col = cur->col;
-          last_bold = cur->bold;
-          last_bg = cur->bg;
-          last_bg_bold = cur->bg_bold;
-          first = false;
         }
+        last = cur;
         fputs(cur->glyph, stdout);
-        *old = *cur;
-        x++;
       }
     }
   }

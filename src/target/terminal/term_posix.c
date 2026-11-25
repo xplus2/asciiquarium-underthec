@@ -168,10 +168,10 @@ int term_poll_key(int timeout_ms) {
     }
   }
   switch (c3) {
-    case 'A': return TERM_KEY_UP;
-    case 'B': return TERM_KEY_DOWN;
-    case 'C': return TERM_KEY_RIGHT;
-    case 'D': return TERM_KEY_LEFT;
+    case 'A': return APP_KEY_UP;
+    case 'B': return APP_KEY_DOWN;
+    case 'C': return APP_KEY_RIGHT;
+    case 'D': return APP_KEY_LEFT;
     default:  return -1;
   }
 }

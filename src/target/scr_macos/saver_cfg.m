@@ -1,67 +1,22 @@
 #import <ScreenSaver/ScreenSaver.h>
 
-#include <stdlib.h>
 #include <string.h>
 
 #import "saver.h"
 #include "../../opts.h"
+#include "../../ui/opt_table.h"
 #include "../../version.h"
-
-enum saver_opt { OPT_CLASSIC, OPT_AQUATIC, OPT_MESSAGE, OPT_COLOR, OPT_POSITION, OPT_CASTLE_NAME, OPT_NO_CASTLE, OPT_PACE, OPT_UTURN, OPT_FPS, OPT_COLORS, OPT_TIME, OPT_TIME_COLOR, OPT_AUTOFEED, OPT_COUNT };
-
-/* long CLI names */
-static const char *const opt_names[OPT_COUNT] = {
-  "classic", "aquatic-life", "message", "message-color", "message-position", "castle-name", "no-castle", "pace", "uturn-chance", "fps", "colors", "time", "time-color", "autofeed",
-};
-
-/* sheet names in errors */
-static const char *const opt_labels[OPT_COUNT] = {
-  "Classic", "Fish", "Message", "Color", "Position", "Castle name", "Castle", "Pace", "U-turn chance", "FPS", "Colors", "Time", "Time color", "Autofeed",
-};
-
-static const char *const classic_items[] = {"off", "1.0", "1.1"};
-static const char *const time_items[] = {"off", "24", "12"};
-static const char *const time_labels[] = {"Off", "24 hours", "12 hours (am/pm)"};
-static const char *const colors_items[] = {
-  "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
-  "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
-  "4", "7", "8", "8-bold", "16",
-};
-static const char *const colors_labels[] = {
-  "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
-  "2", "2-green", "2-red", "2-blue", "2-yellow", "2-magenta", "2-cyan", "2-white",
-  "4 (RGBW)", "7 (Teletext)", "8", "8-bold", "16 (ANSI)",
-};
-static const char *const color_items[] = {
-  "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-  "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
-};
-static const char *const color_labels[] = {
-  "(default)", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-  "Black (bold)", "Red (bold)", "Green (bold)", "Yellow (bold)", "Blue (bold)", "Magenta (bold)", "Cyan (bold)", "White (bold)",
-};
-/* enum message_position order */
-static const char *const position_items[] = {"middle", "center", "marquee", "swim", "event"};
 
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 #define FLAG_COLUMNS 3
 #define FIELD_WIDTH 60
 
-static int colors_index(int mode) {
-  char eb[128];
-  for (size_t i = 0; i < COUNT(colors_items); i++) {
-    int parsed;
-    if (opts_parse_colors(colors_items[i], &parsed, eb, sizeof eb) && parsed == mode) return (int)i;
-  }
-  return (int)COUNT(colors_items) - 1;
-}
-
 bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   ScreenSaverDefaults *defaults = [ScreenSaverDefaults defaultsForModuleWithName:SAVER_MODULE];
-  for (size_t i = 0; i < OPT_COUNT; i++) {
-    NSString *val = [defaults stringForKey:@(opt_names[i])];
+  for (size_t i = 0; i < OT_COUNT; i++) {
+    NSString *val = [defaults stringForKey:@(ot_names[i])];
     if (val == nil) continue;
-    if (!config_set(cfg, opt_names[i], val.UTF8String, opt_names[i], err, err_len)) return false;
+    if (!config_set(cfg, ot_names[i], val.UTF8String, ot_names[i], err, err_len)) return false;
   }
   return true;
 }
@@ -177,24 +132,24 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
 }
 
 - (void)buildWindow {
-  _classic = [self popupWith:classic_items count:COUNT(classic_items)];
+  _classic = [self popupWith:ot_classic_items count:COUNT(ot_classic_items)];
   _classic.target = self;
   _classic.action = @selector(toggled:);
   _fishAuto = [NSButton checkboxWithTitle:@"auto" target:self action:@selector(toggled:)];
   _fish = [self field];
-  _msgColor = [self popupWith:color_labels count:COUNT(color_labels)];
-  _msgPos = [self popupWith:position_items count:COUNT(position_items)];
-  _time = [self popupWith:time_labels count:COUNT(time_labels)];
+  _msgColor = [self popupWith:ot_color_labels count:COUNT(ot_color_labels)];
+  _msgPos = [self popupWith:ot_position_items count:COUNT(ot_position_items)];
+  _time = [self popupWith:ot_time_labels count:COUNT(ot_time_labels)];
   _time.target = self;
   _time.action = @selector(toggled:);
-  _timeColor = [self popupWith:color_labels count:COUNT(color_labels)];
+  _timeColor = [self popupWith:ot_color_labels count:COUNT(ot_color_labels)];
   _castle = [NSButton checkboxWithTitle:@"enabled" target:self action:@selector(toggled:)];
   _castleName = [self field];
   _pace = [self field];
   _uturn = [self field];
   _autofeed = [self field];
   _fps = [self field];
-  _colors = [self popupWith:colors_labels count:COUNT(colors_labels)];
+  _colors = [self popupWith:ot_colors_labels count:COUNT(ot_colors_labels)];
 
   NSArray<NSArray<NSView *> *> *rows = @[
     @[[NSTextField labelWithString:@"Classic"], _classic],
@@ -246,14 +201,14 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
     _flags[i].state = *scene_aquatic_flag(&cfg->aquatic, i) ? NSControlStateValueOn : NSControlStateValueOff;
   _message.string = @(cfg->message != NULL ? cfg->message : "");
   NSInteger color = 0;
-  for (size_t i = 1; cfg->message_color != NULL && i < COUNT(color_items); i++)
-    if (strcmp(cfg->message_color, color_items[i]) == 0) color = (NSInteger)i;
+  for (size_t i = 1; cfg->message_color != NULL && i < COUNT(ot_color_items); i++)
+    if (strcmp(cfg->message_color, ot_color_items[i]) == 0) color = (NSInteger)i;
   [_msgColor selectItemAtIndex:color];
   [_msgPos selectItemAtIndex:cfg->message_position];
   [_time selectItemAtIndex:cfg->time_mode == 24 ? 1 : cfg->time_mode == 12 ? 2 : 0];
   NSInteger timeColor = 0;
-  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(color_items); i++)
-    if (strcmp(cfg->time_color, color_items[i]) == 0) timeColor = (NSInteger)i;
+  for (size_t i = 1; cfg->time_color != NULL && i < COUNT(ot_color_items); i++)
+    if (strcmp(cfg->time_color, ot_color_items[i]) == 0) timeColor = (NSInteger)i;
   [_timeColor selectItemAtIndex:timeColor];
   _castle.state = cfg->no_castle ? NSControlStateValueOff : NSControlStateValueOn;
   [self setText:_castleName to:cfg->castle_name];
@@ -261,7 +216,7 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   _uturn.stringValue = [NSString stringWithFormat:@"%d", cfg->uturn_chance];
   _autofeed.stringValue = [NSString stringWithFormat:@"%d", cfg->autofeed];
   _fps.stringValue = [NSString stringWithFormat:@"%d", cfg->fps];
-  [_colors selectItemAtIndex:colors_index(cfg->colors_mode)];
+  [_colors selectItemAtIndex:ot_colors_index(cfg->colors_mode)];
   [self updateEnabled];
 }
 
@@ -301,28 +256,28 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
 
 /* NSNull: option not stored */
 - (NSArray<id> *)collect {
-  NSMutableArray<id> *vals = [NSMutableArray arrayWithCapacity:OPT_COUNT];
-  for (size_t i = 0; i < OPT_COUNT; i++) [vals addObject:[NSNull null]];
+  NSMutableArray<id> *vals = [NSMutableArray arrayWithCapacity:OT_COUNT];
+  for (size_t i = 0; i < OT_COUNT; i++) [vals addObject:[NSNull null]];
   NSInteger classic = _classic.indexOfSelectedItem;
-  if (classic > 0) vals[OPT_CLASSIC] = @(classic_items[classic]);
-  else vals[OPT_AQUATIC] = [self aquaticDefinition];
+  if (classic > 0) vals[OT_CLASSIC] = @(ot_classic_items[classic]);
+  else vals[OT_AQUATIC] = [self aquaticDefinition];
   NSString *message = _message.string;
-  if (message.length > 0) vals[OPT_MESSAGE] = message;
+  if (message.length > 0) vals[OT_MESSAGE] = message;
   NSInteger color = _msgColor.indexOfSelectedItem;
-  if (color > 0) vals[OPT_COLOR] = @(color_items[color]);
+  if (color > 0) vals[OT_COLOR] = @(ot_color_items[color]);
   NSInteger timeSel = _time.indexOfSelectedItem;
   NSInteger position = _msgPos.indexOfSelectedItem;
-  if (timeSel > 0) vals[OPT_TIME] = @(time_items[timeSel]);
+  if (timeSel > 0) vals[OT_TIME] = @(ot_time_items[timeSel]);
   NSInteger timeColor = _timeColor.indexOfSelectedItem;
-  if (timeSel > 0 && timeColor > 0) vals[OPT_TIME_COLOR] = @(color_items[timeColor]);
-  if (timeSel == 0 || position != 0) vals[OPT_POSITION] = @(position_items[position]);
-  if (_castleName.stringValue.length > 0) vals[OPT_CASTLE_NAME] = _castleName.stringValue;
-  vals[OPT_NO_CASTLE] = _castle.state == NSControlStateValueOn ? @"0" : @"1";
-  vals[OPT_PACE] = _pace.stringValue;
-  vals[OPT_UTURN] = _uturn.stringValue;
-  if (_autofeed.stringValue.length > 0) vals[OPT_AUTOFEED] = _autofeed.stringValue;
-  vals[OPT_FPS] = _fps.stringValue;
-  vals[OPT_COLORS] = @(colors_items[_colors.indexOfSelectedItem]);
+  if (timeSel > 0 && timeColor > 0) vals[OT_TIME_COLOR] = @(ot_color_items[timeColor]);
+  if (timeSel == 0 || position != 0) vals[OT_POSITION] = @(ot_position_items[position]);
+  if (_castleName.stringValue.length > 0) vals[OT_CASTLE_NAME] = _castleName.stringValue;
+  vals[OT_NO_CASTLE] = _castle.state == NSControlStateValueOn ? @"0" : @"1";
+  vals[OT_PACE] = _pace.stringValue;
+  vals[OT_UTURN] = _uturn.stringValue;
+  if (_autofeed.stringValue.length > 0) vals[OT_AUTOFEED] = _autofeed.stringValue;
+  vals[OT_FPS] = _fps.stringValue;
+  vals[OT_COLORS] = @(ot_colors_items[_colors.indexOfSelectedItem]);
   return vals;
 }
 
@@ -347,9 +302,9 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
   struct config cfg;
   config_init(&cfg);
   bool ok = true;
-  for (size_t i = 0; i < OPT_COUNT && ok; i++) {
+  for (size_t i = 0; i < OT_COUNT && ok; i++) {
     if (![vals[i] isKindOfClass:[NSString class]]) continue;
-    ok = config_set(&cfg, opt_names[i], [(NSString *)vals[i] UTF8String], opt_labels[i], err, sizeof err);
+    ok = config_set(&cfg, ot_names[i], [(NSString *)vals[i] UTF8String], ot_labels[i], err, sizeof err);
   }
   if (ok) ok = config_check(&cfg, err, sizeof err);
   config_free(&cfg);
@@ -358,9 +313,9 @@ bool saver_config_load(struct config *cfg, char *err, size_t err_len) {
     return;
   }
   ScreenSaverDefaults *defaults = [ScreenSaverDefaults defaultsForModuleWithName:SAVER_MODULE];
-  for (size_t i = 0; i < OPT_COUNT; i++) {
-    if ([vals[i] isKindOfClass:[NSString class]]) [defaults setObject:vals[i] forKey:@(opt_names[i])];
-    else [defaults removeObjectForKey:@(opt_names[i])];
+  for (size_t i = 0; i < OT_COUNT; i++) {
+    if ([vals[i] isKindOfClass:[NSString class]]) [defaults setObject:vals[i] forKey:@(ot_names[i])];
+    else [defaults removeObjectForKey:@(ot_names[i])];
   }
   [defaults synchronize];
   [self close];

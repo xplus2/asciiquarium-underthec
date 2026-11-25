@@ -1,5 +1,6 @@
 #include "opts.h"
 #include "color.h"
+#include "utf8.h"
 #include "xalloc.h"
 
 #include <stdlib.h>
@@ -14,19 +15,15 @@ void opts_append_bounded(char *dst, size_t dst_cap, size_t *pos, const char *src
   *pos += src_len;
 }
 
-static void append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c) {
-  if (*pos < dst_cap) dst[(*pos)++] = c;
-}
-
 void opts_append_char_bounded(char *dst, size_t dst_cap, size_t *pos, char c) {
-  append_char_bounded(dst, dst_cap, pos, c);
+  if (*pos < dst_cap) dst[(*pos)++] = c;
 }
 
 void opts_append_bounded_w(char *dst, size_t dst_cap, size_t *pos, const char *src, int width) {
   size_t start = *pos;
   opts_append_bounded(dst, dst_cap, pos, src);
   int written = (int)(*pos - start);
-  for (int i = written; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
+  for (int i = written; i < width; i++) opts_append_char_bounded(dst, dst_cap, pos, ' ');
 }
 
 static int uint_to_digits(unsigned long v, char *tmp) {
@@ -41,9 +38,9 @@ void opts_append_int_bounded(char *dst, size_t dst_cap, size_t *pos, long v, int
   char tmp[24];
   int n = uint_to_digits(uv, tmp);
   int total = n + (neg ? 1 : 0);
-  for (int i = total; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
-  if (neg) append_char_bounded(dst, dst_cap, pos, '-');
-  while (n > 0) append_char_bounded(dst, dst_cap, pos, tmp[--n]);
+  for (int i = total; i < width; i++) opts_append_char_bounded(dst, dst_cap, pos, ' ');
+  if (neg) opts_append_char_bounded(dst, dst_cap, pos, '-');
+  while (n > 0) opts_append_char_bounded(dst, dst_cap, pos, tmp[--n]);
 }
 
 void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v, int width, int decimals) {
@@ -67,8 +64,14 @@ void opts_append_float_bounded(char *dst, size_t dst_cap, size_t *pos, double v,
     while (n > 0) body[blen++] = tmp[--n];
   }
   body[blen] = '\0';
-  for (int i = (int)blen; i < width; i++) append_char_bounded(dst, dst_cap, pos, ' ');
+  for (int i = (int)blen; i < width; i++) opts_append_char_bounded(dst, dst_cap, pos, ' ');
   opts_append_bounded(dst, dst_cap, pos, body);
+}
+
+void opts_format_int(char *out, size_t out_cap, long v) {
+  size_t p = 0;
+  opts_append_int_bounded(out, out_cap - 1, &p, v, 0);
+  out[p] = '\0';
 }
 
 void opts_set_errbuf(char *errbuf, size_t errbuf_len, const char *const *parts, size_t count) {
@@ -111,7 +114,7 @@ bool opts_parse_fish_count(const char *val, int *out, char *errbuf, size_t errbu
     *out = -1;
     return true;
   }
-  if (!opts_parse_int_range(val, 0, 999, out)) {
+  if (!opts_parse_int_range(val, 0, OPTS_COUNT_MAX, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fish count '", val, "', expected 0-999 or auto"}, 3);
     return false;
   }
@@ -179,21 +182,28 @@ bool opts_parse_time(const char *val, int *out, char *errbuf, size_t errbuf_len)
   return true;
 }
 
+static const char *const message_position_names[] = {
+  [MSG_POS_MIDDLE] = "middle", [MSG_POS_CENTER] = "center", [MSG_POS_MARQUEE] = "marquee",
+  [MSG_POS_SWIM] = "swim",     [MSG_POS_EVENT] = "event",
+};
+
 bool opts_parse_message_position(const char *val, enum message_position *out, char *errbuf, size_t errbuf_len) {
-  if (strcmp(val, "middle") == 0) *out = MSG_POS_MIDDLE;
-  else if (strcmp(val, "center") == 0) *out = MSG_POS_CENTER;
-  else if (strcmp(val, "marquee") == 0) *out = MSG_POS_MARQUEE;
-  else if (strcmp(val, "swim") == 0) *out = MSG_POS_SWIM;
-  else if (strcmp(val, "event") == 0) *out = MSG_POS_EVENT;
-  else {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid message position '", val, "'"}, 3);
-    return false;
+  for (size_t i = 0; i < sizeof(message_position_names) / sizeof(message_position_names[0]); i++) {
+    if (strcmp(val, message_position_names[i]) == 0) {
+      *out = (enum message_position)i;
+      return true;
+    }
   }
-  return true;
+  opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid message position '", val, "'"}, 3);
+  return false;
+}
+
+const char *opts_message_position_name(enum message_position pos) {
+  return message_position_names[pos];
 }
 
 bool opts_parse_uturn_chance(const char *val, int *out, char *errbuf, size_t errbuf_len) {
-  if (!opts_parse_int_range(val, 0, 999, out)) {
+  if (!opts_parse_int_range(val, 0, OPTS_COUNT_MAX, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid uturn chance '", val, "', expected 0-999"}, 3);
     return false;
   }
@@ -213,7 +223,7 @@ bool opts_parse_autofeed(const char *val, int *out, char *errbuf, size_t errbuf_
 }
 
 bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) {
-  if (!opts_parse_int_range(val, 1, 240, out)) {
+  if (!opts_parse_int_range(val, OPTS_FPS_MIN, OPTS_FPS_MAX, out)) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid fps '", val, "', expected 1-240"}, 3);
     return false;
   }
@@ -223,15 +233,12 @@ bool opts_parse_fps(const char *val, int *out, char *errbuf, size_t errbuf_len) 
 bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_len) {
   const char *dash = strchr(val, '-');
   if (dash != NULL) {
-    if (dash == val + 1 && val[0] == '8') {
-      if (strcasecmp(dash + 1, "bold") == 0) {
-        *out = 108;
-        return true;
-      }
-      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1, 2 or 8-bold"}, 3);
-      return false;
+    bool base_ok = dash == val + 1 && (val[0] == '1' || val[0] == '2' || val[0] == '8');
+    if (base_ok && val[0] == '8' && strcasecmp(dash + 1, "bold") == 0) {
+      *out = 108;
+      return true;
     }
-    if ((dash != val + 1) || (val[0] != '1' && val[0] != '2')) {
+    if (!base_ok || val[0] == '8') {
       opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"colors accent '", val, "' only valid for 1, 2 or 8-bold"}, 3);
       return false;
     }
@@ -259,32 +266,42 @@ bool opts_parse_colors(const char *val, int *out, char *errbuf, size_t errbuf_le
   return true;
 }
 
+void opts_format_colors(int mode, char *out, size_t out_cap) {
+  size_t p = 0;
+  int base;
+  int accent_id;
+  color_mode_decode(mode, &base, &accent_id);
+  if (mode == 108) {
+    opts_append_bounded(out, out_cap - 1, &p, "8-bold");
+  } else {
+    opts_append_int_bounded(out, out_cap - 1, &p, base, 0);
+    if (accent_id != 0) {
+      opts_append_char_bounded(out, out_cap - 1, &p, '-');
+      opts_append_bounded(out, out_cap - 1, &p, color_accent_names[accent_id - 1]);
+    }
+  }
+  out[p] = '\0';
+}
+
 bool opts_parse_pace(const char *s, double *out, char *errbuf, size_t errbuf_len) {
   size_t dot_count = 0;
+  bool bad_char = false;
   for (const char *p = s; *p != '\0'; p++) {
-    if (*p == '.') {
-      dot_count++;
-      if (dot_count > 1) {
-        opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid pace '", s, "'"}, 3);
-        return false;
-      }
-    } else if (*p < '0' || *p > '9') {
-      opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid pace '", s, "'"}, 3);
-      return false;
-    }
+    if (*p == '.') dot_count++;
+    else if (*p < '0' || *p > '9') bad_char = true;
+  }
+  char *endptr = NULL;
+  double val = strtod(s, &endptr);
+  if (bad_char || dot_count > 1 || s[0] == '\0' || *endptr != '\0') {
+    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid pace '", s, "'"}, 3);
+    return false;
   }
   const char *dot = strchr(s, '.');
   if (dot != NULL && strlen(dot + 1) > 2) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"pace '", s, "' has more than 2 decimal digits"}, 3);
     return false;
   }
-  char *endptr = NULL;
-  double val = strtod(s, &endptr);
-  if (s[0] == '\0' || *endptr != '\0') {
-    opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"invalid pace '", s, "'"}, 3);
-    return false;
-  }
-  if (val < 0.01 - 1e-9 || val > 10.0 + 1e-9) {
+  if (val < OPTS_PACE_MIN - 1e-9 || val > OPTS_PACE_MAX + 1e-9) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"pace '", s, "' out of range 0.01-10"}, 3);
     return false;
   }
@@ -308,40 +325,6 @@ bool opts_parse_teletext_caption(const char *val, char *out, size_t out_cap, cha
   return true;
 }
 
-static int utf8_decode_strict(const char *s, size_t len, unsigned *cp_out) {
-  unsigned char b0 = (unsigned char)s[0];
-  if (b0 < 0x80) {
-    *cp_out = b0;
-    return 1;
-  }
-  int n;
-  unsigned cp;
-  if ((b0 & 0xE0) == 0xC0) {
-    if (b0 < 0xC2) return -1;
-    n = 2;
-    cp = b0 & 0x1F;
-  } else if ((b0 & 0xF0) == 0xE0) {
-    n = 3;
-    cp = b0 & 0x0F;
-  } else if ((b0 & 0xF8) == 0xF0) {
-    if (b0 > 0xF4) return -1;
-    n = 4;
-    cp = b0 & 0x07;
-  } else {
-    return -1;
-  }
-  if (len < (size_t)n) return -1;
-  for (int k = 1; k < n; k++) {
-    unsigned char c = (unsigned char)s[k];
-    if ((c & 0xC0) != 0x80) return -1;
-    cp = (cp << 6) | (unsigned)(c & 0x3F);
-  }
-  if (n == 3 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) return -1;
-  if (n == 4 && (cp < 0x10000 || cp > 0x10FFFF)) return -1;
-  *cp_out = cp;
-  return n;
-}
-
 bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *errbuf, size_t errbuf_len) {
   size_t len = strlen(val);
   for (size_t i = 0; i < len; ) {
@@ -357,7 +340,7 @@ bool opts_parse_castle_name(const char *val, char *out, size_t out_cap, char *er
     }
     i += (size_t)n;
   }
-  if (entity_utf8_display_width(val) > CASTLE_NAME_LEN) {
+  if (utf8_col_width(val) > CASTLE_NAME_LEN) {
     opts_set_errbuf(errbuf, errbuf_len, (const char *[]){"castle name '", val, "' too long, max 11 columns"}, 3);
     return false;
   }

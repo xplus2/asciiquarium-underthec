@@ -1,8 +1,6 @@
 #include "app.h"
 #include "rng.h"
 
-#include <string.h>
-
 static bool too_small(const struct app *a) { return a->h < APP_MIN_ROWS || a->w < APP_MIN_COLS; }
 
 static void draw_too_small(struct canvas *c) {
@@ -101,7 +99,7 @@ void app_frame(struct app *a, double now) {
   if (dt < 0.0) dt = 0.0;
   if (dt > 0.5) dt = 0.5;
   if (!a->paused && !too_small(a)) {
-    a->tick_accum += dt * 10.0 * a->pace;
+    a->tick_accum += dt * TICKS_PER_SECOND * a->pace;
     while (a->tick_accum >= 1.0) {
       scene_tick(&a->scene, a->w, a->h);
       a->tick_accum -= 1.0;
@@ -117,4 +115,21 @@ void app_frame(struct app *a, double now) {
   canvas_reduce_colors(&a->canvas, a->colors_mode);
   help_ui_draw(&a->help, &a->canvas);
   settings_ui_draw(&a->settings, &a->canvas);
+}
+
+double app_frame_wait(const struct app *a, double *deadline, double now) {
+  double period = 1.0 / (double)a->fps;
+  *deadline += period;
+  double wait = *deadline - now;
+  if (wait < -period) *deadline = now;
+  return wait > 0.0 ? wait : 0.0;
+}
+
+void app_grid_fit(int w, int h, int cell_w, int cell_h, int *cols, int *rows, int *off_x, int *off_y) {
+  *cols = w / cell_w;
+  *rows = h / cell_h;
+  if (*cols < 1) *cols = 1;
+  if (*rows < 1) *rows = 1;
+  *off_x = (w - *cols * cell_w) / 2;
+  *off_y = (h - *rows * cell_h) / 2;
 }

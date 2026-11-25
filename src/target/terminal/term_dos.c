@@ -1,5 +1,4 @@
 #include "../../color.h"
-#include "../../xalloc.h"
 #include "term.h"
 
 #include <conio.h>
@@ -8,7 +7,6 @@
 #include <dpmi.h>
 #include <go32.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <sys/farptr.h>
 #include <time.h>
 
@@ -81,8 +79,7 @@ static int orig_mode;
 static int orig_cols;
 static int orig_rows;
 static unsigned orig_cursor;
-static uint16_t *prev = NULL;
-static size_t prev_cap = 0;
+/* false: next present repaints all */
 static bool prev_valid = false;
 
 static void bios_video(int ax, int bx, int cx) {
@@ -167,9 +164,6 @@ void term_shutdown(void) {
   }
   if (adapter_kind != ADAPTER_CGA) bios_video(0x1003, 1, 0);
   bios_video(0x0100, 0, (int)orig_cursor);
-  free(prev);
-  prev = NULL;
-  prev_cap = 0;
   prev_valid = false;
 }
 
@@ -210,31 +204,25 @@ static uint8_t attr_byte(const struct cell *c) {
   return (uint8_t)(bg << 4 | fg);
 }
 
-void term_present(const struct canvas *c) {
+void term_present(struct canvas *c) {
   int cols = _farpeekw(_dos_ds, BDA_COLS);
   if (c->width != cols || c->height != bda_rows()) {
     prev_valid = false; /* clear canvas after mode switch */
     return;
   }
-  size_t n = (size_t)c->width * (size_t)c->height;
-  if (n > prev_cap) {
-    prev = xrealloc(prev, n * sizeof *prev);
-    prev_cap = n;
-    prev_valid = false;
-  }
   if (!prev_valid) {
-    for (size_t i = 0; i < n; i++) prev[i] = 0xffff;
+    canvas_diff_invalidate(c);
     prev_valid = true;
   }
+  if (!canvas_diff(c)) return;
   _farsetsel(_dos_ds);
   for (int y = 0; y < c->height; y++) {
-    for (int x = 0; x < c->width; x++) {
-      size_t i = (size_t)y * (size_t)c->width + (size_t)x;
+    for (int x = c->row_lo[y]; x <= c->row_hi[y]; x++) {
+      int i = y * c->width + x;
+      if (!canvas_cell_changed(c, i)) continue;
       const struct cell *cell = &c->cells[i];
       uint8_t ch = cell->cont ? ' ' : utf8_to_cp437(cell->glyph);
       uint16_t word = (uint16_t)(attr_byte(cell) << 8 | ch);
-      if (word == prev[i]) continue;
-      prev[i] = word;
       _farnspokew(TEXT_BASE + ((unsigned)y * (unsigned)cols + (unsigned)x) * 2u, word);
     }
   }
@@ -244,10 +232,10 @@ static int read_key(void) {
   int c = getch();
   if (c == 0 || c == 0xe0) {
     switch (getch()) {
-      case 72: return TERM_KEY_UP;
-      case 80: return TERM_KEY_DOWN;
-      case 75: return TERM_KEY_LEFT;
-      case 77: return TERM_KEY_RIGHT;
+      case 72: return APP_KEY_UP;
+      case 80: return APP_KEY_DOWN;
+      case 75: return APP_KEY_LEFT;
+      case 77: return APP_KEY_RIGHT;
       default: return -1;
     }
   }

@@ -8,28 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct kaiju_mask_ctx {
-  char body;
-  char back;
-};
-
-static void map_kaiju_colors(const char *in, char *out, void *ctx) {
-  const struct kaiju_mask_ctx *k = ctx;
-  size_t len = strlen(in);
-  for (size_t j = 0; j < len; j++) {
-    char ch = in[j];
-    if (ch == '2')       out[j] = k->body;
-    else if (ch == '3')  out[j] = k->back;
-    else                 out[j] = ch;
-  }
-  out[len] = '\0';
-}
-
 static void randomize_kaiju_mask(struct entity *e, ascii_rows tmpl) {
   static const char body_letters[4] = {'G', 'g', 'w', 'K'};
   static const char back_letters[5] = {'c', 'y', 'Y', 'R', 'r'};
-  struct kaiju_mask_ctx ctx = {body_letters[rng_int(4)], back_letters[rng_int(5)]};
-  e->owned_mask = entity_build_transformed_rows(tmpl, map_kaiju_colors, &ctx);
+  char pick[10] = {0};
+  pick[2] = body_letters[rng_int(4)];
+  pick[3] = back_letters[rng_int(5)];
+  e->owned_mask = entity_build_digit_rows(tmpl, pick);
 }
 
 void spawn_kaiju(struct scene *sc, int w, int h) {
@@ -45,10 +30,7 @@ void spawn_kaiju(struct scene *sc, int w, int h) {
   e->frames = &kaiju[dir];
   e->frame_count = 1;
   randomize_kaiju_mask(e, kaiju[dir].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 2) : (double)(1 - width);
+  swim_place(e, w, h, dir, 2);
   finish_creature_spawn(e, ENT_KAIJU, rng_int(Z_FISH_RANGE) + Z_FISH_MIN, speed, 0, DEATH_ADD_KAIJU_COOLDOWN, (struct attr){.col = COL_DEFAULT, .bold = false});
 }
 
@@ -97,7 +79,7 @@ static void update_laser_shape(struct entity *e, int length) {
     entity_set_owned_single_row(e, line, 0.0);
     entity_shape_changed(e);
   }
-  e->x = (e->vx < 0) ? e->splat_x - (length - 1) : e->splat_x;
+  e->x = (e->vx < 0) ? e->laser_eye_x - (length - 1) : e->laser_eye_x;
   e->has_prev = false;
 }
 
@@ -107,10 +89,10 @@ static void spawn_laser(struct scene *sc, double eye_x, double eye_y, int z, int
   e->y = eye_y;
   e->z = z;
   e->vx = dir_sign;
-  e->splat_x = eye_x;
-  e->splat_z = target_id;
+  e->laser_eye_x = eye_x;
+  e->laser_target_id = target_id;
   e->default_attr = color_from_name("RED");
-  e->age_ticks = 1;
+  e->laser_len = 1;
   update_laser_shape(e, 1);
 }
 
@@ -130,7 +112,7 @@ static void handle_castle_collision(struct scene *sc) {
 }
 
 static void update_active_laser(struct scene *sc, struct entity *laser) {
-  struct entity *target = entity_find_by_id(&sc->entities, laser->splat_z);
+  struct entity *target = entity_find_by_id(&sc->entities, laser->laser_target_id);
   const struct entity *kaiju_ent = entity_find_first(&sc->entities, ENT_KAIJU);
   int eye_row;
   int eye_col;
@@ -139,16 +121,16 @@ static void update_active_laser(struct scene *sc, struct entity *laser) {
     return;
   }
   if (find_kaiju_eye(kaiju_ent, &eye_row, &eye_col)) {
-    laser->splat_x = kaiju_ent->x + eye_col;
+    laser->laser_eye_x = kaiju_ent->x + eye_col;
     laser->y = kaiju_ent->y + eye_row;
   }
   if (target == NULL) {
     laser->marked_dead = true;
     return;
   }
-  double d = target->x - laser->splat_x;
+  double d = target->x - laser->laser_eye_x;
   double dist = d < 0 ? -d : d;
-  int new_len = laser->age_ticks + 5;
+  int new_len = laser->laser_len + 5;
   if ((double)new_len >= dist) {
     double tx = target->x;
     double ty = target->y;
@@ -158,7 +140,7 @@ static void update_active_laser(struct scene *sc, struct entity *laser) {
     spawn_splat(sc, tx, ty, tz);
     return;
   }
-  laser->age_ticks = new_len;
+  laser->laser_len = new_len;
   update_laser_shape(laser, new_len);
 }
 

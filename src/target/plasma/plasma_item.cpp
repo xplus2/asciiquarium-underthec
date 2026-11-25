@@ -4,7 +4,6 @@
 #include <cstring>
 
 #include <QByteArray>
-#include <QElapsedTimer>
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QPainter>
@@ -12,6 +11,7 @@
 
 extern "C" {
 #include "config.h"
+#include "monotime.h"
 #include "scene.h"
 }
 
@@ -20,27 +20,8 @@ namespace {
 const int kMinFontPx = 7;
 const int kGlyphCacheMax = 4096;
 
-/* [enum color * 2 + bold] as 0xRRGGBB */
-const std::array<QRgb, 18> kPalette = {
-    0xc0c0c0, 0xffffff,
-    0x000000, 0x808080,
-    0xc00000, 0xff5555,
-    0x00c000, 0x55ff55,
-    0xc0c000, 0xffff55,
-    0x0000c0, 0x5555ff,
-    0xc000c0, 0xff55ff,
-    0x00c0c0, 0x55ffff,
-    0xc0c0c0, 0xffffff,
-};
-
 QColor colorOf(enum color col, bool bold) {
-  return QColor(kPalette[static_cast<size_t>(col) * 2 + (bold ? 1 : 0)]);
-}
-
-double nowSeconds() {
-  static QElapsedTimer clk;
-  if (!clk.isValid()) clk.start();
-  return static_cast<double>(clk.nsecsElapsed()) / 1e9;
+  return QColor(static_cast<QRgb>(color_rgb(col, bold)));
 }
 
 void applyOption(struct config *cfg, const QString &name, const QString &value) {
@@ -100,7 +81,7 @@ void UnderTheC::restart() {
     config_free(&cfg);
     config_init(&cfg);
   }
-  config_start(&cfg, &app_, nowSeconds());
+  config_start(&cfg, &app_, monotime_now());
   config_free(&cfg);
   started_ = true;
   timer_.setInterval(1000 / cfg.fps);
@@ -141,7 +122,7 @@ void UnderTheC::itemChange(ItemChange change, const ItemChangeData &value) {
 }
 
 void UnderTheC::step() {
-  app_frame(&app_, nowSeconds());
+  app_frame(&app_, monotime_now());
   struct canvas &c = app_.canvas;
   if (fullRedraw_) {
     canvas_diff_invalidate(&c);

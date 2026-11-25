@@ -47,6 +47,8 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
   private boolean powerSave;
   private final boolean software;
   private boolean fallbackSaved;
+  /* surface or grid new: draw even if canvas unchanged */
+  private boolean redrawPending = true;
   private final int powerSaveFps;
   private final float edgePx;
   private final float swipePx;
@@ -138,11 +140,13 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
     offY = (surfaceH - rows * cellH) / 2;
     Native.resize(handle, cols, rows);
     cells = new int[cols * rows];
+    redrawPending = true;
   }
 
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
     surfaceValid = true;
+    redrawPending = true;
   }
 
   @Override
@@ -205,27 +209,32 @@ public final class UnderTheCView extends SurfaceView implements SurfaceHolder.Ca
       long period = 1_000_000_000L / Math.max(1, fps);
       if (frameTimeNanos - lastNanos + SLACK_NANOS >= period) {
         lastNanos = frameTimeNanos;
-        Native.frame(handle, frameTimeNanos / 1e9, System.currentTimeMillis(), cells);
-        drawFrame();
+        if (Native.frame(handle, frameTimeNanos / 1e9, System.currentTimeMillis(), cells, redrawPending)) {
+          redrawPending = !drawFrame();
+        }
       }
     }
     Choreographer.getInstance().postFrameCallback(this);
   }
 
-  private void drawFrame() {
+  /* false: not drawn, retry */
+  private boolean drawFrame() {
     SurfaceHolder holder = getHolder();
     boolean hardware = !software && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
     Canvas canvas = null;
+    boolean drawn = false;
     try {
       canvas = hardware ? holder.getSurface().lockHardwareCanvas() : holder.lockCanvas();
-      if (canvas == null) return;
+      if (canvas == null) return false;
       canvas.drawColor(0xff000000);
       renderer.draw(canvas, cells, cols, rows, offX, offY);
+      drawn = true;
     } catch (RuntimeException e) {
       renderFailed(e);
     } finally {
       if (canvas != null) post(holder, canvas, hardware);
     }
+    return drawn;
   }
 
   private void post(SurfaceHolder holder, Canvas canvas, boolean hardware) {

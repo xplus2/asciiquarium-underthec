@@ -215,7 +215,7 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           name=underthec-${ver}-web
           mkdir "$name"
-          cp build/index.html build/underthec.js build/underthec.wasm LICENSE "$name"/
+          cp build/index.html build/underthec.js build/underthec.wasm build/favicon.ico build/apple-touch-icon.png LICENSE "$name"/
           (cd "$name" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | xargs sha256sum > SHA256SUMS)
           zip -r "${name}.zip" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

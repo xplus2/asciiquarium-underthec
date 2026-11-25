@@ -35,21 +35,10 @@ bool help_ui_click(const struct help_ui *ui, int x, int y) {
   return ui->open && x >= 0 && x < BOX_W && y >= 0 && y < box_h(ui);
 }
 
-static void fill_rect(struct canvas *c, int x0, int y0, int w, int h, struct attr a) {
-  for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) canvas_put(c, x0 + x, y0 + y, " ", 1, a, 1);
-}
-
-static void draw_row_text(struct canvas *c, int x0, int y, const char *s, struct attr a) {
-  for (int i = 0; s[i] != '\0'; i++) {
-    char g[2] = {s[i], '\0'};
-    canvas_put(c, x0 + i, y, g, 1, a, 1);
-  }
-}
-
 void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   if (!ui->open) return;
 
-  fill_rect(c, 0, 0, BOX_W, box_h(ui), BOX_ATTR);
+  canvas_fill(c, 0, 0, BOX_W, box_h(ui), BOX_ATTR);
 
   char line[CONTENT_W + 1];
   int y = MARGIN;
@@ -57,18 +46,17 @@ void help_ui_draw(const struct help_ui *ui, struct canvas *c) {
   opts_append_bounded(line, sizeof line - 1, &line_pos, TOOL_DISPLAY_NAME " v");
   opts_append_bounded(line, sizeof line - 1, &line_pos, TOOL_VERSION);
   line[line_pos] = '\0';
-  draw_row_text(c, MARGIN, y++, line, TITLE_ATTR);
+  canvas_text(c, MARGIN, y++, line, TITLE_ATTR);
   y++;
-  draw_row_text(c, MARGIN, y++, "keys:", BOX_ATTR);
-  if (ui->scene->classic_ver == 0) draw_row_text(c, MARGIN, y++, "  f         feed", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  h         help", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  p [space] pause", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  q Ctrl+c  quit", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  r         redraw", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  s         settings", BOX_ATTR);
-  draw_row_text(c, MARGIN, y++, "  t         transparency", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "keys:", BOX_ATTR);
+  if (ui->scene->classic_ver == 0) canvas_text(c, MARGIN, y++, "  f         feed", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  h         help", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  p [space] pause", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  q Ctrl+c  quit", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  r         redraw", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  s         settings", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  t         transparency", BOX_ATTR);
 #ifdef __DJGPP__
-  draw_row_text(c, MARGIN, y++, "  v         text mode", BOX_ATTR);
+  canvas_text(c, MARGIN, y++, "  v         text mode", BOX_ATTR);
 #endif
-  y++;
 }

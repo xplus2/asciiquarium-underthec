@@ -2,6 +2,7 @@
 
 #include "../../app.h"
 #include "../../config.h"
+#include "../../monotime.h"
 #include "../terminal/term.h"
 
 #include <signal.h>
@@ -9,9 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -25,12 +24,6 @@ static bool build_config(struct config *cfg) {
     return false;
   }
   return true;
-}
-
-static double now_seconds(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
 static volatile sig_atomic_t g_should_quit = 0;
@@ -54,7 +47,7 @@ static void child_run(void) {
   }
 
   struct app app;
-  config_start(&cfg, &app, now_seconds());
+  config_start(&cfg, &app, monotime_now());
   config_free(&cfg);
 
   double deadline = app.last;
@@ -63,17 +56,14 @@ static void child_run(void) {
     int h;
     term_size(&w, &h);
     app_resize(&app, w, h);
-    double frame_period = 1.0 / (double)app.fps;
-    deadline += frame_period;
-    double wait = deadline - now_seconds();
-    if (wait < -frame_period) deadline = now_seconds();
+    double wait = app_frame_wait(&app, &deadline, monotime_now());
     if (wait > 0.0) {
       struct timespec ts;
       ts.tv_sec = (time_t)wait;
       ts.tv_nsec = (long)((wait - (double)ts.tv_sec) * 1e9);
       nanosleep(&ts, NULL);
     }
-    app_frame(&app, now_seconds());
+    app_frame(&app, monotime_now());
     term_present(&app.canvas);
   }
   app_free(&app);

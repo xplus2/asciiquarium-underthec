@@ -3,8 +3,14 @@ BUILDDIR := build
 
 -include config.mk
 
+# clean-only runs skip config checks
+ifneq ($(if $(MAKECMDGOALS),$(filter-out clean,$(MAKECMDGOALS)),all),)
 ifndef SRCS
 $(error config.mk not found - run ./configure first)
+endif
+ifneq ($(shell test configure -nt config.mk && echo stale),)
+$(error config.mk older than configure - rerun ./configure)
+endif
 endif
 
 OBJS := $(patsubst %.c,$(BUILDDIR)/%.o,$(SRCS))
@@ -21,7 +27,19 @@ SAVER_THUMBS := $(BUILDDIR)/underthec.saver/Contents/Resources/thumbnail.png $(B
 PLASMA_OBJDIR := $(BUILDDIR)/plasma
 PLASMA_OBJS := $(patsubst %.c,$(PLASMA_OBJDIR)/%.o,$(PLASMA_C_SRCS)) $(patsubst %.cpp,$(PLASMA_OBJDIR)/%.o,$(PLASMA_CXX_SRCS)) $(PLASMA_OBJDIR)/moc_plasma_item.o
 PLASMA_FILES := $(BUILDDIR)/plasma_wallpaper/qml/org/underthec/qmldir $(BUILDDIR)/plasma_wallpaper/package/metadata.json
-DEPS := $(sort $(OBJS:.o=.d) $(patsubst %.c,$(BUILDDIR)/%.d,$(SCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/%.d,$(XSCR_SRCS)) $(patsubst %.c,$(BUILDDIR)/vlock/%.d,$(VLOCK_SRCS)) $(SAVER_OBJS:.o=.d) $(PLASMA_OBJS:.o=.d))
+DEPS := $(sort $(patsubst %.o,%.d,$(filter-out %.res.o,$(OBJS) $(SCR_OBJS) $(XSCR_OBJS) $(VLOCK_OBJS) $(SAVER_OBJS) $(PLASMA_OBJS))))
+NOLTO_CFLAGS = $(filter-out -flto=auto,$(CFLAGS))
+
+# $(1): compiler + flags
+define compile
+	@mkdir -p $(dir $@)
+	$(1) -MMD -MP -c $< -o $@
+endef
+
+define copy
+	@mkdir -p $(dir $@)
+	cp $< $@
+endef
 
 .PHONY: all clean install
 
@@ -50,16 +68,13 @@ $(SAVER_PLIST): src/target/scr_macos/Info.plist.in src/version.h
 	sed 's/@UNDERTHEC_VERSION@/$(SAVER_VERSION)/' $< > $@
 
 $(BUILDDIR)/underthec.saver/Contents/Resources/%: src/target/scr_macos/%
-	@mkdir -p $(dir $@)
-	cp $< $@
+	$(copy)
 
 $(BUILDDIR)/saver/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -flto=auto,$(CFLAGS)) -MMD -MP -c $< -o $@
+	$(call compile,$(CC) $(NOLTO_CFLAGS))
 
 $(BUILDDIR)/saver/%.o: %.m
-	@mkdir -p $(dir $@)
-	$(CC) $(patsubst -std=c11,-std=gnu11,$(filter-out -flto=auto,$(CFLAGS))) -fobjc-arc -MMD -MP -c $< -o $@
+	$(call compile,$(CC) $(patsubst -std=c11,-std=gnu11,$(NOLTO_CFLAGS)) -fobjc-arc)
 endif
 
 ifdef PLASMA_TARGET
@@ -68,15 +83,13 @@ $(PLASMA_TARGET): $(PLASMA_OBJS)
 	$(CXX) -shared $(PLASMA_OBJS) $(filter-out -static -flto=auto,$(LDFLAGS)) $(PLASMA_LDFLAGS) -o $@
 
 $(PLASMA_OBJDIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -flto=auto,$(CFLAGS)) -fPIC -MMD -MP -c $< -o $@
+	$(call compile,$(CC) $(NOLTO_CFLAGS) -fPIC)
 
 $(PLASMA_OBJDIR)/%.o: %.cpp $(PLASMA_OBJDIR)/plasma_plugin.moc
-	@mkdir -p $(dir $@)
-	$(CXX) $(PLASMA_CXXFLAGS) -fPIC -I$(PLASMA_OBJDIR) -MMD -MP -c $< -o $@
+	$(call compile,$(CXX) $(PLASMA_CXXFLAGS) -fPIC -I$(PLASMA_OBJDIR))
 
 $(PLASMA_OBJDIR)/moc_plasma_item.o: $(PLASMA_OBJDIR)/moc_plasma_item.cpp
-	$(CXX) $(PLASMA_CXXFLAGS) -fPIC -MMD -MP -c $< -o $@
+	$(call compile,$(CXX) $(PLASMA_CXXFLAGS) -fPIC)
 
 $(PLASMA_OBJDIR)/moc_plasma_item.cpp: src/target/plasma/plasma_item.h
 	@mkdir -p $(dir $@)
@@ -87,8 +100,7 @@ $(PLASMA_OBJDIR)/plasma_plugin.moc: src/target/plasma/plasma_plugin.cpp
 	$(MOC) $(PLASMA_INCS) $< -o $@
 
 $(BUILDDIR)/plasma_wallpaper/qml/org/underthec/qmldir: src/target/plasma/qmldir
-	@mkdir -p $(dir $@)
-	cp $< $@
+	$(copy)
 
 $(BUILDDIR)/plasma_wallpaper/package/metadata.json: $(shell find src/target/plasma/package -type f)
 	@mkdir -p $(dir $@)
@@ -96,28 +108,22 @@ $(BUILDDIR)/plasma_wallpaper/package/metadata.json: $(shell find src/target/plas
 endif
 
 $(BUILDDIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	$(call compile,$(CC) $(CFLAGS))
+
+$(BUILDDIR)/src/target/scr_x11/%.o: CFLAGS += $(XSCR_CFLAGS)
 
 $(BUILDDIR)/vlock/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -fPIC -MMD -MP -c $< -o $@
+	$(call compile,$(CC) $(CFLAGS) -fPIC)
 
 $(BUILDDIR)/%.res.o: %.rc src/version.h src/target/scr_windows/scr_res.h src/target/scr_windows/scr.manifest src/target/windows/underthec.ico src/target/windows/scr.ico
 	@mkdir -p $(dir $@)
 	$(WINDRES) -Isrc -O coff $< -o $@
 
-$(BUILDDIR)/index.html: src/target/web/index.html
-	@mkdir -p $(dir $@)
-	cp $< $@
-
-$(BUILDDIR)/apple-touch-icon.png: src/target/web/apple-touch-icon.png
-	@mkdir -p $(dir $@)
-	cp $< $@
+$(BUILDDIR)/index.html $(BUILDDIR)/apple-touch-icon.png: $(BUILDDIR)/%: src/target/web/%
+	$(copy)
 
 $(BUILDDIR)/favicon.ico: src/target/windows/underthec.ico
-	@mkdir -p $(dir $@)
-	cp $< $@
+	$(copy)
 
 -include $(DEPS)
 

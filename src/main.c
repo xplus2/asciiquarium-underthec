@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "config.h"
+#include "monotime.h"
 #include "scene.h"
 #include "target/teletext/teletext.h"
 #include "target/terminal/term.h"
@@ -14,7 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,21 +36,6 @@ static void on_feed_signal(int sig) {
   g_feed_signal = 1;
 }
 #endif
-
-static double now_seconds(void) {
-#ifdef _WIN32
-  LARGE_INTEGER freq, counter;
-  QueryPerformanceFrequency(&freq);
-  QueryPerformanceCounter(&counter);
-  return (double)counter.QuadPart / (double)freq.QuadPart;
-#elif defined(__DJGPP__)
-  return (double)uclock() / (double)UCLOCKS_PER_SEC;
-#else
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
-#endif
-}
 
 static char *read_all_stdin(void) {
   size_t cap = 4096;
@@ -149,7 +134,7 @@ int main(int argc, char **argv) {
   sigaction(SIGUSR1, &feed_sa, NULL);
 #endif
   struct app app;
-  config_start(&cfg, &app, now_seconds());
+  config_start(&cfg, &app, monotime_now());
   config_free(&cfg);
   exit_code = 0;
   double deadline = app.last;
@@ -163,11 +148,8 @@ int main(int argc, char **argv) {
       term_size(&w, &h);
     }
     app_resize(&app, w, h);
-    double frame_period = 1.0 / (double)app.fps;
-    deadline += frame_period;
-    double wait = deadline - now_seconds();
-    if (wait < -frame_period) deadline = now_seconds();
-    int wait_ms = wait > 0.0 ? (int)(wait * 1000.0 + 0.999) : 0;
+    double wait = app_frame_wait(&app, &deadline, monotime_now());
+    int wait_ms = (int)(wait * 1000.0 + 0.999);
     int key = -1;
     if (tt != NULL) tt_sleep_ms(wait_ms);
     else key = term_poll_key(wait_ms);
@@ -182,7 +164,7 @@ int main(int argc, char **argv) {
       g_feed_signal = 0;
       app_feed(&app, FEED_COL_AUTO);
     }
-    app_frame(&app, now_seconds());
+    app_frame(&app, monotime_now());
     if (tt != NULL) {
       if (tt_stream_present(tt, &app.canvas) != 0) {
         if (tt_net != NULL) {

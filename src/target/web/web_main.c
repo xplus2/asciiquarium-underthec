@@ -1,7 +1,6 @@
 #include "../../app.h"
 #include "../../config.h"
 #include "../../xalloc.h"
-#include "../../entity/priv.h"
 
 #include <stdint.h>
 
@@ -17,6 +16,7 @@ int web_width(void);
 int web_height(void);
 bool web_settings_open(void);
 bool web_help_open(void);
+uint32_t web_palette(int col, int bold);
 
 static struct app app;
 static uint32_t *packed;
@@ -67,12 +67,7 @@ void web_click(int col, int row) { app_click(&app, col, row); }
 
 const uint32_t *web_frame(double now_ms) {
   app_frame(&app, now_ms / 1000.0);
-  size_t n = (size_t)app.canvas.width * (size_t)app.canvas.height;
-  for (size_t i = 0; i < n; i++) {
-    const struct cell *c = &app.canvas.cells[i];
-    uint32_t cp = c->cont ? 0 : (uint32_t)utf8_decode(c->glyph, utf8_seq_len((unsigned char)c->glyph[0]));
-    packed[i] = cp << 10 | (c->bg_bold ? 1u : 0u) << 9 | (uint32_t)c->bg << 5 | (uint32_t)c->col << 1 | (c->bold ? 1u : 0u);
-  }
+  canvas_pack(&app.canvas, packed);
   return packed;
 }
 
@@ -83,3 +78,5 @@ int web_height(void) { return app.canvas.height; }
 bool web_settings_open(void) { return settings_ui_is_open(&app.settings); }
 
 bool web_help_open(void) { return help_ui_is_open(&app.help); }
+
+uint32_t web_palette(int col, int bold) { return color_rgb((enum color)col, bold != 0); }

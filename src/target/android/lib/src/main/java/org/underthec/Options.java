@@ -7,21 +7,27 @@ import org.underthec.lib.R;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class Options {
-  static final String[] CREATURES = {
-      "bigfish", "crab", "dolphins", "ducks", "fishhook", "jellyfish", "kaiju", "monster", "rowers",
-      "sailboat", "seahorse", "shark", "ship", "submarine", "swan", "swordfish", "turtle", "whale"
-  };
+  static final String[] CREATURES = Native.creatures();
+  private static final Map<String, String> DEFAULTS = new HashMap<>();
+
+  static {
+    String[] d = Native.defaults();
+    for (int i = 0; i + 1 < d.length; i += 2) DEFAULTS.put(d[i], d[i + 1]);
+  }
+
   static final String[] MESSAGE_COLORS = {
       "", "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
       "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"
   };
   static final String[] TIME_FORMATS = {"", "24", "12"};
-  static final String DEFAULT_POSITION = "middle";
+  static final String DEFAULT_POSITION = def("message-position");
   static final String[] POSITIONS = {DEFAULT_POSITION, "center", "marquee", "swim", "event"};
   static final String[] COLORS = {
       "1", "1-green", "1-red", "1-blue", "1-yellow", "1-magenta", "1-cyan", "1-white",
@@ -48,6 +54,11 @@ public final class Options {
   }
 
   private Options() {
+  }
+
+  /* core default for option name */
+  static String def(String name) {
+    return DEFAULTS.get(name);
   }
 
   public static SharedPreferences prefs(Context c) {
@@ -108,11 +119,11 @@ public final class Options {
     add(o, "time-color", p.getString("time-color", ""));
     add(o, "castle-name", p.getString("castle-name", ""));
     add(o, "no-castle", p.getString("no-castle", "0"));
-    add(o, "pace", p.getString("pace", "1.00"));
-    add(o, "uturn-chance", p.getString("uturn-chance", "400"));
+    add(o, "pace", p.getString("pace", def("pace")));
+    add(o, "uturn-chance", p.getString("uturn-chance", def("uturn-chance")));
     add(o, "autofeed", p.getString("autofeed", "0"));
     add(o, "fps", p.getString("fps", String.valueOf(c.getResources().getInteger(R.integer.default_fps))));
-    add(o, "colors", p.getString("colors", "16"));
+    add(o, "colors", p.getString("colors", def("colors")));
     byte[][] out = new byte[o.size()][];
     for (int i = 0; i < out.length; i++) out[i] = o.get(i).getBytes(StandardCharsets.UTF_8);
     return out;

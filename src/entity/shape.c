@@ -17,13 +17,19 @@ char **entity_build_transformed_rows(ascii_rows tmpl, row_transform_fn fn, void 
   return out;
 }
 
-static void randomize_row(const char *in, char *out, void *ctx) {
-  (void)ctx;
-  color_randomize_mask(in, out);
+static void map_digits_row(const char *in, char *out, void *ctx) {
+  color_map_digits(in, out, ctx);
+}
+
+char **entity_build_digit_rows(ascii_rows tmpl, const char pick[10]) {
+  char copy[10];
+  memcpy(copy, pick, sizeof copy);
+  return entity_build_transformed_rows(tmpl, map_digits_row, copy);
 }
 
 void entity_randomize_mask(struct entity *e, ascii_rows mask_template) {
-  char **owned = entity_build_transformed_rows(mask_template, randomize_row, NULL);
+  color_roll_pick(e->color_pick);
+  char **owned = entity_build_digit_rows(mask_template, e->color_pick);
   entity_clear_owned(e);
   e->owned_mask = owned;
 }
@@ -35,6 +41,10 @@ void entity_set_owned_single_row(struct entity *e, char *row, double frame_inter
   char ***frame_list = xmalloc(1 * sizeof(*frame_list));
   frame_list[0] = rows;
   entity_set_owned_shape_frames(e, frame_list, 1, frame_interval_ticks);
+}
+
+void entity_set_owned_lead(struct entity *e, char c) {
+  e->owned_shape_rows[0][0][0] = c;
 }
 
 void entity_set_owned_shape_frames(struct entity *e, char ***rows, int frame_count, double frame_interval_ticks) {

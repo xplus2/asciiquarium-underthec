@@ -1,7 +1,8 @@
 #include "settings.h"
 #include "../color.h"
 #include "../opts.h"
-#include "../target/terminal/term.h"
+#include "../app.h"
+#include "opt_table.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -10,35 +11,36 @@ enum field_kind { FIELD_NONE, FIELD_CLASSIC, FIELD_FPS, FIELD_PACE, FIELD_UTURN,
 
 static bool is_checkbox_kind(enum field_kind k) { return k == FIELD_SPECIES || k == FIELD_CASTLE; }
 
+/* species: scene aquatic flag index, label from scene table */
 struct grid_cell {
   enum field_kind kind;
   const char *label;
-  size_t species_offset;
+  size_t species;
 };
-
-#define SP(field) offsetof(struct aquatic_life, field)
 
 #define GRID_ROWS 14
 #define TOP_ROW_COUNT 3
+/* 2 species columns, scene table order */
+#define SPECIES_ROWS 9
+_Static_assert(SCENE_AQUATIC_FLAG_COUNT == 2 * SPECIES_ROWS, "species grid layout");
+
+#define SP(i) {FIELD_SPECIES, NULL, i}
 
 static const struct grid_cell grid[GRID_ROWS][2] = {
-{{FIELD_COLORS, "colors", 0},                 {FIELD_NONE, NULL, 0}},
-{{FIELD_FPS, "fps", 0},                       {FIELD_PACE, "pace", 0}},
-{{FIELD_UTURN, "uturn", 0},                   {FIELD_FISH, "fish", 0}},
-{{FIELD_SPECIES, "bigfish", SP(bigfish)},     {FIELD_SPECIES, "sailboat", SP(sailboat)}},
-{{FIELD_SPECIES, "crab", SP(crab)},           {FIELD_SPECIES, "seahorse", SP(seahorse)}},
-{{FIELD_SPECIES, "dolphins", SP(dolphins)},   {FIELD_SPECIES, "shark", SP(shark)}},
-{{FIELD_SPECIES, "ducks", SP(ducks)},         {FIELD_SPECIES, "ship", SP(ship)}},
-{{FIELD_SPECIES, "fishhook", SP(fishhook)},   {FIELD_SPECIES, "submarine", SP(submarine)}},
-{{FIELD_SPECIES, "jellyfish", SP(jellyfish)}, {FIELD_SPECIES, "swan", SP(swan)}},
-{{FIELD_SPECIES, "kaiju", SP(kaiju)},         {FIELD_SPECIES, "swordfish", SP(swordfish)}},
-{{FIELD_SPECIES, "monster", SP(monster)},     {FIELD_SPECIES, "turtle", SP(turtle)}},
-{{FIELD_SPECIES, "rowers", SP(rowers)},       {FIELD_SPECIES, "whale", SP(whale)}},
-{{FIELD_CASTLE, "castle", 0},                 {FIELD_NONE, NULL, 0}},
-{{FIELD_CLASSIC, "classic", 0},               {FIELD_AUTOFEED, "feed", 0}},
+{{FIELD_COLORS, "colors", 0},   {FIELD_NONE, NULL, 0}},
+{{FIELD_FPS, "fps", 0},         {FIELD_PACE, "pace", 0}},
+{{FIELD_UTURN, "uturn", 0},     {FIELD_FISH, "fish", 0}},
+{SP(0), SP(9)},  {SP(1), SP(10)}, {SP(2), SP(11)}, {SP(3), SP(12)}, {SP(4), SP(13)},
+{SP(5), SP(14)}, {SP(6), SP(15)}, {SP(7), SP(16)}, {SP(8), SP(17)},
+{{FIELD_CASTLE, "castle", 0},   {FIELD_NONE, NULL, 0}},
+{{FIELD_CLASSIC, "classic", 0}, {FIELD_AUTOFEED, "feed", 0}},
 };
 
 #undef SP
+
+static const char *cell_label(const struct grid_cell *cell) {
+  return cell->kind == FIELD_SPECIES ? scene_aquatic_flag_name(cell->species) : cell->label;
+}
 
 #define CONTENT_W 28
 #define CONTENT_H 16
@@ -77,13 +79,6 @@ static int clampi(int v, int lo, int hi) {
   return v;
 }
 
-static const int COLORS_MODES[] = {1, 11, 21, 31, 41, 51, 61, 71, 2, 12, 22, 32, 42, 52, 62, 72, 4, 7, 8, 108, 16};
-#define COLORS_MODES_N (int)(sizeof(COLORS_MODES) / sizeof(COLORS_MODES[0]))
-
-static int colors_mode_index(int mode) {
-  for (int i = 0; i < COLORS_MODES_N; i++) if (COLORS_MODES[i] == mode) return i;
-  return COLORS_MODES_N - 1;
-}
 
 static void colors_mode_label(int mode, char *out, size_t out_cap) {
   int base;
@@ -102,17 +97,16 @@ static void colors_mode_label(int mode, char *out, size_t out_cap) {
   if (mode == 7) { memcpy(out, "  7 (Teletext)", sizeof "  7 (Teletext)"); return; }
   if (mode == 108) { memcpy(out, "  8-bold", sizeof "  8-bold"); return; }
   if (mode == 16) { memcpy(out, " 16 (ANSI)", sizeof " 16 (ANSI)"); return; }
-  { size_t p = 0; opts_append_bounded(out, out_cap - 1, &p, "  "); opts_append_int_bounded(out, out_cap - 1, &p, mode, 0); out[p] = '\0'; }
+  size_t p = 0;
+  opts_append_bounded(out, out_cap - 1, &p, "  ");
+  opts_append_int_bounded(out, out_cap - 1, &p, mode, 0);
+  out[p] = '\0';
 }
 
 static double clampd(double v, double lo, double hi) {
   if (v < lo) return lo;
   if (v > hi) return hi;
   return v;
-}
-
-static bool *species_field(struct aquatic_life *a, size_t offset) {
-  return (bool *)((char *)a + offset);
 }
 
 static int current_fish_value(const struct scene *sc) {
@@ -122,9 +116,8 @@ static int current_fish_value(const struct scene *sc) {
 static int draw_row_for_logical(int lr) { return lr + 2; }
 
 static int logical_for_draw_row(int dr) {
-  for (int lr = 0; lr < GRID_ROWS; lr++)
-    if (draw_row_for_logical(lr) == dr) return lr;
-  return -1;
+  int lr = dr - 2;
+  return lr >= 0 && lr < GRID_ROWS ? lr : -1;
 }
 
 void settings_ui_init(struct settings_ui *ui, int *fps, double *pace, int *colors_mode, int *autofeed, struct scene *scene) {
@@ -181,29 +174,30 @@ static void adjust(struct settings_ui *ui, int dir, int term_w, int term_h) {
       break;
     }
     case FIELD_FPS:
-      *ui->fps = clampi(*ui->fps + dir, 1, 240);
+      *ui->fps = clampi(*ui->fps + dir, OPTS_FPS_MIN, OPTS_FPS_MAX);
       break;
     case FIELD_PACE: {
       int hundredths = (int)(*ui->pace * 100.0 + 0.5) + dir * 10;
-      *ui->pace = clampd((double)hundredths / 100.0, 0.01, 10.0);
+      *ui->pace = clampd((double)hundredths / 100.0, OPTS_PACE_MIN, OPTS_PACE_MAX);
       break;
     }
     case FIELD_UTURN:
-      scene_set_uturn_chance(ui->scene, clampi(ui->scene->uturn_chance + dir, 0, 999));
+      scene_set_uturn_chance(ui->scene, clampi(ui->scene->uturn_chance + dir, 0, OPTS_COUNT_MAX));
       break;
     case FIELD_AUTOFEED:
       *ui->autofeed = clampi(*ui->autofeed + dir * AUTOFEED_STEP, 0, AUTOFEED_MAX);
       break;
     case FIELD_COLORS: {
-      int idx = (colors_mode_index(*ui->colors_mode) + dir + COLORS_MODES_N) % COLORS_MODES_N;
-      *ui->colors_mode = COLORS_MODES[idx];
+      int idx = (ot_colors_index(*ui->colors_mode) + dir + OT_COLORS_N) % OT_COLORS_N;
+      char eb[64];
+      opts_parse_colors(ot_colors_items[idx], ui->colors_mode, eb, sizeof eb);
       break;
     }
     case FIELD_FISH: {
       int cur = ui->scene->aquatic.fish_count;
-      int next = cur < 0 ? clampi(current_fish_value(ui->scene) + dir, 0, 999) : cur + dir;
+      int next = cur < 0 ? clampi(current_fish_value(ui->scene) + dir, 0, OPTS_COUNT_MAX) : cur + dir;
       if (next < 0) next = -1;
-      if (next > 999) next = 999;
+      if (next > OPTS_COUNT_MAX) next = OPTS_COUNT_MAX;
       scene_set_fish_count(ui->scene, term_w, term_h, next);
       break;
     }
@@ -217,7 +211,7 @@ static void toggle_checkbox(struct settings_ui *ui, int term_w, int term_h) {
   const struct grid_cell *cell = &grid[ui->sel_row][ui->sel_col];
   if (kind_disabled(ui, cell->kind)) return;
   if (cell->kind == FIELD_SPECIES) {
-    bool *flag = species_field(&ui->scene->aquatic, cell->species_offset);
+    bool *flag = scene_aquatic_flag(&ui->scene->aquatic, cell->species);
     *flag = !*flag;
     scene_on_species_toggled(ui->scene, term_w, term_h);
   } else if (cell->kind == FIELD_CASTLE) {
@@ -228,10 +222,10 @@ static void toggle_checkbox(struct settings_ui *ui, int term_w, int term_h) {
 void settings_ui_handle_key(struct settings_ui *ui, int key, int term_w, int term_h) {
   if (!ui->open) return;
   switch (key) {
-    case TERM_KEY_UP:    move_up_down(ui, -1);           break;
-    case TERM_KEY_DOWN:  move_up_down(ui, 1);            break;
-    case TERM_KEY_LEFT:  move_left_right(ui, -1);        break;
-    case TERM_KEY_RIGHT: move_left_right(ui, 1);         break;
+    case APP_KEY_UP:    move_up_down(ui, -1);           break;
+    case APP_KEY_DOWN:  move_up_down(ui, 1);            break;
+    case APP_KEY_LEFT:  move_left_right(ui, -1);        break;
+    case APP_KEY_RIGHT: move_left_right(ui, 1);         break;
     case '+':            adjust(ui, 1, term_w, term_h);    break;
     case '-':            adjust(ui, -1, term_w, term_h);   break;
     case ' ':            toggle_checkbox(ui, term_w, term_h); break;
@@ -259,7 +253,7 @@ bool settings_ui_click(struct settings_ui *ui, int x, int y, int term_w, int ter
     const struct grid_cell *cell = &grid[lr][col];
     int x0 = col == 0 ? COL0_X : COL1_X;
     if (!is_checkbox_kind(cell->kind) || kind_disabled(ui, cell->kind)) return true;
-    if (cx < x0 || cx >= x0 + CHECK_PREFIX + (int)strlen(cell->label)) return true;
+    if (cx < x0 || cx >= x0 + CHECK_PREFIX + (int)strlen(cell_label(cell))) return true;
   }
   ui->sel_row = lr;
   ui->sel_col = col;
@@ -268,23 +262,9 @@ bool settings_ui_click(struct settings_ui *ui, int x, int y, int term_w, int ter
   return true;
 }
 
-static void fill_rect(struct canvas *c, int x0, int y0, int w, int h, struct attr a) {
-  for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) canvas_put(c, x0 + x, y0 + y, " ", 1, a, 1);
-}
-
 static void draw_row_text(struct canvas *c, int x0, int y, const char *s, int hl_start, int hl_len) {
-  for (int i = 0; s[i] != '\0'; i++) {
-    struct attr a = (hl_len > 0 && i >= hl_start && i < hl_start + hl_len) ? HL_ATTR : BOX_ATTR;
-    char g[2] = {s[i], '\0'};
-    canvas_put(c, x0 + i, y, g, 1, a, 1);
-  }
-}
-
-static void draw_span(struct canvas *c, int x0, int y, const char *s, int start, int len, struct attr a) {
-  for (int i = start; i < start + len && s[i] != '\0'; i++) {
-    char g[2] = {s[i], '\0'};
-    canvas_put(c, x0 + i, y, g, 1, a, 1);
-  }
+  canvas_text(c, x0, y, s, BOX_ATTR);
+  if (hl_len > 0) canvas_text_span(c, x0, y, s, hl_start, hl_len, HL_ATTR);
 }
 
 struct adj_field {
@@ -362,12 +342,12 @@ static void draw_adjustable_row(const struct settings_ui *ui, struct canvas *c, 
   draw_row_text(c, MARGIN, y, line, hl_off, hl_len);
   for (int col = 0; col < 2; col++)
     if (row[col].kind != FIELD_NONE && kind_disabled(ui, row[col].kind))
-      draw_span(c, MARGIN, y, line, field_start[col], field_end[col] - field_start[col], DIS_ATTR);
+      canvas_text_span(c, MARGIN, y, line, field_start[col], field_end[col] - field_start[col], DIS_ATTR);
 }
 
 void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
   if (!ui->open) return;
-  fill_rect(c, 0, 0, BOX_W, BOX_H, BOX_ATTR);
+  canvas_fill(c, 0, 0, BOX_W, BOX_H, BOX_ATTR);
   draw_row_text(c, MARGIN, MARGIN + 0, "Settings", -1, 0);
   for (int lr = 0; lr < TOP_ROW_COUNT; lr++) draw_adjustable_row(ui, c, lr, TOP_ROWS[lr]);
   draw_adjustable_row(ui, c, GRID_ROWS - 1, CLASSIC_ROW);
@@ -376,19 +356,19 @@ void settings_ui_draw(const struct settings_ui *ui, struct canvas *c) {
     for (int col = 0; col < 2; col++) {
       const struct grid_cell *cell = &grid[lr][col];
       if (cell->kind == FIELD_NONE) continue;
-      bool on = cell->kind == FIELD_CASTLE ? ui->scene->castle : *species_field(&ui->scene->aquatic, cell->species_offset);
+      bool on = cell->kind == FIELD_CASTLE ? ui->scene->castle : *scene_aquatic_flag(&ui->scene->aquatic, cell->species);
       char buf[16];
       {
         size_t p = 0;
         opts_append_bounded(buf, sizeof buf - 1, &p, "[");
         opts_append_char_bounded(buf, sizeof buf - 1, &p, on ? 'x' : ' ');
         opts_append_bounded(buf, sizeof buf - 1, &p, "] ");
-        opts_append_bounded(buf, sizeof buf - 1, &p, cell->label);
+        opts_append_bounded(buf, sizeof buf - 1, &p, cell_label(cell));
         buf[p] = '\0';
       }
       bool sel = ui->sel_row == lr && ui->sel_col == col;
       draw_row_text(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, sel ? 0 : -1, sel ? 3 : 0);
-      if (kind_disabled(ui, cell->kind)) draw_span(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, 0, (int)strlen(buf), DIS_ATTR);
+      if (kind_disabled(ui, cell->kind)) canvas_text(c, MARGIN + (col == 0 ? COL0_X : COL1_X), y, buf, DIS_ATTR);
     }
   }
 }

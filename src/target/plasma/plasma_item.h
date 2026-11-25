@@ -63,7 +63,7 @@ private:
   bool fullRedraw_ = true;
 };
 
-/* creature names for the settings page */
+/* creature names for settings page */
 class UnderTheCInfo : public QObject {
   Q_OBJECT
   Q_PROPERTY(QStringList creatures READ creatures CONSTANT)

@@ -22,6 +22,7 @@
 #include "art/swordfish.h"
 #include "art/whale.h"
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,6 +30,15 @@ int random_swim_y(int h, int sprite_height) {
   int max_height = MAIN_REGION_TOP_ROW;
   int min_height = h - sprite_height;
   return rng_int(min_height - max_height) + max_height;
+}
+
+double entry_x(struct entity *e, int w, int dir, int right_inset) {
+  return dir ? (double)(w - right_inset) : (double)(1 - entity_width(e));
+}
+
+void swim_place(struct entity *e, int w, int h, int dir, int right_inset) {
+  e->y = random_swim_y(h, entity_height(e));
+  e->x = entry_x(e, w, dir, right_inset);
 }
 
 bool swim_fits(int h, ascii_rows shape) {
@@ -49,25 +59,14 @@ void finish_creature_spawn(struct entity *e, enum entity_type type, int z, doubl
   e->default_attr = attr;
 }
 
-static void randomize_fish_row(const char *in, char *out, void *ctx) {
-  const char *pick = ctx;
-  size_t len = strlen(in);
-  for (size_t j = 0; j < len; j++) {
-    unsigned char c = (unsigned char)in[j];
-    if (c == '4') out[j] = 'W';
-    else if (c >= '1' && c <= '9') out[j] = pick[c - '0'];
-    else out[j] = in[j];
-  }
-  out[len] = '\0';
-}
-
+/* 4: eye, always white */
 static void roll_fish_colors(struct entity *e) {
-  static const char letters[] = {'c', 'C', 'r', 'R', 'y', 'Y', 'b', 'B', 'g', 'G', 'm', 'M'};
-  for (int digit = 1; digit <= 9; digit++) e->color_pick[digit] = letters[rng_int((int)(sizeof(letters) / sizeof(letters[0])))];
+  color_roll_pick(e->color_pick);
+  e->color_pick[4] = 'W';
 }
 
 static void apply_fish_colors(struct entity *e, ascii_rows tmpl) {
-  char **owned = entity_build_transformed_rows(tmpl, randomize_fish_row, e->color_pick);
+  char **owned = entity_build_digit_rows(tmpl, e->color_pick);
   entity_clear_owned(e);
   e->owned_mask = owned;
 }
@@ -84,10 +83,7 @@ static void spawn_fish_from_table(struct scene *sc, const struct sprite_pair *ta
   e->turn_frames = &table[fish_num ^ 1];
   roll_fish_colors(e);
   if (table[fish_num].mask != NULL) apply_fish_colors(e, table[fish_num].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = odd ? (double)(w - 2) : (double)(1 - width);
+  swim_place(e, w, h, odd, 2);
   e->physical = true;
   finish_creature_spawn(e, ENT_FISH, rng_int(Z_FISH_RANGE) + Z_FISH_MIN, speed, 0, DEATH_ADD_FISH, (struct attr){.col = COL_DEFAULT, .bold = false});
 }
@@ -193,28 +189,41 @@ void spawn_fish(struct scene *sc, int w, int h) {
   else spawn_fish_from_table(sc, fish_old, 16, w, h);
 }
 
-static void spawn_big_fish_variant(struct scene *sc, int w, int h, const struct sprite_pair *frames, double speed) {
+/* random-masked pool swimmer */
+struct swimmer_def {
+  enum entity_type type;
+  int z;
+  double speed;
+  double speed_rand; /* > 0: + rng_double(speed_rand) */
+  int frame_count;
+  double frame_interval;
+  int right_inset;
+  const char *color;
+  const struct sprite_pair *frames[2];
+};
+
+static void spawn_swimmer(struct scene *sc, int w, int h, const struct swimmer_def *def) {
   int dir = rng_int(2);
-  if (!swim_fits(h, frames[dir].shape)) {
+  const struct sprite_pair *frames = def->frames[dir];
+  if (!swim_fits(h, frames[0].shape)) {
     schedule_random_object_return(sc);
     return;
   }
-  double v = mirror_speed(dir, speed);
+  double speed = def->speed_rand > 0.0 ? rng_double(def->speed_rand) + def->speed : def->speed;
   struct entity *e = entity_spawn(&sc->entities);
-  e->frames = &frames[dir];
-  e->frame_count = 1;
-  entity_randomize_mask(e, frames[dir].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 1) : (double)(1 - width);
-  finish_creature_spawn(e, ENT_BIGFISH, Z_BIGFISH, v, 0, DEATH_RANDOM_OBJECT, color_from_name("YELLOW"));
+  e->frames = frames;
+  e->frame_count = def->frame_count;
+  e->frame_interval = def->frame_interval;
+  entity_randomize_mask(e, frames[0].mask);
+  swim_place(e, w, h, dir, def->right_inset);
+  finish_creature_spawn(e, def->type, def->z, mirror_speed(dir, speed), 0, DEATH_RANDOM_OBJECT, color_from_name(def->color));
 }
 
 static void spawn_big_fish(struct scene *sc, int w, int h) {
+  static const struct swimmer_def big1 = {ENT_BIGFISH, Z_BIGFISH, 3.0, 0.0, 1, 0.0, 1, "YELLOW", {&bigfish1[0], &bigfish1[1]}};
+  static const struct swimmer_def big2 = {ENT_BIGFISH, Z_BIGFISH, 2.5, 0.0, 1, 0.0, 1, "YELLOW", {&bigfish2[0], &bigfish2[1]}};
   bool use_2 = sc->classic_ver != 1 && rng_int(3) > 1;
-  if (use_2) spawn_big_fish_variant(sc, w, h, bigfish2, 2.5);
-  else spawn_big_fish_variant(sc, w, h, bigfish1, 3.0);
+  spawn_swimmer(sc, w, h, use_2 ? &big2 : &big1);
 }
 
 static void spawn_shark(struct scene *sc, int w, int h) {
@@ -255,7 +264,7 @@ static void spawn_shark(struct scene *sc, int w, int h) {
   e->y = y;
   e->frames = frames;
   e->frame_count = 1;
-  finish_creature_spawn(e, ENT_SHARK, Z_SHARK, speed, 0, DEATH_SHARK, color_from_name("CYAN"));
+  finish_creature_spawn(e, ENT_SHARK, Z_SHARK, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("CYAN"));
 }
 
 struct simple_creature_def {
@@ -269,11 +278,16 @@ struct simple_creature_def {
   const struct sprite_pair *frames[2];
 };
 
-static void map_placeholder_color(const char *in, char *out, void *ctx) {
-  char color = *(const char *)ctx;
-  size_t len = strlen(in);
-  for (size_t j = 0; j < len; j++) out[j] = (in[j] == '1') ? color : in[j];
-  out[len] = '\0';
+/* owned per-frame shape + mask copies, digits mapped by pick */
+static void own_digit_frames(struct entity *e, const struct sprite_pair *src, int count, double interval, const char pick[10]) {
+  char ***shapes = xmalloc((size_t)count * sizeof(*shapes));
+  char ***masks = xmalloc((size_t)count * sizeof(*masks));
+  for (int i = 0; i < count; i++) {
+    shapes[i] = entity_build_digit_rows(src[i].shape, pick);
+    masks[i] = entity_build_digit_rows(src[i].mask, pick);
+  }
+  entity_set_owned_shape_frames(e, shapes, count, interval);
+  entity_set_owned_shape_frame_masks(e, masks);
 }
 
 static struct entity *spawn_simple_creature(struct scene *sc, int w, const struct simple_creature_def *def) {
@@ -284,83 +298,36 @@ static struct entity *spawn_simple_creature(struct scene *sc, int w, const struc
   e->frame_count = def->frame_count;
   e->frame_interval = def->frame_interval;
   e->y = def->y;
-  e->x = dir ? (double)(w - 2) : (double)(1 - entity_width(e));
+  e->x = entry_x(e, w, dir, 2);
   finish_creature_spawn(e, def->type, def->z, speed, 0, DEATH_RANDOM_OBJECT, color_from_name(def->color));
   return e;
 }
 
-static void spawn_ship(struct scene *sc, int w, int h) {
-  (void)h;
-  static const struct simple_creature_def def = {ENT_SHIP, Z_SHIP, 1.0, 0, 1, 0.0, "WHITE", {&ship[0], &ship[1]}};
-  spawn_simple_creature(sc, w, &def);
-}
+static const struct simple_creature_def ship_def = {ENT_SHIP, Z_SHIP, 1.0, 0, 1, 0.0, "WHITE", {&ship[0], &ship[1]}};
+static const struct simple_creature_def whale_def = {ENT_WHALE, Z_WHALE, 1.0, 0, 12, 10.0, "WHITE", {whale[0], whale[1]}};
+static const struct simple_creature_def submarine_def = {ENT_SUBMARINE, Z_SUBMARINE, 1.0, 6, 9, 0.0, "YELLOW", {submarine[0], submarine[1]}};
+static const struct simple_creature_def ducks_def = {ENT_DUCK, Z_DUCK, 1.0, 5, 3, 2.5, "WHITE", {ducks[0], ducks[1]}};
 
 static void spawn_sailboat(struct scene *sc, int w, int h) {
   (void)h;
   static const char sail_letters[] = {'r', 'R', 'g', 'G', 'w', 'm', 'M', 'Y', 'B'};
-  int dir = rng_int(2);
-  double speed = mirror_speed(dir, 1.0);
-  struct entity *e = entity_spawn(&sc->entities);
-  e->frames = &sailboat[dir];
-  e->frame_count = 1;
-  char sail = sail_letters[rng_int((int)sizeof(sail_letters))];
-  e->owned_mask = entity_build_transformed_rows(sailboat[dir].mask, map_placeholder_color, &sail);
+  static const struct simple_creature_def def = {ENT_SAILBOAT, Z_SAILBOAT, 1.0, 0, 1, 0.0, "WHITE", {&sailboat[0], &sailboat[1]}};
+  struct entity *e = spawn_simple_creature(sc, w, &def);
+  const char pick[10] = {[1] = sail_letters[rng_int((int)sizeof(sail_letters))]};
+  e->owned_mask = entity_build_digit_rows(e->frames->mask, pick);
   e->y = (double)(1 + rng_int(3));
-  e->x = dir ? (double)(w - 2) : (double)(1 - entity_width(e));
-  finish_creature_spawn(e, ENT_SAILBOAT, Z_SAILBOAT, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("WHITE"));
-}
-
-static void spawn_whale(struct scene *sc, int w, int h) {
-  (void)h;
-  static const struct simple_creature_def def = {ENT_WHALE, Z_WHALE, 1.0, 0, 12, 10.0, "WHITE", {whale[0], whale[1]}};
-  spawn_simple_creature(sc, w, &def);
-}
-
-static void spawn_monster_new(struct scene *sc, int w, int h) {
-  (void)h;
-  static const struct simple_creature_def def = {ENT_MONSTER, Z_MONSTER, 2.0, 2, 2, 2.5, "GREEN", {monster_new[0], monster_new[1]}};
-  spawn_simple_creature(sc, w, &def);
-}
-
-static void spawn_monster_old(struct scene *sc, int w, int h) {
-  (void)h;
-  static const struct simple_creature_def def = {ENT_MONSTER, Z_MONSTER, 2.0, 2, 4, 2.5, "GREEN", {monster_old[0], monster_old[1]}};
-  spawn_simple_creature(sc, w, &def);
 }
 
 static void spawn_monster(struct scene *sc, int w, int h) {
-  if (sc->classic_ver != 1) spawn_monster_new(sc, w, h);
-  else spawn_monster_old(sc, w, h);
-}
-
-static void spawn_submarine(struct scene *sc, int w, int h) {
   (void)h;
-  static const struct simple_creature_def def = {ENT_SUBMARINE, Z_SUBMARINE, 1.0, 6, 9, 0.0, "YELLOW", {submarine[0], submarine[1]}};
-  spawn_simple_creature(sc, w, &def);
+  static const struct simple_creature_def new_def = {ENT_MONSTER, Z_MONSTER, 2.0, 2, 2, 2.5, "GREEN", {monster_new[0], monster_new[1]}};
+  static const struct simple_creature_def old_def = {ENT_MONSTER, Z_MONSTER, 2.0, 2, 4, 2.5, "GREEN", {monster_old[0], monster_old[1]}};
+  spawn_simple_creature(sc, w, sc->classic_ver != 1 ? &new_def : &old_def);
 }
 
 static void spawn_swordfish(struct scene *sc, int w, int h) {
-  int dir = rng_int(2);
-  if (!swim_fits(h, swordfish[dir].shape)) {
-    schedule_random_object_return(sc);
-    return;
-  }
-  double speed = mirror_speed(dir, 3.5);
-  struct entity *e = entity_spawn(&sc->entities);
-  e->frames = &swordfish[dir];
-  e->frame_count = 1;
-  entity_randomize_mask(e, swordfish[dir].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 1) : (double)(1 - width);
-  finish_creature_spawn(e, ENT_SWORDFISH, Z_SWORDFISH, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("YELLOW"));
-}
-
-static void spawn_ducks(struct scene *sc, int w, int h) {
-  (void)h;
-  static const struct simple_creature_def def = {ENT_DUCK, Z_DUCK, 1.0, 5, 3, 2.5, "WHITE", {ducks[0], ducks[1]}};
-  spawn_simple_creature(sc, w, &def);
+  static const struct swimmer_def def = {ENT_SWORDFISH, Z_SWORDFISH, 3.5, 0.0, 1, 0.0, 1, "YELLOW", {&swordfish[0], &swordfish[1]}};
+  spawn_swimmer(sc, w, h, &def);
 }
 
 static void spawn_swan(struct scene *sc, int w, int h) {
@@ -394,16 +361,8 @@ static void spawn_rowers(struct scene *sc, int w, int h) {
   };
   const struct simple_creature_def def = defs[rng_int(2)];
   struct entity *e = spawn_simple_creature(sc, w, &def);
-  char boat = boat_letters[rng_int((int)sizeof(boat_letters))];
-  const struct sprite_pair *src = e->frames;
-  char ***shapes = xmalloc(5 * sizeof(*shapes));
-  char ***masks = xmalloc(5 * sizeof(*masks));
-  for (int i = 0; i < 5; i++) {
-    shapes[i] = entity_build_transformed_rows(src[i].shape, map_placeholder_color, &boat);
-    masks[i] = entity_build_transformed_rows(src[i].mask, map_placeholder_color, &boat);
-  }
-  entity_set_owned_shape_frames(e, shapes, 5, def.frame_interval);
-  entity_set_owned_shape_frame_masks(e, masks);
+  const char pick[10] = {[1] = boat_letters[rng_int((int)sizeof(boat_letters))]};
+  own_digit_frames(e, e->frames, def.frame_count, def.frame_interval, pick);
 }
 
 static void spawn_dolphins(struct scene *sc, int w, int h) {
@@ -444,10 +403,8 @@ static void spawn_crab(struct scene *sc, int w, int h) {
   e->frames = crab_frames;
   e->frame_count = 2;
   e->frame_interval = 3.0;
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = h - height;
-  e->x = dir ? (double)(w - 2) : (double)(1 - width);
+  e->y = h - entity_height(e);
+  e->x = entry_x(e, w, dir, 2);
   finish_creature_spawn(e, ENT_CRAB, rng_int(Z_FLORA_RANGE) + Z_FISH_MIN, speed, 0, DEATH_RANDOM_OBJECT, color_from_name(colors[rng_int(4)]));
 }
 
@@ -456,67 +413,66 @@ void spawn_jellyfish(struct scene *sc, int w, int h) {
   int dir = rng_int(2);
   double speed = mirror_speed(dir, rng_double(0.3) + 0.1);
   static const char body_letters[] = {'c', 'b', 'K'};
-  char body = body_letters[rng_int((int)sizeof(body_letters))];
+  const char pick[10] = {[1] = body_letters[rng_int((int)sizeof(body_letters))]};
   const struct sprite_pair *src = rng_int(2) ? jellyfish_small_frames : jellyfish_frames;
   if (!swim_fits(h, src[0].shape)) return;
   struct entity *e = entity_spawn(&sc->entities);
-  char ***shapes = xmalloc(2 * sizeof(*shapes));
-  char ***masks = xmalloc(2 * sizeof(*masks));
-  for (int i = 0; i < 2; i++) {
-    shapes[i] = entity_build_transformed_rows(src[i].shape, map_placeholder_color, &body);
-    masks[i] = entity_build_transformed_rows(src[i].mask, map_placeholder_color, &body);
-  }
-  entity_set_owned_shape_frames(e, shapes, 2, 6.0);
-  entity_set_owned_shape_frame_masks(e, masks);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 2) : (double)(1 - width);
+  own_digit_frames(e, src, 2, 6.0, pick);
+  swim_place(e, w, h, dir, 2);
   finish_creature_spawn(e, ENT_JELLYFISH, Z_JELLYFISH, speed, 0, DEATH_NONE, color_from_name("cyan"));
 }
 
 static void spawn_seahorse(struct scene *sc, int w, int h) {
-  int dir = rng_int(2);
-  if (!swim_fits(h, seahorse[dir][0].shape)) {
-    schedule_random_object_return(sc);
-    return;
-  }
-  double speed = mirror_speed(dir, rng_double(0.4) + 0.5);
-  struct entity *e = entity_spawn(&sc->entities);
-  e->frames = seahorse[dir];
-  e->frame_count = 2;
-  e->frame_interval = 4.0;
-  entity_randomize_mask(e, seahorse[dir][0].mask);
-  int width = entity_width(e);
-  int height = entity_height(e);
-  e->y = random_swim_y(h, height);
-  e->x = dir ? (double)(w - 2) : (double)(1 - width);
-  finish_creature_spawn(e, ENT_SEAHORSE, Z_SEAHORSE, speed, 0, DEATH_RANDOM_OBJECT, color_from_name("YELLOW"));
+  static const struct swimmer_def def = {ENT_SEAHORSE, Z_SEAHORSE, 0.5, 0.4, 2, 4.0, 2, "YELLOW", {seahorse[0], seahorse[1]}};
+  spawn_swimmer(sc, w, h, &def);
+}
+
+typedef void (*spawn_fn)(struct scene *, int, int);
+
+/* spawn fn or simple def */
+struct pool_species {
+  size_t flag;
+  enum entity_type type;
+  spawn_fn spawn;
+  const struct simple_creature_def *simple;
+};
+
+#define POOL(flag, fn, type) {offsetof(struct aquatic_life, flag), type, fn, NULL}
+#define POOL_SIMPLE(flag, def, type) {offsetof(struct aquatic_life, flag), type, NULL, &(def)}
+
+/* order = pick order */
+static const struct pool_species random_pool[] = {
+  POOL_SIMPLE(ship, ship_def, ENT_SHIP),           POOL_SIMPLE(whale, whale_def, ENT_WHALE),
+  POOL(monster, spawn_monster, ENT_MONSTER),       POOL(bigfish, spawn_big_fish, ENT_BIGFISH),
+  POOL(shark, spawn_shark, ENT_SHARK),             POOL_SIMPLE(submarine, submarine_def, ENT_SUBMARINE),
+  POOL(swordfish, spawn_swordfish, ENT_SWORDFISH), POOL_SIMPLE(ducks, ducks_def, ENT_DUCK),
+  POOL(dolphins, spawn_dolphins, ENT_DOLPHIN),     POOL(swan, spawn_swan, ENT_SWAN),
+  POOL(fishhook, spawn_fishhook, ENT_FISHHOOK),    POOL(crab, spawn_crab, ENT_CRAB),
+  POOL(seahorse, spawn_seahorse, ENT_SEAHORSE),    POOL(rowers, spawn_rowers, ENT_ROWERS),
+  POOL(sailboat, spawn_sailboat, ENT_SAILBOAT),
+};
+#define RANDOM_POOL_COUNT (sizeof(random_pool) / sizeof(random_pool[0]))
+
+bool random_pool_enabled(const struct aquatic_life *a) {
+  for (size_t i = 0; i < RANDOM_POOL_COUNT; i++) if (aquatic_on(a, random_pool[i].flag)) return true;
+  return false;
+}
+
+bool random_pool_has_type(enum entity_type type) {
+  for (size_t i = 0; i < RANDOM_POOL_COUNT; i++) if (random_pool[i].type == type) return true;
+  return false;
 }
 
 void spawn_random_object(struct scene *sc, int w, int h) {
-  typedef void (*spawn_fn)(struct scene *, int, int);
-  struct candidate {
-    spawn_fn fn;
-    bool enabled;
-  };
-  const struct candidate table[] = {
-  {spawn_ship, sc->aquatic.ship},           {spawn_whale, sc->aquatic.whale},
-  {spawn_monster, sc->aquatic.monster},     {spawn_big_fish, sc->aquatic.bigfish},
-  {spawn_shark, sc->aquatic.shark},         {spawn_submarine, sc->aquatic.submarine},
-  {spawn_swordfish, sc->aquatic.swordfish}, {spawn_ducks, sc->aquatic.ducks},
-  {spawn_dolphins, sc->aquatic.dolphins},   {spawn_swan, sc->aquatic.swan},
-  {spawn_fishhook, sc->aquatic.fishhook},   {spawn_crab, sc->aquatic.crab},
-  {spawn_seahorse, sc->aquatic.seahorse},   {spawn_rowers, sc->aquatic.rowers},
-  {spawn_sailboat, sc->aquatic.sailboat},
-  {spawn_message_event, sc->message_rows != NULL && sc->classic_ver == 0 && sc->message_position == MSG_POS_EVENT},
-  };
-  const int count = (int)(sizeof(table) / sizeof(table[0]));
-  spawn_fn enabled[sizeof(table) / sizeof(table[0])];
+  static const struct pool_species message_event = {0, ENT_MESSAGE, spawn_message_event, NULL};
+  const struct pool_species *enabled[RANDOM_POOL_COUNT + 1];
   int enabled_count = 0;
-  for (int i = 0; i < count; i++) if (table[i].enabled) enabled[enabled_count++] = table[i].fn;
+  for (size_t i = 0; i < RANDOM_POOL_COUNT; i++) if (aquatic_on(&sc->aquatic, random_pool[i].flag)) enabled[enabled_count++] = &random_pool[i];
+  if (sc->message_rows != NULL && sc->classic_ver == 0 && sc->message_position == MSG_POS_EVENT) enabled[enabled_count++] = &message_event;
   if (enabled_count == 0) return;
-  enabled[rng_int(enabled_count)](sc, w, h);
+  const struct pool_species *p = enabled[rng_int(enabled_count)];
+  if (p->simple != NULL) spawn_simple_creature(sc, w, p->simple);
+  else p->spawn(sc, w, h);
 }
 
 void schedule_random_object_return(struct scene *sc) {

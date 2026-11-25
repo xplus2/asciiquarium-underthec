@@ -34,7 +34,7 @@ static void seaweed_grow_row(struct entity *e) {
 
 static bool seaweed_reached_limit(const struct entity *e) {
   if (e->seaweed_orig_height + e->seaweed_grown >= (e->seaweed_orig_height * 5 + 1) / 2) return true;
-  return e->y <= 5.0;
+  return e->y <= WATER_SURFACE_ROW;
 }
 
 static char *seaweed_row_mask(const char *shape_row, bool brown) {
@@ -62,26 +62,23 @@ static void seaweed_cap(struct entity *e) {
   mask_frames[1] = seaweed_mask_frame(e->owned_shape_rows[1], total, brown_rows);
   entity_set_owned_shape_frame_masks(e, mask_frames);
   e->seaweed_capped = true;
-  e->seaweed_split_timer = rng_range(90.0, 270.0);
+  e->seaweed_split_timer = rng_range(SEAWEED_TIMER_MIN_S, SEAWEED_TIMER_MAX_S);
 }
 
 void tick_seaweed_growth(struct entity *e) {
   if (e->seaweed_static) return;
   if (e->seaweed_capped) {
-    if (e->seaweed_split_timer > 0.0) e->seaweed_split_timer -= 0.1;
+    if (e->seaweed_split_timer > 0.0) e->seaweed_split_timer -= TICK_SECONDS;
     return;
   }
-  e->seaweed_grow_timer -= 0.1;
+  e->seaweed_grow_timer -= TICK_SECONDS;
   if (e->seaweed_grow_timer > 0.0) return;
   seaweed_grow_row(e);
   if (seaweed_reached_limit(e)) seaweed_cap(e);
-  else e->seaweed_grow_timer = rng_range(90.0, 270.0);
+  else e->seaweed_grow_timer = rng_range(SEAWEED_TIMER_MIN_S, SEAWEED_TIMER_MAX_S);
 }
 
 void tick_seaweed_debris(struct entity *e, int term_h) {
-  if (e->seaweed_landed) return;
   e->y += e->vy;
-  if (e->y < (double)(term_h - 1)) return;
-  e->seaweed_landed = true;
-  e->marked_dead = true;
+  if (e->y >= (double)(term_h - 1)) e->marked_dead = true;
 }

@@ -10,12 +10,12 @@
 
 #include "../../app.h"
 #include "../../config.h"
+#include "../../opts.h"
 #include "../../xalloc.h"
-#include "../../entity/priv.h"
 
 struct handle {
   struct app app;
-  jint *packed;
+  uint32_t *packed;
   size_t packed_cap;
   int64_t wall_ms;
 };
@@ -127,19 +127,18 @@ JNIEXPORT void JNICALL Java_org_underthec_Native_click(JNIEnv *env, jclass cls, 
   app_click(&from_ptr(ptr)->app, col, row);
 }
 
-JNIEXPORT void JNICALL Java_org_underthec_Native_frame(JNIEnv *env, jclass cls, jlong ptr, jdouble now, jlong wall_ms, jintArray out) {
+JNIEXPORT jboolean JNICALL Java_org_underthec_Native_frame(JNIEnv *env, jclass cls, jlong ptr, jdouble now, jlong wall_ms, jintArray out, jboolean force) {
   (void)cls;
   struct handle *h = from_ptr(ptr);
   h->wall_ms = wall_ms;
   app_frame(&h->app, now);
+  if (force) canvas_diff_invalidate(&h->app.canvas);
+  if (!canvas_diff(&h->app.canvas)) return JNI_FALSE;
   size_t n = (size_t)h->app.canvas.width * (size_t)h->app.canvas.height;
-  for (size_t i = 0; i < n; i++) {
-    const struct cell *c = &h->app.canvas.cells[i];
-    uint32_t cp = c->cont ? 0 : (uint32_t)utf8_decode(c->glyph, utf8_seq_len((unsigned char)c->glyph[0]));
-    h->packed[i] = (jint)(cp << 10 | (c->bg_bold ? 1u : 0u) << 9 | (uint32_t)c->bg << 5 | (uint32_t)c->col << 1 | (c->bold ? 1u : 0u));
-  }
+  canvas_pack(&h->app.canvas, h->packed);
   jsize len = (*env)->GetArrayLength(env, out);
-  (*env)->SetIntArrayRegion(env, out, 0, (jsize)n < len ? (jsize)n : len, h->packed);
+  (*env)->SetIntArrayRegion(env, out, 0, (jsize)n < len ? (jsize)n : len, (const jint *)h->packed);
+  return JNI_TRUE;
 }
 
 JNIEXPORT jint JNICALL Java_org_underthec_Native_width(JNIEnv *env, jclass cls, jlong ptr) {
@@ -165,4 +164,48 @@ JNIEXPORT jboolean JNICALL Java_org_underthec_Native_dialogOpen(JNIEnv *env, jcl
   (void)cls;
   const struct app *a = &from_ptr(ptr)->app;
   return settings_ui_is_open(&a->settings) || help_ui_is_open(&a->help);
+}
+
+JNIEXPORT jintArray JNICALL Java_org_underthec_Native_palette(JNIEnv *env, jclass cls) {
+  (void)cls;
+  jint rgb[18];
+  for (int i = 0; i < 18; i++) rgb[i] = (jint)color_rgb((enum color)(i / 2), (i % 2) != 0);
+  jintArray out = (*env)->NewIntArray(env, 18);
+  if (out != NULL) (*env)->SetIntArrayRegion(env, out, 0, 18, rgb);
+  return out;
+}
+
+static jobjectArray string_array(JNIEnv *env, const char *const *items, int count) {
+  jobjectArray out = (*env)->NewObjectArray(env, count, (*env)->FindClass(env, "java/lang/String"), NULL);
+  if (out == NULL) return NULL;
+  for (int i = 0; i < count; i++) (*env)->SetObjectArrayElement(env, out, i, (*env)->NewStringUTF(env, items[i]));
+  return out;
+}
+
+JNIEXPORT jobjectArray JNICALL Java_org_underthec_Native_creatures(JNIEnv *env, jclass cls) {
+  (void)cls;
+  const char *names[SCENE_AQUATIC_FLAG_COUNT];
+  for (int i = 0; i < SCENE_AQUATIC_FLAG_COUNT; i++) names[i] = scene_aquatic_flag_name((size_t)i);
+  return string_array(env, names, SCENE_AQUATIC_FLAG_COUNT);
+}
+
+JNIEXPORT jobjectArray JNICALL Java_org_underthec_Native_defaults(JNIEnv *env, jclass cls) {
+  (void)cls;
+  struct config d;
+  config_init(&d);
+  char pace[16];
+  char uturn[16];
+  char colors[16];
+  size_t p = 0;
+  opts_append_float_bounded(pace, sizeof pace - 1, &p, d.pace, 0, 2);
+  pace[p] = '\0';
+  opts_format_int(uturn, sizeof uturn, d.uturn_chance);
+  opts_format_colors(d.colors_mode, colors, sizeof colors);
+  const char *pairs[] = {
+    "pace", pace, "uturn-chance", uturn, "colors", colors,
+    "message-position", opts_message_position_name(d.message_position),
+  };
+  jobjectArray out = string_array(env, pairs, (int)(sizeof pairs / sizeof pairs[0]));
+  config_free(&d);
+  return out;
 }

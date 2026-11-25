@@ -1,6 +1,7 @@
 #define _DEFAULT_SOURCE
 #include "../../app.h"
 #include "../../config.h"
+#include "../../monotime.h"
 #include "xscr_font.h"
 
 #include <X11/Xlib.h>
@@ -46,12 +47,6 @@ static int on_x_error(Display *dpy, XErrorEvent *ev) {
   return 0;
 }
 
-static double now_seconds(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
-}
-
 static bool arg_window_id(const char *s, Window *out) {
   if (s[0] == '\0') return false;
   char *end = NULL;
@@ -67,30 +62,17 @@ static void backbuf_free(struct xscr *x) {
   x->backbuf = None;
 }
 
-/* runs of same fg attr in cols lo..hi, font's own advance (monospace ASCII content) */
-static void draw_row(struct xscr *x, int row, int lo, int hi) {
-  const struct canvas *c = &x->app.canvas;
-  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
-  int y = x->off_y + row * x->cell_h + xscr_font_ascent(x->font);
+/* font's own advance within run (monospace ASCII content) */
+static void draw_run(void *ctx, int row, int col0, int col1, const struct cell *attr) {
+  struct xscr *x = ctx;
   char text[RUN_MAX];
-  int n = 0;
-  int run_x = x->off_x;
-  const struct cell *run_attr = NULL;
-  for (int col = lo; col <= hi; col++) {
-    const struct cell *cell = &line[col];
-    if (cell->cont) continue;
-    bool same = run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold;
-    size_t len = strlen(cell->glyph);
-    if (!same || n + (int)len > RUN_MAX) {
-      if (run_attr != NULL) xscr_font_draw_run(x->font, x->backbuf, x->gc, run_x, y, text, n, run_attr->col, run_attr->bold);
-      n = 0;
-      run_x = x->off_x + col * x->cell_w;
-      run_attr = cell;
-    }
-    memcpy(text + n, cell->glyph, len);
-    n += (int)len;
-  }
-  if (run_attr != NULL) xscr_font_draw_run(x->font, x->backbuf, x->gc, run_x, y, text, n, run_attr->col, run_attr->bold);
+  int n = canvas_run_utf8(&x->app.canvas, row, col0, col1, text, RUN_MAX);
+  int y = x->off_y + row * x->cell_h + xscr_font_ascent(x->font);
+  xscr_font_draw_run(x->font, x->backbuf, x->gc, x->off_x + col0 * x->cell_w, y, text, n, attr->col, attr->bold);
+}
+
+static void draw_row(struct xscr *x, int row, int lo, int hi) {
+  canvas_row_runs(&x->app.canvas, row, lo, hi, RUN_MAX / 4, draw_run, x);
 }
 
 static void draw_span(struct xscr *x, int row, int lo, int hi) {
@@ -151,12 +133,9 @@ static void layout(struct xscr *x, int w, int h) {
   xscr_font_retarget(x->font, x->backbuf);
   x->bmp_w = w;
   x->bmp_h = h;
-  int cols = w / x->cell_w;
-  int rows = h / x->cell_h;
-  if (cols < 1) cols = 1;
-  if (rows < 1) rows = 1;
-  x->off_x = (w - cols * x->cell_w) / 2;
-  x->off_y = (h - rows * x->cell_h) / 2;
+  int cols;
+  int rows;
+  app_grid_fit(w, h, x->cell_w, x->cell_h, &cols, &rows, &x->off_x, &x->off_y);
   if (x->started) app_resize(&x->app, cols, rows);
   present_full(x);
 }
@@ -246,7 +225,7 @@ int main(int argc, char **argv) {
 
   int font_px = wa.height / 45;
   if (font_px < 10) font_px = 10;
-  char ferr[256];
+  char ferr[256] = {0};
   x.font = xscr_font_create(dpy, x.screen, wa.visual, wa.colormap, font_px, ferr, sizeof ferr);
   if (x.font == NULL) {
     fprintf(stderr, "%s: %s\n", argv[0], ferr);
@@ -258,7 +237,7 @@ int main(int argc, char **argv) {
   x.cell_w = xscr_font_cell_w(x.font);
   x.cell_h = xscr_font_cell_h(x.font);
 
-  config_start(&cfg, &x.app, now_seconds());
+  config_start(&cfg, &x.app, monotime_now());
   x.started = true;
   int fps = cfg.fps;
   config_free(&cfg);
@@ -270,7 +249,7 @@ int main(int argc, char **argv) {
 
   int fd = ConnectionNumber(dpy);
   double frame_period = 1.0 / (double)fps;
-  double deadline = now_seconds();
+  double deadline = monotime_now();
   while (!g_should_quit) {
     while (XPending(dpy) > 0) {
       XEvent ev;
@@ -279,7 +258,7 @@ int main(int argc, char **argv) {
       else if (ev.type == Expose) present_all(&x);
       else if (ev.type == DestroyNotify) g_should_quit = 1;
     }
-    double t = now_seconds();
+    double t = monotime_now();
     if (t >= deadline) {
       app_frame(&x.app, t);
       present_diff(&x);

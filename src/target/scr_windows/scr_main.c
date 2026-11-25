@@ -1,6 +1,7 @@
 #include "scr.h"
 #include "../../app.h"
 #include "../../config.h"
+#include "../../monotime.h"
 #include "../../version.h"
 
 #include <ctype.h>
@@ -12,18 +13,10 @@
 #define MOUSE_SLACK 8
 #define TIMER_ID 1
 
-/* enum color order, [normal, bold] */
-static const COLORREF palette[9][2] = {
-  {RGB(0xc0, 0xc0, 0xc0), RGB(0xff, 0xff, 0xff)},
-  {RGB(0x00, 0x00, 0x00), RGB(0x80, 0x80, 0x80)},
-  {RGB(0xc0, 0x00, 0x00), RGB(0xff, 0x55, 0x55)},
-  {RGB(0x00, 0xc0, 0x00), RGB(0x55, 0xff, 0x55)},
-  {RGB(0xc0, 0xc0, 0x00), RGB(0xff, 0xff, 0x55)},
-  {RGB(0x00, 0x00, 0xc0), RGB(0x55, 0x55, 0xff)},
-  {RGB(0xc0, 0x00, 0xc0), RGB(0xff, 0x55, 0xff)},
-  {RGB(0x00, 0xc0, 0xc0), RGB(0x55, 0xff, 0xff)},
-  {RGB(0xc0, 0xc0, 0xc0), RGB(0xff, 0xff, 0xff)},
-};
+static COLORREF colorref(int col, int bold) {
+  uint32_t v = color_rgb((enum color)col, bold != 0);
+  return RGB((v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff);
+}
 
 struct scr {
   struct app app;
@@ -43,16 +36,9 @@ struct scr {
   int bmp_h;
   bool mouse_seen;
   POINT mouse_origin;
-  LARGE_INTEGER freq;
 };
 
 static struct scr scr;
-
-static double now_seconds(void) {
-  LARGE_INTEGER t;
-  QueryPerformanceCounter(&t);
-  return (double)t.QuadPart / (double)scr.freq.QuadPart;
-}
 
 static void fonts_create(HDC dc) {
   for (int b = 0; b < 2; b++) {
@@ -79,7 +65,7 @@ static HBRUSH bg_brushes[9][2];
 
 static HBRUSH bg_brush(enum color col, bool bold) {
   int b = bold ? 1 : 0;
-  if (bg_brushes[col][b] == NULL) bg_brushes[col][b] = CreateSolidBrush(palette[col][b]);
+  if (bg_brushes[col][b] == NULL) bg_brushes[col][b] = CreateSolidBrush(colorref(col, b));
   return bg_brushes[col][b];
 }
 
@@ -101,35 +87,24 @@ static void backbuffer_free(void) {
 }
 
 static void draw_run(const WCHAR *text, INT *dx, int n, int x, int y, const struct cell *attr) {
-  if (n == 0) return;
   int b = attr->bold ? 1 : 0;
   SelectObject(scr.mem_dc, scr.font[b]);
-  SetTextColor(scr.mem_dc, palette[attr->col][b]);
+  SetTextColor(scr.mem_dc, colorref(attr->col, b));
   ExtTextOutW(scr.mem_dc, x, y, 0, NULL, text, (UINT)n, dx);
 }
 
-/* runs of same fg attr per row, fixed advance */
-static void draw_row(int row, int lo, int hi) {
-  const struct canvas *c = &scr.app.canvas;
-  const struct cell *line = &c->cells[(size_t)row * (size_t)c->width];
-  int y = scr.off_y + row * scr.cell_h;
+/* fixed advance per cell, wide glyph widened via dx */
+static void draw_run_cells(void *ctx, int row, int col0, int col1, const struct cell *attr) {
+  (void)ctx;
+  const struct cell *line = &scr.app.canvas.cells[(size_t)row * (size_t)scr.app.canvas.width];
   WCHAR text[RUN_MAX];
   INT dx[RUN_MAX];
   int n = 0;
-  int run_x = scr.off_x;
-  const struct cell *run_attr = NULL;
-  for (int col = lo; col <= hi; col++) {
+  for (int col = col0; col < col1; col++) {
     const struct cell *cell = &line[col];
     if (cell->cont) {
       if (n > 0) dx[n - 1] += scr.cell_w;
       continue;
-    }
-    bool same = run_attr != NULL && run_attr->col == cell->col && run_attr->bold == cell->bold;
-    if (!same || n + 2 > RUN_MAX) {
-      if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
-      n = 0;
-      run_x = scr.off_x + col * scr.cell_w;
-      run_attr = cell;
     }
     int units = MultiByteToWideChar(CP_UTF8, 0, cell->glyph, (int)strlen(cell->glyph), &text[n], 2);
     if (units <= 0) {
@@ -140,7 +115,12 @@ static void draw_row(int row, int lo, int hi) {
     if (units == 2) dx[n + 1] = 0;
     n += units;
   }
-  if (run_attr != NULL) draw_run(text, dx, n, run_x, y, run_attr);
+  if (n == 0) return;
+  draw_run(text, dx, n, scr.off_x + col0 * scr.cell_w, scr.off_y + row * scr.cell_h, attr);
+}
+
+static void draw_row(int row, int lo, int hi) {
+  canvas_row_runs(&scr.app.canvas, row, lo, hi, RUN_MAX / 2, draw_run_cells, NULL);
 }
 
 static void draw_span(int row, int lo, int hi) {
@@ -165,7 +145,7 @@ static void draw_error(void) {
   if (n <= 0) return;
   RECT r = {scr.cell_w, scr.cell_h, scr.bmp_w - scr.cell_w, scr.bmp_h - scr.cell_h};
   SelectObject(scr.mem_dc, scr.font[0]);
-  SetTextColor(scr.mem_dc, palette[0][0]);
+  SetTextColor(scr.mem_dc, colorref(COL_DEFAULT, 0));
   DrawTextW(scr.mem_dc, msg, -1, &r, DT_WORDBREAK | DT_NOPREFIX);
 }
 
@@ -210,12 +190,9 @@ static void layout(HWND wnd, int w, int h) {
   SetBkMode(scr.mem_dc, TRANSPARENT);
   scr.bmp_w = w;
   scr.bmp_h = h;
-  int cols = w / scr.cell_w;
-  int rows = h / scr.cell_h;
-  if (cols < 1) cols = 1;
-  if (rows < 1) rows = 1;
-  scr.off_x = (w - cols * scr.cell_w) / 2;
-  scr.off_y = (h - rows * scr.cell_h) / 2;
+  int cols;
+  int rows;
+  app_grid_fit(w, h, scr.cell_w, scr.cell_h, &cols, &rows, &scr.off_x, &scr.off_y);
   if (scr.started) app_resize(&scr.app, cols, rows);
   redraw_full();
   InvalidateRect(wnd, NULL, FALSE);
@@ -247,7 +224,7 @@ static LRESULT CALLBACK wnd_proc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) {
       layout(wnd, LOWORD(lp), HIWORD(lp));
       return 0;
     case WM_TIMER:
-      if (scr.started) app_frame(&scr.app, now_seconds());
+      if (scr.started) app_frame(&scr.app, monotime_now());
       redraw_diff(wnd);
       return 0;
     case WM_ERASEBKGND:
@@ -301,12 +278,11 @@ static BOOL CALLBACK add_monitor(HMONITOR mon, HDC dc, LPRECT r, LPARAM all) {
 
 /* preview: parent = preview host, NULL: fullscreen */
 static int run(HINSTANCE inst, HWND parent) {
-  QueryPerformanceFrequency(&scr.freq);
   scr.fullscreen = parent == NULL;
   struct config cfg;
   config_init(&cfg);
   if (scr_config_load(&cfg, scr.err, sizeof scr.err) && config_check(&cfg, scr.err, sizeof scr.err)) {
-    config_start(&cfg, &scr.app, now_seconds());
+    config_start(&cfg, &scr.app, monotime_now());
     /* castle doesn't fit preview */
     if (!scr.fullscreen) scene_set_castle(&scr.app.scene, false);
     scr.started = true;

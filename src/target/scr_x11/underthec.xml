@@ -37,7 +37,7 @@ Classic modes ignore aquatic-life, message, castle name, U-turn chance, autofeed
       <option id="c-White" _label="White (bold)" arg-set="--message-color White"/>
     </select>
     <select id="message-position">
-      <option id="p-middle" _label="Middle" arg-set="--message-position middle"/>
+      <option id="p-middle" _label="Middle"/>
       <option id="p-center" _label="Center" arg-set="--message-position center"/>
       <option id="p-marquee" _label="Marquee" arg-set="--message-position marquee"/>
       <option id="p-swim" _label="Swim" arg-set="--message-position swim"/>

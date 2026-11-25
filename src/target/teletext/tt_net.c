@@ -2,7 +2,6 @@
 
 #include "teletext.h"
 #include "../../opts.h"
-#include "../../xalloc.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +32,8 @@ void tt_net_close(struct tt_net *n) {
 }
 
 #else
+
+#include "../../xalloc.h"
 
 #include <arpa/inet.h>
 #include <net/if.h>

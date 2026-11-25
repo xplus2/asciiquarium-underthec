@@ -37,7 +37,6 @@
 #define CASTLE_WIDTH 31
 #define MESSAGE_TOP_ROW 1
 #define MESSAGE_SCROLL_SPEED 1.0
-#define WATER_SURFACE_ROW 5
 #define MAIN_REGION_TOP_ROW 9
 #define Z_MESSAGE_SURFACE 1
 
@@ -49,6 +48,9 @@ void spawn_splat(struct scene *sc, double tx, double ty, int tz);
 struct entity *spawn_bubble_at(struct scene *sc, double x, double y, int z);
 void spawn_bubble(struct scene *sc, double fish_x, double fish_y, int fish_z, int fish_w, int fish_h, double fish_vx);
 
+/* scene.c. offset: offsetof(struct aquatic_life, flag) */
+bool aquatic_on(const struct aquatic_life *a, size_t offset);
+
 /* creatures.c */
 void spawn_fish(struct scene *sc, int w, int h);
 void spawn_jellyfish(struct scene *sc, int w, int h);
@@ -58,8 +60,15 @@ void fish_begin_turn(struct entity *e, double new_vx);
 void fish_set_vx(const struct scene *sc, struct entity *e, double goal);
 void spawn_random_object(struct scene *sc, int w, int h);
 void schedule_random_object_return(struct scene *sc);
+/* random object pool: any species on / type belongs to pool */
+bool random_pool_enabled(const struct aquatic_life *a);
+bool random_pool_has_type(enum entity_type type);
 void finish_creature_spawn(struct entity *e, enum entity_type type, int z, double vx, double vy, enum death_action death, struct attr attr);
 int random_swim_y(int h, int sprite_height);
+/* just offscreen. dir 1: right edge minus right_inset, 0: left edge */
+double entry_x(struct entity *e, int w, int dir, int right_inset);
+/* random_swim_y, then entry_x */
+void swim_place(struct entity *e, int w, int h, int dir, int right_inset);
 /* space between main region top and bottom */
 bool swim_fits(int h, ascii_rows shape);
 
